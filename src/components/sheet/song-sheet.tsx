@@ -1,6 +1,6 @@
 import { cn } from 'cn'
 import { StickyNoteIcon } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Chip } from '@/components/app/chip'
 import { ChordDiagram } from '@/components/chord-diagram'
 import { displayChord, soundsAs } from '@/lib/music/chords'
@@ -331,47 +331,70 @@ export function SongSheet({
   )
 }
 
-export function scrollToEntry(entryId: string) {
+function scrollToEntry(entryId: string) {
   document
     .getElementById(entryElementId(entryId))
     ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-export function useActiveEntry(
-  entryIds: Array<string>,
-  root?: HTMLElement | null,
-) {
-  const [active, setActive] = useState<string | null>(entryIds[0] ?? null)
+export function useSectionCursor(entryIds: Array<string>) {
+  const [chosen, setChosen] = useState<string | null>(null)
+  const jumping = useRef(false)
+  const settle = useRef(0)
   const key = entryIds.join(',')
+  const active =
+    chosen && entryIds.includes(chosen) ? chosen : (entryIds[0] ?? null)
+
+  const release = (delay: number) => {
+    window.clearTimeout(settle.current)
+    settle.current = window.setTimeout(() => {
+      jumping.current = false
+    }, delay)
+  }
+
+  const move = (entryId: string) => {
+    setChosen(entryId)
+    jumping.current = true
+    release(1000)
+    scrollToEntry(entryId)
+  }
 
   useEffect(() => {
     const ids = key ? key.split(',') : []
     const compute = () => {
-      const top = (root?.getBoundingClientRect().top ?? 0) + 230
-      let current: string | null = ids[0] ?? null
+      let current: string | null = null
       for (const id of ids) {
         const element = document.getElementById(entryElementId(id))
-        if (element && element.getBoundingClientRect().top <= top) current = id
+        if (element && element.getBoundingClientRect().top <= 230) current = id
       }
-      setActive(current)
+      setChosen(current ?? ids.at(0) ?? null)
     }
     let frame = 0
-    const target: HTMLElement | Window = root ?? window
     const onScroll = () => {
+      if (jumping.current) {
+        release(150)
+        return
+      }
       cancelAnimationFrame(frame)
       frame = requestAnimationFrame(compute)
     }
-    compute()
-    target.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', onScroll)
+    const onUser = () => {
+      jumping.current = false
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('wheel', onUser, { passive: true })
+    window.addEventListener('touchstart', onUser, { passive: true })
     return () => {
       cancelAnimationFrame(frame)
-      target.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', onScroll)
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('wheel', onUser)
+      window.removeEventListener('touchstart', onUser)
     }
-  }, [key, root])
+  }, [key])
 
-  return active
+  useEffect(() => () => window.clearTimeout(settle.current), [])
+
+  return { active, move }
 }
 
 export function SectionNav({

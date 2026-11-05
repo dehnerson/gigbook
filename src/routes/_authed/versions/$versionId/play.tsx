@@ -26,10 +26,9 @@ import {
   TextSizeControl,
 } from '@/components/sheet/sheet-controls'
 import {
-  scrollToEntry,
   SectionNav,
   SongSheet,
-  useActiveEntry,
+  useSectionCursor,
 } from '@/components/sheet/song-sheet'
 import type { SheetEntry, SheetSettings } from '@/components/sheet/types'
 import { useSheetPrefs } from '@/components/sheet/use-sheet-prefs'
@@ -81,10 +80,10 @@ function PlayPage() {
   const prefs = useSheetPrefs('play', 1.3)
   const scroll = useAutoscrollState()
   const entryIds = timeline.map((entry) => entry.entryId)
-  const active = useActiveEntry(entryIds)
+  const { active, move } = useSectionCursor(entryIds)
   useForceDark()
   useWakeLock(true)
-  useSectionKeys(entryIds, active)
+  useSectionKeys(entryIds, active, move)
 
   const setlist = useQuery({
     ...convexQuery(
@@ -184,12 +183,12 @@ function PlayPage() {
           <SectionNav
             timeline={timeline}
             activeEntryId={active}
-            onJump={(entryId) => scrollToEntry(entryId)}
+            onJump={move}
           />
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-5 pt-6 pb-48 sm:px-8">
+      <main className="mx-auto max-w-5xl px-5 pt-6 pb-[70vh] sm:px-8">
         <SongSheet
           version={version}
           song={song}

@@ -13,7 +13,7 @@ import {
   MusicIcon,
   SkipForwardIcon,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '../../../../convex/_generated/api'
 import type { Id } from '../../../../convex/_generated/dataModel'
@@ -32,10 +32,9 @@ import {
   TextSizeControl,
 } from '@/components/sheet/sheet-controls'
 import {
-  scrollToEntry,
   SectionNav,
   SongSheet,
-  useActiveEntry,
+  useSectionCursor,
 } from '@/components/sheet/song-sheet'
 import type { SheetEntry } from '@/components/sheet/types'
 import { useSheetPrefs } from '@/components/sheet/use-sheet-prefs'
@@ -144,14 +143,16 @@ function JamRoomPage() {
   const timeline = (bundle.data?.timeline ?? []) as Array<SheetEntry>
   const entryIds = timeline.map((entry) => entry.entryId)
   const entryKey = entryIds.join(',')
-  const active = useActiveEntry(entryIds)
+  const { active, move } = useSectionCursor(entryIds)
   const hostEntryId = entryIds.at(
     Math.min(room.timelineIndex, entryIds.length - 1),
   )
-  useSectionKeys(entryIds, active)
+  useSectionKeys(entryIds, active, move)
 
+  const moveRef = useRef(move)
+  moveRef.current = move
   useEffect(() => {
-    if (following && hostEntryId) scrollToEntry(hostEntryId)
+    if (following && hostEntryId) moveRef.current(hostEntryId)
   }, [following, hostEntryId])
 
   useEffect(() => {
@@ -183,7 +184,7 @@ function JamRoomPage() {
     const target = entryIds.at(
       Math.min(entryIds.length - 1, Math.max(0, activeIndex + direction)),
     )
-    if (target) scrollToEntry(target)
+    if (target) move(target)
   }
 
   const songOptions = catalog.flatMap((row) =>
@@ -305,7 +306,7 @@ function JamRoomPage() {
             <SectionNav
               timeline={timeline}
               activeEntryId={(following ? hostEntryId : active) ?? null}
-              onJump={(entryId) => scrollToEntry(entryId)}
+              onJump={move}
             />
           </div>
         ) : null}
@@ -322,7 +323,7 @@ function JamRoomPage() {
         </div>
       ) : null}
 
-      <main className="mx-auto max-w-5xl px-5 pt-6 pb-48 sm:px-8">
+      <main className="mx-auto max-w-5xl px-5 pt-6 pb-[70vh] sm:px-8">
         {!room.versionId ? (
           <EmptyState
             icon={MusicIcon}

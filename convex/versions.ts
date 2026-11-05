@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import type { Id } from './_generated/dataModel'
+import type { Doc, Id } from './_generated/dataModel'
 import { internalQuery, mutation, query } from './_generated/server'
 import type { QueryCtx } from './_generated/server'
 import { tabMeasure } from './schema'
@@ -24,6 +24,24 @@ async function loadVersion(ctx: QueryCtx, versionId: Id<'versions'>) {
   if (!version) fail('NOT_FOUND')
   const song = await songOfVersion(ctx, version)
   return { version, song }
+}
+
+async function libraryCopyOf(
+  ctx: QueryCtx,
+  version: Doc<'versions'>,
+  userId: string,
+) {
+  if (version.createdBy === userId && !version.bandId) {
+    return { songId: version.songId, versionId: version._id }
+  }
+  const copies = await ctx.db
+    .query('versions')
+    .withIndex('by_parent_creator', (q) =>
+      q.eq('parentVersionId', version._id).eq('createdBy', userId),
+    )
+    .collect()
+  const personal = copies.find((copy) => !copy.bandId)
+  return personal ? { songId: personal.songId, versionId: personal._id } : null
 }
 
 async function bundle(ctx: any, version: any, song: any, canEdit: boolean) {
@@ -87,14 +105,17 @@ export const getBundle = query({
 export const getByShare = query({
   args: { token: v.string() },
   handler: async (ctx, args) => {
-    await requireIdentity(ctx)
+    const identity = await requireIdentity(ctx)
     const version = await ctx.db
       .query('versions')
       .withIndex('by_share', (q) => q.eq('shareToken', args.token))
       .unique()
     if (!version) fail('NOT_FOUND')
     const song = await songOfVersion(ctx, version)
-    return bundle(ctx, version, song, false)
+    return {
+      ...(await bundle(ctx, version, song, false)),
+      libraryCopy: await libraryCopyOf(ctx, version, identity.subject),
+    }
   },
 })
 
@@ -179,6 +200,8 @@ export const duplicate = mutation({
     } catch {
       if (!version.shareToken) fail('FORBIDDEN')
     }
+    const existing = await libraryCopyOf(ctx, version, identity.subject)
+    if (existing) return { ...existing, existing: true }
     const copySongId = await ctx.db.insert('songs', {
       title: song.title,
       artist: song.artist,
@@ -189,7 +212,7 @@ export const duplicate = mutation({
       name: version.name,
       createdBy: identity.subject,
     })
-    return { songId: copySongId, versionId: copyVersionId }
+    return { songId: copySongId, versionId: copyVersionId, existing: false }
   },
 })
 

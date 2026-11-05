@@ -21,11 +21,10 @@ import {
   TextSizeControl,
 } from '@/components/sheet/sheet-controls'
 import {
-  scrollToEntry,
   SectionNav,
   SheetHeader,
   SongSheet,
-  useActiveEntry,
+  useSectionCursor,
 } from '@/components/sheet/song-sheet'
 import type { SheetEntry, SheetSettings } from '@/components/sheet/types'
 import { useSheetPrefs } from '@/components/sheet/use-sheet-prefs'
@@ -68,7 +67,9 @@ function ReadPage() {
   const [transpose, setTranspose] = useState(0)
   const [parts, setParts] = useState<Array<string>>([])
   const prefs = useSheetPrefs('read')
-  const active = useActiveEntry(timeline.map((entry) => entry.entryId))
+  const { active, move } = useSectionCursor(
+    timeline.map((entry) => entry.entryId),
+  )
 
   const settings: SheetSettings = {
     capo,
@@ -193,11 +194,7 @@ function ReadPage() {
             />
           </div>
         </ControlBar>
-        <SectionNav
-          timeline={timeline}
-          activeEntryId={active}
-          onJump={(entryId) => scrollToEntry(entryId)}
-        />
+        <SectionNav timeline={timeline} activeEntryId={active} onJump={move} />
       </div>
 
       <SongSheet
@@ -208,7 +205,7 @@ function ReadPage() {
         settings={settings}
         visiblePartIds={parts}
         showHeader={false}
-        className="pb-24"
+        className="pb-[60vh]"
       />
     </div>
   )

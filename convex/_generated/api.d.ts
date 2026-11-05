@@ -8,7 +8,9 @@
  * @module
  */
 
+import type * as accountCleanup from "../accountCleanup.js";
 import type * as bands from "../bands.js";
+import type * as http from "../http.js";
 import type * as importAction from "../importAction.js";
 import type * as importDrafts from "../importDrafts.js";
 import type * as importModels from "../importModels.js";
@@ -17,6 +19,7 @@ import type * as lib_access from "../lib/access.js";
 import type * as lib_cascade from "../lib/cascade.js";
 import type * as lib_crypto from "../lib/crypto.js";
 import type * as lib_errors from "../lib/errors.js";
+import type * as lib_users from "../lib/users.js";
 import type * as setlists from "../setlists.js";
 import type * as songs from "../songs.js";
 import type * as users from "../users.js";
@@ -29,7 +32,9 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  accountCleanup: typeof accountCleanup;
   bands: typeof bands;
+  http: typeof http;
   importAction: typeof importAction;
   importDrafts: typeof importDrafts;
   importModels: typeof importModels;
@@ -38,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   "lib/cascade": typeof lib_cascade;
   "lib/crypto": typeof lib_crypto;
   "lib/errors": typeof lib_errors;
+  "lib/users": typeof lib_users;
   setlists: typeof setlists;
   songs: typeof songs;
   users: typeof users;

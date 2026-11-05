@@ -109,6 +109,8 @@
   "linkCopied": "Link kopiert",
   "forkToLibrary": "In meine Bibliothek kopieren",
   "copiedToLibrary": "In deine Bibliothek kopiert",
+  "alreadyInLibrary": "Schon in deiner Bibliothek",
+  "openInLibrary": "In meiner Bibliothek öffnen",
   "sharedWithYou": "Mit dir geteilt",
 
   "concertKey": "Tonart (klingend)",

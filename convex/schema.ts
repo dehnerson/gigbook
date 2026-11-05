@@ -73,7 +73,7 @@ export default defineSchema({
     bandId: v.id('bands'),
     userId: v.string(),
     role: v.union(v.literal('owner'), v.literal('editor'), v.literal('viewer')),
-    name: v.string(),
+    name: v.optional(v.string()),
   })
     .index('by_band', ['bandId'])
     .index('by_user', ['userId']),
@@ -108,7 +108,8 @@ export default defineSchema({
   })
     .index('by_song', ['songId'])
     .index('by_share', ['shareToken'])
-    .index('by_creator', ['createdBy']),
+    .index('by_creator', ['createdBy'])
+    .index('by_parent_creator', ['parentVersionId', 'createdBy']),
 
   sections: defineTable({
     versionId: v.id('versions'),
@@ -166,14 +167,15 @@ export default defineSchema({
   jamMembers: defineTable({
     roomId: v.id('jamRooms'),
     userId: v.string(),
-    name: v.string(),
+    name: v.optional(v.string()),
     capo: v.number(),
     following: v.boolean(),
     visiblePartIds: v.array(v.string()),
     personalVersionId: v.optional(v.id('versions')),
   })
     .index('by_room', ['roomId'])
-    .index('by_room_user', ['roomId', 'userId']),
+    .index('by_room_user', ['roomId', 'userId'])
+    .index('by_user', ['userId']),
 
   importDrafts: defineTable({
     ownerId: v.string(),

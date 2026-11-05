@@ -12,7 +12,7 @@ import {
 import { SongSheet } from '@/components/sheet/song-sheet'
 import type { SheetEntry, SheetSettings } from '@/components/sheet/types'
 import { useSheetPrefs } from '@/components/sheet/use-sheet-prefs'
-import { Button } from '@/components/ui/button'
+import { Button, ButtonLink } from '@/components/ui/button'
 import { useNotation } from '@/components/use-notation'
 import { useVersionActions } from '@/components/version-actions'
 import { useLiveQuery } from '@/lib/live'
@@ -32,7 +32,7 @@ export const Route = createFileRoute('/_authed/share/$token')({
 function SharePage() {
   const { token } = Route.useParams()
   const bundle = useLiveQuery(convexQuery(api.versions.getByShare, { token }))
-  const { version, song, shapes } = bundle.data
+  const { version, song, shapes, libraryCopy } = bundle.data
   const timeline = bundle.data.timeline as Array<SheetEntry>
   const notation = useNotation()
   const actions = useVersionActions()
@@ -59,17 +59,28 @@ function SharePage() {
             </span>
             <span className="font-semibold">{m.appName()}</span>
           </Link>
-          <Button
-            isDisabled={busy}
-            onPress={async () => {
-              setBusy(true)
-              await actions.fork(version._id)
-              setBusy(false)
-            }}
-          >
-            <LibraryBigIcon />
-            {m.forkToLibrary()}
-          </Button>
+          {libraryCopy ? (
+            <ButtonLink
+              variant="secondary"
+              to="/versions/$versionId"
+              params={{ versionId: libraryCopy.versionId }}
+            >
+              <LibraryBigIcon />
+              {m.openInLibrary()}
+            </ButtonLink>
+          ) : (
+            <Button
+              isDisabled={busy}
+              onPress={async () => {
+                setBusy(true)
+                await actions.fork(version._id)
+                setBusy(false)
+              }}
+            >
+              <LibraryBigIcon />
+              {m.forkToLibrary()}
+            </Button>
+          )}
         </div>
       </header>
       <main className="mx-auto max-w-4xl space-y-6 px-4 pt-6 pb-24 sm:px-8">

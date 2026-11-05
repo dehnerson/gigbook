@@ -2,6 +2,7 @@ import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
 import { canReadSong, requireIdentity, songOfVersion } from './lib/access'
 import { fail } from './lib/errors'
+import { withNames } from './lib/users'
 
 function roomCode() {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -26,7 +27,6 @@ export const create = mutation({
     await ctx.db.insert('jamMembers', {
       roomId,
       userId: identity.subject,
-      name: identity.name ?? 'Host',
       capo: 0,
       following: true,
       visiblePartIds: [],
@@ -56,7 +56,6 @@ export const join = mutation({
       await ctx.db.insert('jamMembers', {
         roomId: room._id,
         userId: identity.subject,
-        name: identity.name ?? 'Player',
         capo: 0,
         following: true,
         visiblePartIds: [],
@@ -75,10 +74,13 @@ export const get = query({
       .withIndex('by_code', (q: any) => q.eq('code', args.code))
       .unique()
     if (!room) fail('NOT_FOUND')
-    const members = await ctx.db
-      .query('jamMembers')
-      .withIndex('by_room', (q: any) => q.eq('roomId', room._id))
-      .collect()
+    const members = await withNames(
+      ctx,
+      await ctx.db
+        .query('jamMembers')
+        .withIndex('by_room', (q: any) => q.eq('roomId', room._id))
+        .collect(),
+    )
     if (!members.some((member) => member.userId === identity.subject))
       fail('FORBIDDEN')
     return {

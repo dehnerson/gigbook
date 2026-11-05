@@ -109,6 +109,8 @@
   "linkCopied": "Link copied",
   "forkToLibrary": "Copy to my library",
   "copiedToLibrary": "Copied to your library",
+  "alreadyInLibrary": "Already in your library",
+  "openInLibrary": "Open in my library",
   "sharedWithYou": "Shared with you",
 
   "concertKey": "Concert key",

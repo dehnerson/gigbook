@@ -1,5 +1,11 @@
 import { v } from 'convex/values'
-import { internalQuery, mutation, query } from './_generated/server'
+import { internal } from './_generated/api'
+import {
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+} from './_generated/server'
 import type { QueryCtx } from './_generated/server'
 import { decryptSecret, encryptSecret } from './lib/crypto'
 import { fail } from './lib/errors'
@@ -32,6 +38,43 @@ export const ensure = mutation({
       name,
       email,
       imageUrl: identity.pictureUrl,
+    })
+  },
+})
+
+export const upsertFromClerk = internalMutation({
+  args: {
+    clerkUserId: v.string(),
+    name: v.string(),
+    email: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const existing = await userByClerk(ctx, args.clerkUserId)
+    const email = args.email?.toLowerCase()
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        name: args.name,
+        email: email ?? existing.email,
+        imageUrl: args.imageUrl ?? existing.imageUrl,
+      })
+      return
+    }
+    await ctx.db.insert('users', {
+      clerkUserId: args.clerkUserId,
+      name: args.name,
+      email,
+      imageUrl: args.imageUrl,
+    })
+  },
+})
+
+export const deleteFromClerk = internalMutation({
+  args: { clerkUserId: v.string() },
+  handler: async (ctx, args) => {
+    await ctx.scheduler.runAfter(0, internal.accountCleanup.run, {
+      clerkUserId: args.clerkUserId,
+      phase: 'bands',
     })
   },
 })

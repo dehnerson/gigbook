@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { m } from '@/paraglide/messages'
-import { scrollToEntry } from './sheet/song-sheet'
 
 export function useForceDark() {
   useEffect(() => {
@@ -65,7 +64,7 @@ function isTyping(target: EventTarget | null) {
 export function useSectionKeys(
   entryIds: Array<string>,
   active: string | null,
-  onMove?: (entryId: string, index: number) => void,
+  onMove: (entryId: string) => void,
 ) {
   const state = useRef({ entryIds, active, onMove })
   state.current = { entryIds, active, onMove }
@@ -93,8 +92,7 @@ export function useSectionKeys(
       )
       const target = ids[next]
       if (!target) return
-      scrollToEntry(target)
-      move?.(target, next)
+      move(target)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)

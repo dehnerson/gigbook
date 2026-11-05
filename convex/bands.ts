@@ -2,6 +2,7 @@ import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
 import { membership, requireIdentity } from './lib/access'
 import { fail } from './lib/errors'
+import { withNames } from './lib/users'
 
 export const list = query({
   args: {},
@@ -45,10 +46,13 @@ export const get = query({
     if (!band) fail('NOT_FOUND')
     const mine = await membership(ctx.db, band._id, identity.subject)
     if (!mine) fail('FORBIDDEN')
-    const members = await ctx.db
-      .query('memberships')
-      .withIndex('by_band', (q) => q.eq('bandId', band._id))
-      .collect()
+    const members = await withNames(
+      ctx,
+      await ctx.db
+        .query('memberships')
+        .withIndex('by_band', (q) => q.eq('bandId', band._id))
+        .collect(),
+    )
     const songs = await ctx.db
       .query('songs')
       .withIndex('by_band', (q) => q.eq('bandId', band._id))
@@ -89,7 +93,6 @@ export const create = mutation({
       bandId,
       userId: identity.subject,
       role: 'owner',
-      name: identity.name ?? 'Owner',
     })
     return bandId
   },
@@ -121,7 +124,6 @@ export const addMember = mutation({
       bandId: args.bandId,
       userId: user.clerkUserId,
       role: args.role,
-      name: user.name,
     })
   },
 })
