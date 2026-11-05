@@ -1,3 +1,4 @@
+import { alphaTab } from '@coderline/alphatab-vite'
 import { paraglideVitePlugin } from '@inlang/paraglide-js'
 import { defineConfig, lazyPlugins } from 'vite-plus'
 import { devtools } from '@tanstack/devtools-vite'
@@ -161,6 +162,7 @@ const config = defineConfig({
     tailwindcss(),
     tanstackStart(),
     viteReact(),
+    alphaTab(),
     nitro(),
   ]),
 })

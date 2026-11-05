@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
+import { Route as LabTabsRouteImport } from './routes/lab/tabs'
 import { Route as SignInIndexRouteImport } from './routes/sign-in/index'
 import { Route as SignInSplatRouteImport } from './routes/sign-in/$'
 import { Route as AuthedBandsIndexRouteImport } from './routes/_authed/bands/index'
@@ -41,6 +42,11 @@ const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
   getParentRoute: () => AuthedRoute,
+} as any)
+const LabTabsRoute = LabTabsRouteImport.update({
+  id: '/lab/tabs',
+  path: '/lab/tabs',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const SignInIndexRoute = SignInIndexRouteImport.update({
   id: '/sign-in/',
@@ -124,6 +130,7 @@ const AuthedVersionsVersionIdPlayRoute =
 export interface FileRoutesByFullPath {
   '/': typeof AuthedIndexRoute
   '/settings': typeof AuthedSettingsRoute
+  '/lab/tabs': typeof LabTabsRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-in/': typeof SignInIndexRoute
   '/bands/$bandId': typeof AuthedBandsBandIdRoute
@@ -142,6 +149,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/settings': typeof AuthedSettingsRoute
+  '/lab/tabs': typeof LabTabsRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/': typeof AuthedIndexRoute
   '/sign-in': typeof SignInIndexRoute
@@ -163,6 +171,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authed': typeof AuthedRouteWithChildren
   '/_authed/settings': typeof AuthedSettingsRoute
+  '/lab/tabs': typeof LabTabsRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/_authed/': typeof AuthedIndexRoute
   '/sign-in/': typeof SignInIndexRoute
@@ -185,6 +194,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/settings'
+    | '/lab/tabs'
     | '/sign-in/$'
     | '/sign-in/'
     | '/bands/$bandId'
@@ -203,6 +213,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/settings'
+    | '/lab/tabs'
     | '/sign-in/$'
     | '/'
     | '/sign-in'
@@ -223,6 +234,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_authed'
     | '/_authed/settings'
+    | '/lab/tabs'
     | '/sign-in/$'
     | '/_authed/'
     | '/sign-in/'
@@ -243,6 +255,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AuthedRoute: typeof AuthedRouteWithChildren
+  LabTabsRoute: typeof LabTabsRoute
   SignInSplatRoute: typeof SignInSplatRoute
   SignInIndexRoute: typeof SignInIndexRoute
 }
@@ -269,6 +282,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings'
       preLoaderRoute: typeof AuthedSettingsRouteImport
       parentRoute: typeof AuthedRoute
+    }
+    '/lab/tabs': {
+      id: '/lab/tabs'
+      path: '/lab/tabs'
+      fullPath: '/lab/tabs'
+      preLoaderRoute: typeof LabTabsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/sign-in/': {
       id: '/sign-in/'
@@ -419,6 +439,7 @@ const AuthedRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   AuthedRoute: AuthedRouteWithChildren,
+  LabTabsRoute: LabTabsRoute,
   SignInSplatRoute: SignInSplatRoute,
   SignInIndexRoute: SignInIndexRoute,
 }

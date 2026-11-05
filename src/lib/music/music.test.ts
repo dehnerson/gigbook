@@ -12,6 +12,80 @@ import {
 import { lookupChordDiagram } from './diagrams.ts'
 import { parseStrum } from './strum.ts'
 import { parseAsciiTab, previewTabShift, serializeAsciiTab } from './tab.ts'
+import {
+  measureFill,
+  noteName,
+  shiftBeatMeasures,
+  toAlphaTex,
+} from './tab-beats.ts'
+
+describe('tab beats', () => {
+  const tuning = ['E2', 'A2', 'D3', 'G3', 'B3', 'E4']
+
+  test('checks that a bar adds up to the time signature', () => {
+    const full = {
+      beats: [
+        { d: 4 as const, dot: true as const, notes: [] },
+        { d: 8 as const, notes: [] },
+        { d: 2 as const, notes: [] },
+      ],
+    }
+    expect(measureFill(full, '4/4')).toBe('full')
+    expect(measureFill(full, '3/4')).toBe('long')
+    expect(measureFill({ beats: [{ d: 2, notes: [] }] }, '4/4')).toBe('short')
+  })
+
+  test('names notes from tuning and fret', () => {
+    expect(noteName(tuning, { s: 6, f: 0 }, 'en')).toBe('E')
+    expect(noteName(tuning, { s: 2, f: 1 }, 'en')).toBe('C')
+    expect(noteName(tuning, { s: 5, f: 2 }, 'de')).toBe('H')
+  })
+
+  test('flags notes that leave the fretboard when shifted', () => {
+    const [measure] = shiftBeatMeasures(
+      [
+        {
+          beats: [
+            {
+              d: 4,
+              notes: [
+                { s: 1, f: 1 },
+                { s: 2, f: 5 },
+              ],
+            },
+          ],
+        },
+      ],
+      -2,
+    )
+    expect(measure?.beats[0]?.notes).toEqual([
+      { s: 1, f: 1, unplayable: true },
+      { s: 2, f: 3, unplayable: false },
+    ])
+  })
+
+  test('writes alphaTex with durations, effects, chords and repeats', () => {
+    const tex = toAlphaTex(
+      [
+        {
+          repeat: { start: true, times: 2 },
+          beats: [
+            { d: 8, chord: 'Am', notes: [{ s: 3, f: 5, t: 'h' }] },
+            { d: 8, notes: [{ s: 3, f: 7 }] },
+            { d: 4, dot: true, notes: [{ s: 2, f: 7, t: 'b', bend: 2 }] },
+            { d: 8, rest: true, notes: [] },
+          ],
+        },
+      ],
+      { tuning, timeSignature: '3/4' },
+    )
+    expect(tex).toContain('\\tuning (E4 B3 G3 D3 A2 E2)')
+    expect(tex).toContain('\\ts (3 4)')
+    expect(tex).toContain(
+      '\\ro \\rc 2 (5.3{h}).8{ch "Am"} (7.3).8 (7.2{b (0 4)}).4{d} r.8',
+    )
+  })
+})
 
 describe('chords', () => {
   test('transposes a minor chord and keeps the quality', () => {

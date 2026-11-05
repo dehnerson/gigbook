@@ -20,3 +20,7 @@ project.inlang/cache
 project.inlang/.lix
 project.inlang/.meta.json
 project.inlang/README.md
+
+# Copied from @coderline/alphatab by its Vite plugin
+public/font
+public/soundfont
