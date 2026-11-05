@@ -1,0 +1,45 @@
+{
+  "files.exclude": {
+    "dist": true,
+    ".tanstack": true,
+    "src/paraglide": true,
+    "project.inlang/cache": true,
+    "project.inlang/.lix": true
+  },
+  "files.watcherExclude": {
+    "**/routeTree.gen.ts": true,
+    "dist": true,
+    ".tanstack": true,
+    "src/paraglide": true,
+    "project.inlang/cache": true
+  },
+  "search.exclude": {
+    "**/routeTree.gen.ts": true,
+    "dist": true,
+    "src/paraglide": true,
+    "project.inlang/cache": true
+  },
+  "files.readonlyInclude": {
+    "**/routeTree.gen.ts": true
+  },
+  "editor.defaultFormatter": "oxc.oxc-vscode",
+  "[javascript]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode"
+  },
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode"
+  },
+  "oxc.disableNestedConfig": true,
+  "oxc.fmt.disableNestedConfig": true,
+  "editor.formatOnSave": true,
+  "editor.formatOnSaveMode": "file",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.oxc": "explicit"
+  }
+}

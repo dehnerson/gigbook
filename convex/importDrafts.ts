@@ -1,0 +1,259 @@
+import { v } from 'convex/values'
+import {
+  action,
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+} from './_generated/server'
+import { internal } from './_generated/api'
+import { importOutput } from './schema'
+import { requireIdentity } from './lib/access'
+import { fail } from './lib/errors'
+import { readAiKey } from './users'
+
+const HOUR = 60 * 60 * 1000
+const LIMIT = 15
+
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireIdentity(ctx)
+    return ctx.storage.generateUploadUrl()
+  },
+})
+
+export const create = mutation({
+  args: {
+    sourceKind: v.union(
+      v.literal('paste'),
+      v.literal('photo'),
+      v.literal('pdf'),
+      v.literal('url'),
+      v.literal('youtube'),
+    ),
+    sourceText: v.optional(v.string()),
+    storageId: v.optional(v.id('_storage')),
+    targetVersionId: v.optional(v.id('versions')),
+    youtubeId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await requireIdentity(ctx)
+    await readAiKey(ctx, identity.subject)
+    const recent = await ctx.db
+      .query('importDrafts')
+      .withIndex('by_owner', (q) => q.eq('ownerId', identity.subject))
+      .collect()
+    const count = recent.filter(
+      (draft) => draft.createdAt > Date.now() - HOUR,
+    ).length
+    if (count >= LIMIT) fail('RATE_LIMIT')
+    const text = args.sourceText?.slice(0, 40_000)
+    const draftId = await ctx.db.insert('importDrafts', {
+      ownerId: identity.subject,
+      status: 'queued',
+      sourceKind: args.sourceKind,
+      sourceText: text,
+      storageId: args.storageId,
+      targetVersionId: args.targetVersionId,
+      youtubeId: args.youtubeId,
+      mapping: [],
+      warnings: [],
+      createdAt: Date.now(),
+    })
+    await ctx.scheduler.runAfter(0, internal.importAction.run, { draftId })
+    return draftId
+  },
+})
+
+export const get = query({
+  args: { draftId: v.id('importDrafts') },
+  handler: async (ctx, args) => {
+    const identity = await requireIdentity(ctx)
+    const draft = await ctx.db.get(args.draftId)
+    if (!draft || draft.ownerId !== identity.subject) fail('NOT_FOUND')
+    return draft
+  },
+})
+
+export const updateOutput = mutation({
+  args: {
+    draftId: v.id('importDrafts'),
+    output: importOutput,
+    mapping: v.array(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, args) => {
+    const identity = await requireIdentity(ctx)
+    const draft = await ctx.db.get(args.draftId)
+    if (!draft || draft.ownerId !== identity.subject) fail('FORBIDDEN')
+    await ctx.db.patch(draft._id, {
+      output: args.output,
+      mapping: args.mapping,
+    })
+  },
+})
+
+export const discard = mutation({
+  args: { draftId: v.id('importDrafts') },
+  handler: async (ctx, args) => {
+    const identity = await requireIdentity(ctx)
+    const draft = await ctx.db.get(args.draftId)
+    if (!draft || draft.ownerId !== identity.subject) fail('FORBIDDEN')
+    if (draft.storageId) await ctx.storage.delete(draft.storageId)
+    await ctx.db.delete(draft._id)
+  },
+})
+
+export const save = mutation({
+  args: { draftId: v.id('importDrafts') },
+  handler: async (ctx, args) => {
+    const identity = await requireIdentity(ctx)
+    const draft = await ctx.db.get(args.draftId)
+    if (!draft || draft.ownerId !== identity.subject || !draft.output)
+      fail('FORBIDDEN')
+    const output = draft.output
+    if (draft.targetVersionId) {
+      const version = await ctx.db.get(draft.targetVersionId)
+      if (!version) fail('NOT_FOUND')
+      const timeline = [...version.timeline]
+      for (const [index, section] of output.sections.entries()) {
+        const mapped = draft.mapping[index]
+        let sectionId = mapped ? ctx.db.normalizeId('sections', mapped) : null
+        if (!sectionId) {
+          sectionId = await ctx.db.insert('sections', {
+            versionId: version._id,
+            name: section.name,
+            notes: section.notes,
+          })
+          timeline.push({ entryId: crypto.randomUUID(), sectionId })
+        }
+        const existing = await ctx.db
+          .query('parts')
+          .withIndex('by_section', (q) => q.eq('sectionId', sectionId))
+          .collect()
+        let order = existing.length
+        for (const part of section.parts) {
+          await ctx.db.insert('parts', {
+            sectionId,
+            versionId: version._id,
+            kind: part.kind,
+            label: part.label,
+            chartBody: part.chartBody,
+            strumming: part.strumming,
+            measures: part.measures,
+            order,
+          })
+          order += 1
+        }
+      }
+      await ctx.db.patch(version._id, { timeline })
+      if (draft.storageId) await ctx.storage.delete(draft.storageId)
+      await ctx.db.delete(draft._id)
+      return { songId: version.songId, versionId: version._id }
+    }
+
+    const songId = await ctx.db.insert('songs', {
+      title: output.title,
+      artist: output.artist,
+      createdBy: identity.subject,
+    })
+    const versionId = await ctx.db.insert('versions', {
+      songId,
+      name: 'Imported',
+      concertKey: output.concertKey,
+      timeSignature: output.timeSignature,
+      bpm: output.bpm,
+      tuning: output.tuning,
+      suggestedCapo: output.suggestedCapo,
+      timeline: [],
+      createdBy: identity.subject,
+    })
+    const timeline = []
+    for (const section of output.sections) {
+      const sectionId = await ctx.db.insert('sections', {
+        versionId,
+        name: section.name,
+        notes: section.notes,
+      })
+      timeline.push({ entryId: crypto.randomUUID(), sectionId })
+      for (const [order, part] of section.parts.entries()) {
+        await ctx.db.insert('parts', {
+          sectionId,
+          versionId,
+          kind: part.kind,
+          label: part.label,
+          chartBody: part.chartBody,
+          strumming: part.strumming,
+          measures: part.measures,
+          order,
+        })
+      }
+    }
+    await ctx.db.patch(versionId, { timeline })
+    if (draft.storageId) await ctx.storage.delete(draft.storageId)
+    await ctx.db.delete(draft._id)
+    return { songId, versionId }
+  },
+})
+
+export const mark = internalMutation({
+  args: {
+    draftId: v.id('importDrafts'),
+    status: v.union(
+      v.literal('queued'),
+      v.literal('reading'),
+      v.literal('structuring'),
+      v.literal('ready'),
+      v.literal('failed'),
+    ),
+    output: v.optional(importOutput),
+    warnings: v.optional(v.array(v.string())),
+    error: v.optional(v.string()),
+    sourceText: v.optional(v.string()),
+    mapping: v.optional(v.array(v.union(v.string(), v.null()))),
+  },
+  handler: async (ctx, args) => {
+    const draft = await ctx.db.get(args.draftId)
+    if (!draft) return
+    await ctx.db.patch(draft._id, {
+      status: args.status,
+      output: args.output ?? draft.output,
+      warnings: args.warnings ?? draft.warnings,
+      error: args.error,
+      sourceText: args.sourceText ?? draft.sourceText,
+      mapping: args.mapping ?? draft.mapping,
+    })
+  },
+})
+
+export const load = internalQuery({
+  args: { draftId: v.id('importDrafts') },
+  handler: async (ctx, args) => ctx.db.get(args.draftId),
+})
+
+export const testKey = action({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await requireIdentity(ctx)
+    const apiKey = await ctx.runQuery(internal.users.internalReadAiKey, {
+      clerkUserId: identity.subject,
+    })
+    const response = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
+        },
+        body: JSON.stringify({
+          contents: [
+            { role: 'user', parts: [{ text: 'Reply with the word ready.' }] },
+          ],
+        }),
+      },
+    )
+    if (!response.ok) fail('INVALID')
+    return { ok: true }
+  },
+})

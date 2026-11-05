@@ -1,0 +1,22 @@
+node_modules
+.DS_Store
+dist
+dist-ssr
+*.local
+.env
+.nitro
+.tanstack
+.vite-hooks
+.wrangler
+.netlify
+.output
+.vinxi
+__unconfig*
+todos.json
+
+# Generated. Edit messages/ and project.inlang/settings.json instead.
+src/paraglide
+project.inlang/cache
+project.inlang/.lix
+project.inlang/.meta.json
+project.inlang/README.md
