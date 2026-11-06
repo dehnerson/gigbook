@@ -22,9 +22,11 @@ import {
 import {
   DisplayModeToggle,
   KeyControls,
+  LayoutToggle,
   PartsFilter,
   TextSizeControl,
 } from '@/components/sheet/sheet-controls'
+import { sheetPasses } from '@/components/sheet/passes'
 import {
   SectionNav,
   SongSheet,
@@ -79,8 +81,10 @@ function PlayPage() {
   const [parts, setParts] = useState<Array<string>>([])
   const prefs = useSheetPrefs('play', 1.3)
   const scroll = useAutoscrollState()
-  const entryIds = timeline.map((entry) => entry.entryId)
-  const { active, move } = useSectionCursor(entryIds)
+  const passes = sheetPasses(timeline)
+  const entryIds = passes.map((item) => item.id)
+  const hasRepeats = passes.length > timeline.length
+  const { active, move } = useSectionCursor(entryIds, prefs.layout)
   useForceDark()
   useWakeLock(true)
   useSectionKeys(entryIds, active, move)
@@ -180,11 +184,7 @@ function PlayPage() {
           ) : null}
         </div>
         <div className="mx-auto max-w-5xl px-3 pb-2">
-          <SectionNav
-            timeline={timeline}
-            activeEntryId={active}
-            onJump={move}
-          />
+          <SectionNav passes={passes} activeEntryId={active} onJump={move} />
         </div>
       </header>
 
@@ -197,6 +197,7 @@ function PlayPage() {
           settings={settings}
           visiblePartIds={parts}
           highlightEntryId={active}
+          layout={prefs.layout}
         />
         {search.setlist && upNext ? (
           <button
@@ -257,6 +258,9 @@ function PlayPage() {
         />
         <DockDivider />
         <DisplayModeToggle mode={prefs.mode} onMode={prefs.setMode} iconOnly />
+        {hasRepeats ? (
+          <LayoutToggle layout={prefs.layout} onLayout={prefs.setLayout} />
+        ) : null}
         <TextSizeControl scale={prefs.scale} onScale={prefs.setScale} />
         <PartsFilter
           timeline={timeline}

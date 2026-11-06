@@ -17,6 +17,8 @@ import { transposeSymbol } from '../src/lib/music/chords'
 import { transposeChordPro } from '../src/lib/music/chordpro'
 import { previewTabShift } from '../src/lib/music/tab'
 
+const MAX_REPEAT = 16
+
 function token() {
   return crypto.randomUUID().replaceAll('-', '').slice(0, 12)
 }
@@ -352,6 +354,29 @@ export const detachEntry = mutation({
     await ctx.db.patch(version._id, {
       timeline: version.timeline.map((item) =>
         item.entryId === args.entryId ? { ...item, sectionId: copyId } : item,
+      ),
+    })
+  },
+})
+
+export const setRepeat = mutation({
+  args: {
+    versionId: v.id('versions'),
+    entryId: v.string(),
+    repeat: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const { version, song } = await loadVersion(ctx, args.versionId)
+    await canEditSong(ctx, song)
+    const repeat = Math.round(args.repeat)
+    if (repeat < 1 || repeat > MAX_REPEAT) fail('INVALID')
+    if (!version.timeline.some((entry) => entry.entryId === args.entryId))
+      fail('NOT_FOUND')
+    await ctx.db.patch(version._id, {
+      timeline: version.timeline.map((entry) =>
+        entry.entryId === args.entryId
+          ? { ...entry, repeat: repeat > 1 ? repeat : undefined }
+          : entry,
       ),
     })
   },

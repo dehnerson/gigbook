@@ -13,11 +13,14 @@ import {
 } from '@/lib/music/diagrams'
 import { m } from '@/paraglide/messages'
 import { ChartPart } from './chart-part'
+import { blockOf, passOf, sheetPasses } from './passes'
+import type { SheetPass } from './passes'
 import { StrumPattern } from './strum-pattern'
 import { TabStaff } from './tab-staff'
 import type {
   ChordShapeOverride,
   SheetEntry,
+  SheetLayout,
   SheetPart,
   SheetSettings,
   SheetSong,
@@ -190,13 +193,17 @@ export function ChordStrip({
 }
 
 function SectionBlock({
+  elementId,
   entry,
+  badge,
   version,
   settings,
   visiblePartIds,
   highlighted,
 }: {
+  elementId: string
   entry: SheetEntry
+  badge?: string
   version: SheetVersion
   settings: SheetSettings
   visiblePartIds?: Array<string>
@@ -210,8 +217,8 @@ function SectionBlock({
   const showLabels = entry.parts.length > 1
   return (
     <section
-      id={entryElementId(entry.entryId)}
-      data-entry={entry.entryId}
+      id={entryElementId(elementId)}
+      data-entry={elementId}
       className={cn(
         '-mx-3 scroll-mt-52 rounded-2xl px-3 py-3 transition-colors duration-300 sm:-mx-5 sm:px-5',
         highlighted && 'bg-primary/[0.06] ring-1 ring-primary/30',
@@ -228,6 +235,11 @@ function SectionBlock({
         >
           {entry.section.name}
         </h2>
+        {badge ? (
+          <span className="font-mono text-[0.75em] font-semibold text-primary tabular-nums">
+            {badge}
+          </span>
+        ) : null}
         <div className="h-px flex-1 bg-border" />
       </div>
       {entry.section.notes ? (
@@ -284,6 +296,7 @@ export function SongSheet({
   settings,
   visiblePartIds,
   highlightEntryId,
+  layout = 'expanded',
   showHeader = true,
   className,
 }: {
@@ -294,10 +307,37 @@ export function SongSheet({
   settings: SheetSettings
   visiblePartIds?: Array<string>
   highlightEntryId?: string | null
+  layout?: SheetLayout
   showHeader?: boolean
   className?: string
 }) {
   const symbols = versionChords(timeline, visiblePartIds)
+  const highlightBlock = highlightEntryId
+    ? blockOf(layout)(highlightEntryId)
+    : null
+  const blocks =
+    layout === 'compact'
+      ? timeline.map((entry) => {
+          const total = Math.max(1, entry.repeat ?? 1)
+          const highlighted = highlightBlock === entry.entryId
+          return {
+            id: entry.entryId,
+            entry,
+            highlighted,
+            badge:
+              total === 1
+                ? undefined
+                : highlighted && highlightEntryId
+                  ? `${passOf(highlightEntryId)}/${total}`
+                  : `×${total}`,
+          }
+        })
+      : sheetPasses(timeline).map((item) => ({
+          id: item.id,
+          entry: item.entry,
+          highlighted: highlightBlock === item.id,
+          badge: item.total > 1 ? `${item.pass}/${item.total}` : undefined,
+        }))
   return (
     <article
       className={cn('space-y-8', className)}
@@ -315,14 +355,16 @@ export function SongSheet({
         </p>
       ) : (
         <div className="space-y-4">
-          {timeline.map((entry) => (
+          {blocks.map((block) => (
             <SectionBlock
-              key={entry.entryId}
-              entry={entry}
+              key={block.id}
+              elementId={block.id}
+              entry={block.entry}
+              badge={block.badge}
               version={version}
               settings={settings}
               visiblePartIds={visiblePartIds}
-              highlighted={highlightEntryId === entry.entryId}
+              highlighted={block.highlighted}
             />
           ))}
         </div>
@@ -337,7 +379,10 @@ function scrollToEntry(entryId: string) {
     ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-export function useSectionCursor(entryIds: Array<string>) {
+export function useSectionCursor(
+  entryIds: Array<string>,
+  layout: SheetLayout = 'expanded',
+) {
   const [chosen, setChosen] = useState<string | null>(null)
   const jumping = useRef(false)
   const settle = useRef(0)
@@ -356,18 +401,24 @@ export function useSectionCursor(entryIds: Array<string>) {
     setChosen(entryId)
     jumping.current = true
     release(1000)
-    scrollToEntry(entryId)
+    scrollToEntry(blockOf(layout)(entryId))
   }
 
   useEffect(() => {
     const ids = key ? key.split(',') : []
+    const toBlock = blockOf(layout)
     const compute = () => {
       let current: string | null = null
       for (const id of ids) {
-        const element = document.getElementById(entryElementId(id))
-        if (element && element.getBoundingClientRect().top <= 230) current = id
+        const element = document.getElementById(entryElementId(toBlock(id)))
+        if (element && element.getBoundingClientRect().top <= 230)
+          current = toBlock(id)
       }
-      setChosen(current ?? ids.at(0) ?? null)
+      setChosen((previous) =>
+        previous && ids.includes(previous) && toBlock(previous) === current
+          ? previous
+          : (ids.find((id) => toBlock(id) === current) ?? ids.at(0) ?? null),
+      )
     }
     let frame = 0
     const onScroll = () => {
@@ -390,7 +441,7 @@ export function useSectionCursor(entryIds: Array<string>) {
       window.removeEventListener('wheel', onUser)
       window.removeEventListener('touchstart', onUser)
     }
-  }, [key])
+  }, [key, layout])
 
   useEffect(() => () => window.clearTimeout(settle.current), [])
 
@@ -398,12 +449,12 @@ export function useSectionCursor(entryIds: Array<string>) {
 }
 
 export function SectionNav({
-  timeline,
+  passes,
   activeEntryId,
   onJump,
   className,
 }: {
-  timeline: Array<SheetEntry>
+  passes: Array<SheetPass>
   activeEntryId: string | null
   onJump: (entryId: string, index: number) => void
   className?: string
@@ -416,21 +467,21 @@ export function SectionNav({
       inline: 'center',
     })
   }, [activeEntryId])
-  if (timeline.length === 0) return null
+  if (passes.length === 0) return null
   return (
     <nav
       aria-label={m.sections()}
       className={cn('scrollbar-none overflow-x-auto', className)}
     >
       <div className="flex w-max gap-1.5">
-        {timeline.map((entry, index) => {
-          const active = entry.entryId === activeEntryId
+        {passes.map((item, index) => {
+          const active = item.id === activeEntryId
           return (
             <button
-              key={entry.entryId}
-              id={`nav-${entry.entryId}`}
+              key={item.id}
+              id={`nav-${item.id}`}
               type="button"
-              onClick={() => onJump(entry.entryId, index)}
+              onClick={() => onJump(item.id, index)}
               aria-current={active ? 'true' : undefined}
               className={cn(
                 'h-8 rounded-full border px-3 text-xs font-semibold whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring',
@@ -439,7 +490,12 @@ export function SectionNav({
                   : 'border-border bg-card/60 text-muted-foreground hover:text-foreground',
               )}
             >
-              {entry.section.name}
+              {item.entry.section.name}
+              {item.total > 1 ? (
+                <span className="ml-1 font-mono opacity-70">
+                  {item.pass}/{item.total}
+                </span>
+              ) : null}
             </button>
           )
         })}

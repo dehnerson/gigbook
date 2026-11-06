@@ -102,6 +102,11 @@ export function Outline({
                   >
                     {entry.section.name}
                   </span>
+                  {entry.repeat && entry.repeat > 1 ? (
+                    <span className="shrink-0 font-mono text-xs font-semibold text-primary">
+                      ×{entry.repeat}
+                    </span>
+                  ) : null}
                   {repeated ? (
                     <RepeatIcon
                       className="size-3.5 shrink-0 text-primary"

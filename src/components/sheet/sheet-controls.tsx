@@ -4,9 +4,11 @@ import {
   FileMusicIcon,
   GuitarIcon,
   LayersIcon,
+  ListIcon,
   MicVocalIcon,
   MinusIcon,
   PlusIcon,
+  Repeat2Icon,
 } from 'lucide-react'
 import { Dialog } from 'react-aria-components'
 import { signed, Stepper } from '@/components/app/stepper'
@@ -17,7 +19,7 @@ import { Switch } from '@/components/ui/switch'
 import { soundsAs } from '@/lib/music/chords'
 import type { Notation } from '@/lib/music/pitch'
 import { m } from '@/paraglide/messages'
-import type { DisplayMode, SheetEntry } from './types'
+import type { DisplayMode, SheetEntry, SheetLayout } from './types'
 import { stepScale } from './use-sheet-prefs'
 
 export function partOptions(timeline: Array<SheetEntry>) {
@@ -60,6 +62,34 @@ export function DisplayModeToggle({
         { id: 'both', label: label(m.modeBoth()), icon: FileMusicIcon },
         { id: 'lyrics', label: label(m.modeLyrics()), icon: MicVocalIcon },
         { id: 'chords', label: label(m.modeChords()), icon: GuitarIcon },
+      ]}
+    />
+  )
+}
+
+export function LayoutToggle({
+  layout,
+  onLayout,
+}: {
+  layout: SheetLayout
+  onLayout: (layout: SheetLayout) => void
+}) {
+  return (
+    <Segmented
+      aria-label={m.repeatLayout()}
+      value={layout}
+      onChange={onLayout}
+      options={[
+        {
+          id: 'expanded',
+          label: <span className="sr-only">{m.layoutExpanded()}</span>,
+          icon: ListIcon,
+        },
+        {
+          id: 'compact',
+          label: <span className="sr-only">{m.layoutCompact()}</span>,
+          icon: Repeat2Icon,
+        },
       ]}
     />
   )

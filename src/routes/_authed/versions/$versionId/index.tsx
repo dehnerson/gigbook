@@ -17,9 +17,11 @@ import {
   ControlBar,
   DisplayModeToggle,
   KeyControls,
+  LayoutToggle,
   PartsFilter,
   TextSizeControl,
 } from '@/components/sheet/sheet-controls'
+import { sheetPasses } from '@/components/sheet/passes'
 import {
   SectionNav,
   SheetHeader,
@@ -67,8 +69,10 @@ function ReadPage() {
   const [transpose, setTranspose] = useState(0)
   const [parts, setParts] = useState<Array<string>>([])
   const prefs = useSheetPrefs('read')
+  const passes = sheetPasses(timeline)
   const { active, move } = useSectionCursor(
-    timeline.map((entry) => entry.entryId),
+    passes.map((item) => item.id),
+    prefs.layout,
   )
 
   const settings: SheetSettings = {
@@ -186,6 +190,9 @@ function ReadPage() {
           ) : null}
           <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
             <DisplayModeToggle mode={prefs.mode} onMode={prefs.setMode} />
+            {passes.length > timeline.length ? (
+              <LayoutToggle layout={prefs.layout} onLayout={prefs.setLayout} />
+            ) : null}
             <TextSizeControl scale={prefs.scale} onScale={prefs.setScale} />
             <PartsFilter
               timeline={timeline}
@@ -194,7 +201,7 @@ function ReadPage() {
             />
           </div>
         </ControlBar>
-        <SectionNav timeline={timeline} activeEntryId={active} onJump={move} />
+        <SectionNav passes={passes} activeEntryId={active} onJump={move} />
       </div>
 
       <SongSheet
@@ -204,6 +211,7 @@ function ReadPage() {
         shapes={shapes}
         settings={settings}
         visiblePartIds={parts}
+        layout={prefs.layout}
         showHeader={false}
         className="pb-[60vh]"
       />

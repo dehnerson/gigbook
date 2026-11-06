@@ -212,6 +212,8 @@ Chord symbols remain the shared source of truth, so sharing and jam stay consist
 
 **Idea:** the timeline is already the road map that D.S. and Coda markings encode on paper, so we don't need those symbols. What's missing is a repeat count.
 
+**Status: done.** The ×N stepper sits in the section panel header next to "Reuse later", and the outline shows the count. Both layouts share one pass list (`src/lib/passes.ts`, ids like `entryId~2`), so the cursor, keys and the jam's `timelineIndex` count passes the same way whichever layout each player picks. The layout toggle only appears when a version has repeats.
+
 - Add `timeline[].repeat?: number`, shown as "Chorus ×2".
 - Editor: put a ×N stepper on each outline entry. Rename the current Repeat button to "Reuse section later", which is still useful for a chorus coming back after the bridge.
 - Play mode:

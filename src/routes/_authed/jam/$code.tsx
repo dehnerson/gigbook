@@ -28,9 +28,11 @@ import {
 import {
   DisplayModeToggle,
   KeyControls,
+  LayoutToggle,
   PartsFilter,
   TextSizeControl,
 } from '@/components/sheet/sheet-controls'
+import { sheetPasses } from '@/components/sheet/passes'
 import {
   SectionNav,
   SongSheet,
@@ -141,9 +143,10 @@ function JamRoomPage() {
   })
 
   const timeline = (bundle.data?.timeline ?? []) as Array<SheetEntry>
-  const entryIds = timeline.map((entry) => entry.entryId)
+  const passes = sheetPasses(timeline)
+  const entryIds = passes.map((item) => item.id)
   const entryKey = entryIds.join(',')
-  const { active, move } = useSectionCursor(entryIds)
+  const { active, move } = useSectionCursor(entryIds, prefs.layout)
   const hostEntryId = entryIds.at(
     Math.min(room.timelineIndex, entryIds.length - 1),
   )
@@ -210,6 +213,7 @@ function JamRoomPage() {
       }}
       visiblePartIds={visible}
       highlightEntryId={following ? hostEntryId : active}
+      layout={prefs.layout}
     />
   ) : null
 
@@ -305,7 +309,7 @@ function JamRoomPage() {
         {timeline.length > 0 ? (
           <div className="mx-auto max-w-5xl px-3 pb-2">
             <SectionNav
-              timeline={timeline}
+              passes={passes}
               activeEntryId={(following ? hostEntryId : active) ?? null}
               onJump={move}
             />
@@ -502,6 +506,9 @@ function JamRoomPage() {
         ) : null}
         <DockDivider />
         <DisplayModeToggle mode={prefs.mode} onMode={prefs.setMode} iconOnly />
+        {passes.length > timeline.length ? (
+          <LayoutToggle layout={prefs.layout} onLayout={prefs.setLayout} />
+        ) : null}
         <TextSizeControl scale={prefs.scale} onScale={prefs.setScale} />
         {timeline.length > 0 ? (
           <PartsFilter

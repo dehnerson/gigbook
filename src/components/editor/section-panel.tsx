@@ -11,6 +11,7 @@ import {
 import { useState } from 'react'
 import { ConfirmDialog } from '@/components/app/confirm-dialog'
 import { useDebounced } from '@/components/app/save'
+import { Stepper } from '@/components/app/stepper'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -191,6 +192,22 @@ export function SectionPanel({
             className="w-full rounded-lg bg-transparent text-2xl font-semibold tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
           />
         </div>
+        <Stepper
+          label={m.repeatCount()}
+          value={entry.repeat ?? 1}
+          min={1}
+          max={16}
+          format={(value) => `×${value}`}
+          onChange={(repeat) =>
+            void save(() =>
+              mutations.setRepeat({
+                versionId: version._id,
+                entryId: entry.entryId,
+                repeat,
+              }),
+            )
+          }
+        />
         <Button
           variant="outline"
           onPress={() =>

@@ -12,6 +12,7 @@ export type SheetPart = {
 
 export type SheetEntry = {
   entryId: string
+  repeat?: number
   section: { _id: string; name: string; notes?: string }
   parts: Array<SheetPart>
 }
@@ -31,6 +32,8 @@ export type SheetSong = { title: string; artist: string }
 export type ChordShapeOverride = { symbol: string; frets: Array<number> }
 
 export type DisplayMode = 'both' | 'lyrics' | 'chords'
+
+export type SheetLayout = 'expanded' | 'compact'
 
 export type SheetSettings = {
   capo: number

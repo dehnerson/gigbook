@@ -8,6 +8,7 @@ export function useEditorMutations() {
     updateMeta: useMutation(api.versions.updateMeta),
     addSection: useMutation(api.versions.addSection),
     repeatSection: useMutation(api.versions.repeatSection),
+    setRepeat: useMutation(api.versions.setRepeat),
     detachEntry: useMutation(api.versions.detachEntry),
     reorderTimeline: useMutation(api.versions.reorderTimeline),
     updateSection: useMutation(api.versions.updateSection),

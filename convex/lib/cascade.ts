@@ -67,7 +67,9 @@ export async function cloneVersionTree(
   await ctx.db.patch(copyVersionId, {
     timeline: version.timeline.flatMap((entry) => {
       const sectionId = idMap.get(entry.sectionId)
-      return sectionId ? [{ entryId: crypto.randomUUID(), sectionId }] : []
+      return sectionId
+        ? [{ entryId: crypto.randomUUID(), sectionId, repeat: entry.repeat }]
+        : []
     }),
   })
   return copyVersionId

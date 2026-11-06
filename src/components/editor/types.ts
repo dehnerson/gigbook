@@ -13,6 +13,7 @@ export type EditorPart = {
 
 export type EditorEntry = {
   entryId: string
+  repeat?: number
   sectionId: Id<'sections'>
   section: { _id: Id<'sections'>; name: string; notes?: string }
   parts: Array<EditorPart>

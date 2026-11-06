@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { DisplayMode } from './types'
+import type { DisplayMode, SheetLayout } from './types'
 
 export const SCALES = [0.85, 1, 1.15, 1.3, 1.5, 1.75, 2] as const
 
@@ -9,8 +9,10 @@ export function useSheetPrefs(
 ) {
   const modeKey = `sheet:${scope}:mode`
   const scaleKey = `sheet:${scope}:scale`
+  const layoutKey = `sheet:${scope}:layout`
   const [mode, setModeState] = useState<DisplayMode>('both')
   const [scale, setScaleState] = useState(defaultScale)
+  const [layout, setLayoutState] = useState<SheetLayout>('expanded')
 
   useEffect(() => {
     const storedMode = localStorage.getItem(modeKey)
@@ -18,14 +20,20 @@ export function useSheetPrefs(
       setModeState(storedMode)
     const storedScale = Number(localStorage.getItem(scaleKey))
     if (storedScale > 0) setScaleState(storedScale)
-  }, [modeKey, scaleKey])
+    if (localStorage.getItem(layoutKey) === 'compact') setLayoutState('compact')
+  }, [modeKey, scaleKey, layoutKey])
 
   return {
     mode,
     scale,
+    layout,
     setMode: (next: DisplayMode) => {
       setModeState(next)
       localStorage.setItem(modeKey, next)
+    },
+    setLayout: (next: SheetLayout) => {
+      setLayoutState(next)
+      localStorage.setItem(layoutKey, next)
     },
     setScale: (next: number) => {
       setScaleState(next)

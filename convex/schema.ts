@@ -116,6 +116,7 @@ export default defineSchema({
       v.object({
         entryId: v.string(),
         sectionId: v.id('sections'),
+        repeat: v.optional(v.number()),
       }),
     ),
     parentVersionId: v.optional(v.id('versions')),
