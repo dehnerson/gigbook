@@ -358,6 +358,7 @@ export const detachEntry = mutation({
         strumming: part.strumming,
         measures: part.measures,
         rhythmGuessed: part.rhythmGuessed,
+        repeat: part.repeat,
         order: part.order,
       })
     }
@@ -505,13 +506,21 @@ export const updatePart = mutation({
     strumming: v.optional(v.string()),
     measures: v.optional(v.array(tabMeasure)),
     rhythmGuessed: v.optional(v.boolean()),
+    repeat: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const part = await ctx.db.get(args.partId)
     if (!part) fail('NOT_FOUND')
     const { version, song } = await loadVersion(ctx, part.versionId)
     await canEditSong(ctx, song)
+    const repeat =
+      args.repeat === undefined ? undefined : Math.round(args.repeat)
+    if (repeat !== undefined && (repeat < 1 || repeat > MAX_REPEAT))
+      fail('INVALID')
     await ctx.db.patch(part._id, {
+      ...(repeat !== undefined
+        ? { repeat: repeat > 1 ? repeat : undefined }
+        : {}),
       ...(args.label !== undefined ? { label: args.label } : {}),
       ...(args.trackId !== undefined
         ? { trackId: storedTrackId(version, part.kind, args.trackId) }

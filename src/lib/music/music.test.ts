@@ -6,6 +6,7 @@ import {
   isBarGridLine,
   isChordLine,
   normalizeCapoToConcert,
+  parseBarGrid,
   sectionLabelOf,
   transposeChordPro,
 } from './chordpro.ts'
@@ -174,6 +175,32 @@ describe('chordpro', () => {
     expect(isBarGridLine('| Em | G D |')).toBe(true)
     expect(normalizeCapoToConcert('| G |', 2).body).toBe('| A |')
     expect(normalizeCapoToConcert('| G |', 2).suggestedCapo).toBe(2)
+  })
+
+  test('reads repeat signs, counts and endings in bar grids', () => {
+    expect(parseBarGrid('|: Em | G D :| x4')).toEqual([
+      { chords: ['Em'], start: true },
+      { chords: ['G', 'D'], end: true, times: 4 },
+    ])
+    expect(parseBarGrid('|: A :|: B :|')).toEqual([
+      { chords: ['A'], start: true, end: true },
+      { chords: ['B'], start: true, end: true },
+    ])
+    expect(parseBarGrid('|:Am | 1. F :| 2. G || C | 3×')).toEqual([
+      { chords: ['Am'], start: true },
+      { chords: ['F'], end: true, ending: 1 },
+      { chords: ['G'], ending: 2 },
+      { chords: ['C'], times: 3 },
+    ])
+    expect(parseBarGrid('| Em | % |')).toEqual([
+      { chords: ['Em'] },
+      { chords: ['%'] },
+    ])
+  })
+
+  test('transposes and lists chords in grids with repeat signs', () => {
+    expect(transposeChordPro('|:Em | G D:| x4', 2)).toBe('|:F#m | A E:| x4')
+    expect(chartChords('|:Em | 1. G D:|')).toEqual(['Em', 'G', 'D'])
   })
 })
 

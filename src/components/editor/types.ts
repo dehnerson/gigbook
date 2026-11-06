@@ -11,6 +11,7 @@ export type EditorPart = {
   strumming?: string
   measures?: Array<TabMeasure>
   rhythmGuessed?: boolean
+  repeat?: number
   order: number
 }
 

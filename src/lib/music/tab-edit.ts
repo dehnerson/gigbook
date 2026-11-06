@@ -195,6 +195,57 @@ export function placeShape(
   }))
 }
 
+function mapBar(
+  measures: Array<TabMeasure>,
+  bar: number,
+  update: (measure: TabMeasure) => TabMeasure,
+) {
+  return measures.map((measure, index) =>
+    index === bar ? update(measure) : measure,
+  )
+}
+
+function withRepeat(
+  measure: TabMeasure,
+  repeat: TabMeasure['repeat'],
+): TabMeasure {
+  const { repeat: _repeat, ...rest } = measure
+  return repeat?.start || repeat?.times ? { ...rest, repeat } : rest
+}
+
+export function toggleRepeatStart(measures: Array<TabMeasure>, bar: number) {
+  return mapBar(measures, bar, (measure) => {
+    const { start, ...repeat } = measure.repeat ?? {}
+    return withRepeat(measure, start ? repeat : { ...repeat, start: true })
+  })
+}
+
+/** `times` is how often the passage is played in total; below 2 removes the end. */
+export function setRepeatEnd(
+  measures: Array<TabMeasure>,
+  bar: number,
+  times: number,
+) {
+  return mapBar(measures, bar, (measure) => {
+    const { times: _times, ...repeat } = measure.repeat ?? {}
+    return withRepeat(
+      measure,
+      times >= 2 ? { ...repeat, times: Math.round(times) } : repeat,
+    )
+  })
+}
+
+export function setEnding(
+  measures: Array<TabMeasure>,
+  bar: number,
+  ending: number,
+) {
+  return mapBar(measures, bar, (measure) => {
+    const { ending: _ending, ...rest } = measure
+    return ending > 0 ? { ...rest, ending } : rest
+  })
+}
+
 export function insertBeat(
   measures: Array<TabMeasure>,
   cursor: TabCursor,

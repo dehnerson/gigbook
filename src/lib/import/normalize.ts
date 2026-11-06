@@ -16,12 +16,17 @@ export function normalizeDraft(input: DraftOutput) {
     name: section.name,
     notes: section.notes,
     parts: section.parts.map((part) => {
+      const repeat =
+        part.repeat && part.repeat > 1
+          ? { repeat: Math.min(Math.round(part.repeat), 16) }
+          : {}
       if (part.kind === 'chart') {
         return {
           kind: 'chart' as const,
           label: part.label,
           chartBody: normalizeCapoToConcert(part.chartBody ?? '', capo).body,
           strumming: part.strumming,
+          ...repeat,
         }
       }
       const measures: Array<TabMeasure> = part.measures ?? []
@@ -46,6 +51,7 @@ export function normalizeDraft(input: DraftOutput) {
         label: part.label,
         measures: cleanTabMeasures(playable),
         ...(part.rhythmGuessed ? { rhythmGuessed: true } : {}),
+        ...repeat,
       }
     }),
   }))

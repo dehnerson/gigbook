@@ -267,6 +267,7 @@ export const save = mutation({
             strumming: part.strumming,
             measures: part.measures,
             rhythmGuessed: part.rhythmGuessed,
+            repeat: part.repeat,
             order,
           })
           order += 1
@@ -332,6 +333,7 @@ export const save = mutation({
           strumming: part.strumming,
           measures: part.measures,
           rhythmGuessed: part.rhythmGuessed,
+          repeat: part.repeat,
           order,
         })
       }

@@ -11,6 +11,7 @@ export type SheetPart = {
   chartBody?: string
   strumming?: string
   measures?: Array<TabMeasure>
+  repeat?: number
 }
 
 export type SheetEntry = {

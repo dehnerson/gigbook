@@ -48,7 +48,7 @@ function transposeGridLine(
   from: Notation,
   to: Notation,
 ) {
-  return line.replace(/[^\s|]+/g, (token) =>
+  return line.replace(/[^\s|:]+/g, (token) =>
     transposeSymbol(token, semitones, from, to),
   )
 }
@@ -80,6 +80,51 @@ export function transposeChordPro(
 export function isBarGridLine(line: string) {
   const trimmed = line.trim()
   return trimmed.startsWith('|') && !trimmed.includes('[')
+}
+
+export type GridBar = {
+  chords: Array<string>
+  start?: true
+  end?: true
+  times?: number
+  ending?: number
+}
+
+const GRID_TIMES = /^(?:[x×]\d+|\d+[x×])$/i
+const GRID_ENDING = /^(\d)\.$/
+
+/** `|: Em | G D :| x4` – colons mark repeats, `1.` opens an ending. */
+export function parseBarGrid(line: string): Array<GridBar> {
+  const bars: Array<GridBar> = []
+  let pendingStart = false
+  for (const segment of line.trim().split('|')) {
+    let text = segment.trim()
+    const start = text.startsWith(':')
+    if (start) text = text.slice(1).trim()
+    const end = text.endsWith(':')
+    if (end) text = text.slice(0, -1).trim()
+    const tokens = text.split(/\s+/).filter(Boolean)
+    const previous = bars.at(-1)
+    const only = tokens.length === 1 ? (tokens[0] ?? '') : ''
+    if (GRID_TIMES.test(only) && previous && !start) {
+      previous.times = Number(only.replace(/[x×]/gi, ''))
+      continue
+    }
+    if (tokens.length === 0) {
+      if (end && previous) previous.end = true
+      if (start) pendingStart = true
+      continue
+    }
+    const ending = GRID_ENDING.exec(tokens[0] ?? '')
+    bars.push({
+      chords: ending ? tokens.slice(1) : tokens,
+      ...(start || pendingStart ? { start: true as const } : {}),
+      ...(end ? { end: true as const } : {}),
+      ...(ending ? { ending: Number(ending[1]) } : {}),
+    })
+    pendingStart = false
+  }
+  return bars
 }
 
 export function normalizeCapoToConcert(
@@ -199,7 +244,7 @@ export function chartChords(body: string) {
   const symbols: Array<string> = []
   for (const line of body.split(/\r?\n/)) {
     if (isBarGridLine(line)) {
-      for (const token of line.split(/[|\s]+/)) {
+      for (const token of line.split(/[|:\s]+/)) {
         if (token && isChordToken(token)) symbols.push(token)
       }
       continue

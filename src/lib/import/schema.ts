@@ -46,10 +46,18 @@ export const draftSchema = z.object({
                       ),
                     }),
                   ),
+                  repeat: z
+                    .object({
+                      start: z.literal(true).optional(),
+                      times: z.number().optional(),
+                    })
+                    .optional(),
+                  ending: z.number().optional(),
                 }),
               )
               .optional(),
             rhythmGuessed: z.boolean().optional(),
+            repeat: z.number().optional(),
           }),
         ),
       }),

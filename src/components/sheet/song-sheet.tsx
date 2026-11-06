@@ -197,11 +197,24 @@ function SectionBlock({
         <div className="space-y-5">
           {parts.map((part) => {
             const label = partLabel(part, version.tracks)
+            const repeat = part.repeat && part.repeat > 1 ? part.repeat : null
             return (
               <div key={part._id} className="space-y-2.5">
-                {label ? (
-                  <div className="text-[0.72em] font-semibold tracking-widest text-muted-foreground uppercase">
-                    {label}
+                {label || repeat ? (
+                  <div className="flex items-baseline gap-2 text-[0.72em] font-semibold">
+                    {label ? (
+                      <span className="tracking-widest text-muted-foreground uppercase">
+                        {label}
+                      </span>
+                    ) : null}
+                    {repeat ? (
+                      <span
+                        className="font-mono text-primary tabular-nums"
+                        aria-label={m.playedTimes({ count: String(repeat) })}
+                      >
+                        ×{repeat}
+                      </span>
+                    ) : null}
                   </div>
                 ) : null}
                 {part.kind === 'chart' && part.strumming && layers.strumming ? (

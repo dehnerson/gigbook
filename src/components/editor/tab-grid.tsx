@@ -76,11 +76,22 @@ export function TabGrid({
         </div>
         {measures.map((measure, bar) => {
           const fill = measureFill(measure, timeSignature)
+          const start = measure.repeat?.start ?? false
+          const times = measure.repeat?.times
           return (
             <div
               key={bar}
-              className="flex flex-col border-r-2 border-foreground/25 first:border-l-2"
+              className={cn(
+                'relative flex flex-col border-foreground/25',
+                start ? 'border-l-4 border-l-primary/60' : 'first:border-l-2',
+                times ? 'border-r-4 border-r-primary/60' : 'border-r-2',
+              )}
             >
+              {measure.ending ? (
+                <span className="absolute inset-x-1 top-0.5 h-2.5 border-t border-l border-foreground/50 pl-1 text-[0.6rem] leading-none font-semibold text-muted-foreground">
+                  {m.endingNumber({ number: String(measure.ending) })}
+                </span>
+              ) : null}
               <div className="flex">
                 {measure.beats.map((beat, index) => {
                   const active = bar === cursor.bar && index === cursor.beat
@@ -142,17 +153,29 @@ export function TabGrid({
                   )
                 })}
               </div>
-              <div
-                className={cn(
-                  'mt-1 px-1.5 text-[0.65rem] whitespace-nowrap text-muted-foreground',
-                  fill !== 'full' && 'font-medium text-destructive',
-                )}
-              >
-                {fill === 'short'
-                  ? m.barShort()
-                  : fill === 'long'
-                    ? m.barLong()
-                    : m.barNumber({ number: String(bar + 1) })}
+              <div className="mt-1 flex items-baseline gap-1.5 px-1.5 text-[0.65rem] whitespace-nowrap text-muted-foreground">
+                {start ? (
+                  <span className="font-mono font-semibold text-primary">
+                    ‖:
+                  </span>
+                ) : null}
+                <span
+                  className={cn(
+                    'flex-1',
+                    fill !== 'full' && 'font-medium text-destructive',
+                  )}
+                >
+                  {fill === 'short'
+                    ? m.barShort()
+                    : fill === 'long'
+                      ? m.barLong()
+                      : m.barNumber({ number: String(bar + 1) })}
+                </span>
+                {times ? (
+                  <span className="font-mono font-semibold text-primary">
+                    :‖ ×{times}
+                  </span>
+                ) : null}
               </div>
             </div>
           )

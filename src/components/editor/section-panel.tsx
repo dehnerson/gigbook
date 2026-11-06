@@ -135,6 +135,16 @@ function PartCard({
             className="h-8 w-44 rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           />
         )}
+        <Stepper
+          label={m.repeatCount()}
+          value={part.repeat ?? 1}
+          min={1}
+          max={16}
+          format={(value) => `×${value}`}
+          onChange={(repeat) =>
+            void save(() => mutations.updatePart({ partId: part._id, repeat }))
+          }
+        />
         <Button
           variant="ghost"
           size="icon-sm"

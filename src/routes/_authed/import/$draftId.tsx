@@ -133,6 +133,7 @@ function previewTimeline(output: Output): Array<SheetEntry> {
       chartBody: part.chartBody,
       strumming: part.strumming,
       measures: part.measures,
+      repeat: part.repeat,
     })),
   }))
 }

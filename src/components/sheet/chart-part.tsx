@@ -3,10 +3,12 @@ import { displayChord } from '@/lib/music/chords'
 import {
   isBarGridLine,
   isChordOnlyLine,
+  parseBarGrid,
   parseChordPro,
   sectionLabelOf,
 } from '@/lib/music/chordpro'
 import type { ChartToken } from '@/lib/music/chordpro'
+import { m } from '@/paraglide/messages'
 import type { SheetSettings } from './types'
 
 type Cell = { chord?: string; text: string }
@@ -81,6 +83,41 @@ function ChordOnlyRow({
   )
 }
 
+function RepeatDots() {
+  return (
+    <span className="flex flex-col justify-center gap-[0.3em]">
+      <span className="size-[0.28em] rounded-full bg-foreground/60" />
+      <span className="size-[0.28em] rounded-full bg-foreground/60" />
+    </span>
+  )
+}
+
+function Barline({ kind }: { kind: 'single' | 'start' | 'end' }) {
+  if (kind === 'single')
+    return <span aria-hidden className="w-0.5 shrink-0 bg-foreground/25" />
+  const thick = <span className="w-[0.22em] bg-foreground/60" />
+  const thin = <span className="w-px bg-foreground/60" />
+  return (
+    <span aria-hidden className="flex shrink-0 gap-[0.15em]">
+      {kind === 'start' ? (
+        <>
+          {thick}
+          {thin}
+          <RepeatDots />
+        </>
+      ) : (
+        <>
+          <RepeatDots />
+          {thin}
+          {thick}
+        </>
+      )}
+    </span>
+  )
+}
+
+const MUTED_TOKEN = /^[%/.-]+$/
+
 function BarGrid({
   line,
   show,
@@ -88,32 +125,63 @@ function BarGrid({
   line: string
   show: (symbol: string) => string
 }) {
-  const bars = line
-    .split('|')
-    .map((bar) => bar.trim())
-    .filter(Boolean)
+  const bars = parseBarGrid(line)
+  const hasEnding = bars.some((bar) => bar.ending)
   return (
-    <div className="my-1.5 flex flex-wrap">
-      {bars.map((bar, index) => (
-        <div
-          key={index}
-          className="flex min-w-[5.5em] items-center gap-3 border-l-2 border-foreground/25 px-3 py-1 last:border-r-2"
-        >
-          {bar.split(/\s+/).map((token, tokenIndex) => (
-            <span
-              key={tokenIndex}
+    <div className="my-1.5 flex flex-wrap gap-y-2">
+      {bars.map((bar, index) => {
+        const last = index === bars.length - 1
+        return (
+          <div key={index} className="flex items-stretch">
+            {bar.start ? (
+              <Barline kind="start" />
+            ) : bars[index - 1]?.end ? null : (
+              <Barline kind="single" />
+            )}
+            <div
               className={cn(
-                'font-semibold',
-                /^[%/.-]+$/.test(token)
-                  ? 'text-muted-foreground'
-                  : 'text-chord',
+                'relative flex min-w-[5.5em] items-center gap-3 px-3 py-1',
+                hasEnding && 'pt-[1.4em]',
               )}
             >
-              {/^[%/.-]+$/.test(token) ? token : show(token)}
-            </span>
-          ))}
-        </div>
-      ))}
+              {bar.ending ? (
+                <span className="absolute inset-x-1 top-[0.2em] h-[0.9em] border-t border-l border-foreground/50 pl-1 text-[0.7em] leading-tight font-semibold text-muted-foreground">
+                  {bar.ending}.
+                </span>
+              ) : null}
+              {bar.chords.map((token, tokenIndex) => (
+                <span
+                  key={tokenIndex}
+                  className={cn(
+                    'font-semibold',
+                    MUTED_TOKEN.test(token)
+                      ? 'text-muted-foreground'
+                      : 'text-chord',
+                  )}
+                >
+                  {MUTED_TOKEN.test(token) ? token : show(token)}
+                </span>
+              ))}
+            </div>
+            {bar.end ? (
+              <Barline kind="end" />
+            ) : last ? (
+              <Barline kind="single" />
+            ) : null}
+            {bar.times ? (
+              <span
+                className={cn(
+                  'self-center px-2 font-mono text-[0.85em] font-semibold text-primary tabular-nums',
+                  hasEnding && 'pt-[1.2em]',
+                )}
+                aria-label={m.playedTimes({ count: String(bar.times) })}
+              >
+                ×{bar.times}
+              </span>
+            ) : null}
+          </div>
+        )
+      })}
     </div>
   )
 }

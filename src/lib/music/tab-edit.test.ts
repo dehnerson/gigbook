@@ -8,8 +8,11 @@ import {
   moveBeat,
   placeShape,
   setDuration,
+  setEnding,
   setFret,
+  setRepeatEnd,
   toggleDot,
+  toggleRepeatStart,
   toggleRest,
   toggleTechnique,
 } from './tab-edit.ts'
@@ -98,5 +101,21 @@ describe('tab editing', () => {
     const added = insertBar(tab, start, '4/4')
     expect(added.measures).toHaveLength(3)
     expect(added.cursor).toEqual({ bar: 1, beat: 0, string: 1 })
+  })
+
+  test('repeat signs and endings toggle per bar and leave no empty objects', () => {
+    let tab = [emptyBar('4/4'), emptyBar('4/4')]
+    tab = toggleRepeatStart(tab, 0)
+    tab = setRepeatEnd(tab, 1, 3)
+    tab = setEnding(tab, 1, 2)
+    expect(tab[0]?.repeat).toEqual({ start: true })
+    expect(tab[1]?.repeat).toEqual({ times: 3 })
+    expect(tab[1]?.ending).toBe(2)
+    tab = toggleRepeatStart(tab, 0)
+    tab = setRepeatEnd(tab, 1, 1)
+    tab = setEnding(tab, 1, 0)
+    expect(tab[0]).not.toHaveProperty('repeat')
+    expect(tab[1]).not.toHaveProperty('repeat')
+    expect(tab[1]).not.toHaveProperty('ending')
   })
 })

@@ -97,6 +97,7 @@ function outputWith(measure: typeof tabMeasure | typeof storedTabMeasure) {
             strumming: v.optional(v.string()),
             measures: v.optional(v.array(measure)),
             rhythmGuessed: v.optional(v.boolean()),
+            repeat: v.optional(v.number()),
           }),
         ),
       }),
@@ -202,6 +203,7 @@ export default defineSchema({
     strumming: v.optional(v.string()),
     measures: v.optional(v.array(storedTabMeasure)),
     rhythmGuessed: v.optional(v.boolean()),
+    repeat: v.optional(v.number()),
     order: v.number(),
   })
     .index('by_section', ['sectionId'])

@@ -312,6 +312,15 @@ Original plan:
 
 ### 4.5 Repeats inside parts (second part of #4)
 
+**Status: done.** Details:
+
+- **Part count:** `parts.repeat` (2–16, unset means once), set with a ×N stepper on the part card next to the track picker and shown as "×4" after the part label on sheets. It works for chart and tab parts and is copied with sections and versions.
+- **Tabs:** the tab editor has a row for the bar under the cursor: "Repeat from here" (`repeat.start`), a "Repeat end" stepper (`repeat.times`, how often the passage is played in total) and endings 1.–3. The grid shows them as thick bar lines, `‖:` / `:‖ ×N` under the bar and a bracket for endings. alphaTab draws them on the sheet (it shows no number for a plain ×2). "Edit as text" keeps each bar's repeat marks by position.
+- **Bar grids:** `parseBarGrid` in `chordpro.ts` (with tests) reads `|: Em | G D :| x4`, `:|:`, `x4` / `4x` counts and `1.` / `2.` endings at the start of a bar. They're drawn with repeat barlines, an ending bracket and the count after the closing barline. Transposing and the chord list skip the colons. The chart editor hint mentions the syntax.
+- **Import:** the AI schema and prompt now include `repeat`/`ending` on tab measures (they were dropped before), `repeat` on parts, and the bar grid syntax. No migration is needed; the new fields are optional.
+
+**Plan:**
+
 - Add a part-level repeat count, for example "riff ×4" on a tab or bar-grid part.
 - Tabs: add repeat barlines and 1st/2nd endings (`repeat` and `ending` in 4.1). alphaTab renders these natively if chosen.
 - Bar grids in ChordPro: support `|: Em | G D :| x4`, rendered with repeat signs.

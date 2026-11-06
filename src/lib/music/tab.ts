@@ -318,7 +318,13 @@ export function keepRhythm(
 ): Array<TabMeasure> {
   return next.map((measure, index) => {
     const before = previous.at(index)
-    if (!before || before.beats.length !== measure.beats.length) return measure
+    if (!before) return measure
+    if (before.beats.length !== measure.beats.length)
+      return {
+        ...measure,
+        ...(before.repeat ? { repeat: before.repeat } : {}),
+        ...(before.ending ? { ending: before.ending } : {}),
+      }
     return {
       ...before,
       beats: measure.beats.map((beat, beatIndex) => {

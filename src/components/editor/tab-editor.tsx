@@ -16,6 +16,7 @@ import type * as React from 'react'
 import { toast } from 'sonner'
 import { useDebounced } from '@/components/app/save'
 import { Segmented } from '@/components/app/segmented'
+import { Stepper } from '@/components/app/stepper'
 import { TabStaff } from '@/components/sheet/tab-staff'
 import type { SheetSettings } from '@/components/sheet/types'
 import { Button } from '@/components/ui/button'
@@ -55,8 +56,11 @@ import {
   setBend,
   setChord,
   setDuration,
+  setEnding,
   setFret,
+  setRepeatEnd,
   toggleDot,
+  toggleRepeatStart,
   toggleRest,
   toggleTechnique,
 } from '@/lib/music/tab-edit'
@@ -148,6 +152,7 @@ export function TabEditor({
 
   const { measures } = history.present
   const cursor = clampCursor(measures, history.present.cursor, strings)
+  const bar = measures.at(cursor.bar)
   const beat = beatAt(measures, cursor)
   const note = noteAt(measures, cursor)
   const preview = useDeferredValue(measures)
@@ -457,6 +462,58 @@ export function TabEditor({
             {m.insertShape()}
           </Button>
         </div>
+      </div>
+
+      <div
+        role="group"
+        aria-label={m.barNumber({ number: String(cursor.bar + 1) })}
+        className="flex flex-wrap items-center gap-2"
+      >
+        <span className="text-xs font-medium text-muted-foreground">
+          {m.barNumber({ number: String(cursor.bar + 1) })}
+        </span>
+        <Toggle
+          size="sm"
+          variant="outline"
+          isSelected={bar?.repeat?.start ?? false}
+          onChange={() => act(toggleRepeatStart(measures, cursor.bar))}
+        >
+          <span aria-hidden className="font-mono">
+            ‖:
+          </span>
+          {m.repeatStart()}
+        </Toggle>
+        <Stepper
+          label={m.repeatEnd()}
+          value={bar?.repeat?.times ?? 1}
+          min={1}
+          max={16}
+          format={(value) => (value < 2 ? '–' : `×${value}`)}
+          onChange={(times) => act(setRepeatEnd(measures, cursor.bar, times))}
+        />
+        <Segmented
+          size="sm"
+          aria-label={m.ending()}
+          value={String(bar?.ending ?? 0)}
+          onChange={(value) =>
+            act(setEnding(measures, cursor.bar, Number(value)))
+          }
+          options={[
+            {
+              id: '0',
+              label: (
+                <>
+                  <span aria-hidden>–</span>
+                  <span className="sr-only">{m.noEnding()}</span>
+                </>
+              ),
+            },
+            ...[1, 2, 3].map((number) => ({
+              id: String(number),
+              label: m.endingNumber({ number: String(number) }),
+            })),
+          ]}
+        />
       </div>
 
       <TabGrid
