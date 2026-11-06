@@ -2,17 +2,13 @@ import { cn } from 'cn'
 import { StickyNoteIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Chip } from '@/components/app/chip'
-import { ChordDiagram } from '@/components/chord-diagram'
-import { displayChord, soundsAs } from '@/lib/music/chords'
+import { soundsAs } from '@/lib/music/chords'
 import { chartChords } from '@/lib/music/chordpro'
-import {
-  diagramFromFrets,
-  lookupChordDiagram,
-  STANDARD_TUNING,
-  stringLabels,
-} from '@/lib/music/diagrams'
+import { STANDARD_TUNING, stringLabels } from '@/lib/music/diagrams'
 import { m } from '@/paraglide/messages'
+import type { Id } from '../../../convex/_generated/dataModel'
 import { ChartPart } from './chart-part'
+import { PickableChordStrip } from './chord-strip'
 import { blockOf, passOf, sheetPasses } from './passes'
 import type { SheetPass } from './passes'
 import { StrumPattern } from './strum-pattern'
@@ -134,64 +130,6 @@ export function SheetHeader({
   )
 }
 
-export function ChordStrip({
-  symbols,
-  shapes,
-  settings,
-  className,
-}: {
-  symbols: Array<string>
-  shapes: Array<ChordShapeOverride>
-  settings: SheetSettings
-  className?: string
-}) {
-  const seen = new Set<string>()
-  const items = symbols.flatMap((symbol) => {
-    const name = displayChord(
-      symbol,
-      settings.capo,
-      settings.transpose,
-      settings.notation,
-    )
-    if (seen.has(name)) return []
-    seen.add(name)
-    const untouched = settings.capo === 0 && settings.transpose === 0
-    const custom = untouched
-      ? shapes.find((shape) => shape.symbol === symbol)
-      : undefined
-    const diagram = custom
-      ? diagramFromFrets(custom.frets)
-      : lookupChordDiagram(
-          displayChord(symbol, settings.capo, settings.transpose, 'en'),
-        )
-    return [{ name, diagram }]
-  })
-  if (items.length === 0) return null
-  return (
-    <div className={cn('-mx-1 overflow-x-auto pb-1', className)}>
-      <div className="flex w-max gap-2 px-1">
-        {items.map((item) =>
-          item.diagram ? (
-            <div
-              key={item.name}
-              className="rounded-xl border bg-card/60 px-2 pt-2 pb-1"
-            >
-              <ChordDiagram name={item.name} diagram={item.diagram} />
-            </div>
-          ) : (
-            <div
-              key={item.name}
-              className="grid min-w-16 place-items-center rounded-xl border border-dashed px-3 text-sm font-semibold text-chord"
-            >
-              {item.name}
-            </div>
-          ),
-        )}
-      </div>
-    </div>
-  )
-}
-
 function SectionBlock({
   elementId,
   entry,
@@ -298,6 +236,8 @@ export function SongSheet({
   highlightEntryId,
   layout = 'expanded',
   showHeader = true,
+  versionId,
+  canEdit = false,
   className,
 }: {
   version: SheetVersion
@@ -309,6 +249,8 @@ export function SongSheet({
   highlightEntryId?: string | null
   layout?: SheetLayout
   showHeader?: boolean
+  versionId?: Id<'versions'>
+  canEdit?: boolean
   className?: string
 }) {
   const symbols = versionChords(timeline, visiblePartIds)
@@ -347,7 +289,14 @@ export function SongSheet({
         <SheetHeader song={song} version={version} settings={settings} />
       ) : null}
       {settings.mode === 'lyrics' ? null : (
-        <ChordStrip symbols={symbols} shapes={shapes} settings={settings} />
+        <PickableChordStrip
+          symbols={symbols}
+          shapes={shapes}
+          settings={settings}
+          tuning={version.tuning}
+          versionId={versionId}
+          canEdit={canEdit}
+        />
       )}
       {timeline.length === 0 ? (
         <p className="rounded-2xl border border-dashed p-8 text-center text-muted-foreground">

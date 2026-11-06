@@ -198,6 +198,8 @@ function PlayPage() {
           visiblePartIds={parts}
           highlightEntryId={active}
           layout={prefs.layout}
+          versionId={version._id}
+          canEdit={canEdit}
         />
         {search.setlist && upNext ? (
           <button

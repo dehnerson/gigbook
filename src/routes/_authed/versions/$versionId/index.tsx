@@ -213,6 +213,8 @@ function ReadPage() {
         visiblePartIds={parts}
         layout={prefs.layout}
         showHeader={false}
+        versionId={version._id}
+        canEdit={canEdit}
         className="pb-[60vh]"
       />
     </div>

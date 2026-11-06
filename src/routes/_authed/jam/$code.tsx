@@ -214,6 +214,8 @@ function JamRoomPage() {
       visiblePartIds={visible}
       highlightEntryId={following ? hostEntryId : active}
       layout={prefs.layout}
+      versionId={bundle.data.version._id}
+      canEdit={bundle.data.canEdit}
     />
   ) : null
 

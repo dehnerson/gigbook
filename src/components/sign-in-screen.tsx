@@ -5,7 +5,7 @@ import {
   RadioIcon,
   SparklesIcon,
 } from 'lucide-react'
-import { ChordStrip } from '@/components/sheet/song-sheet'
+import { ChordStrip } from '@/components/sheet/chord-strip'
 import { m } from '@/paraglide/messages'
 
 const FEATURES = [

@@ -10,6 +10,7 @@
 
 import type * as accountCleanup from "../accountCleanup.js";
 import type * as bands from "../bands.js";
+import type * as chordShapes from "../chordShapes.js";
 import type * as http from "../http.js";
 import type * as importAction from "../importAction.js";
 import type * as importDrafts from "../importDrafts.js";
@@ -36,6 +37,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   accountCleanup: typeof accountCleanup;
   bands: typeof bands;
+  chordShapes: typeof chordShapes;
   http: typeof http;
   importAction: typeof importAction;
   importDrafts: typeof importDrafts;

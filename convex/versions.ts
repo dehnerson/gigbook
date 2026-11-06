@@ -505,28 +505,3 @@ export const removePart = mutation({
     await ctx.db.delete(part._id)
   },
 })
-
-export const upsertShape = mutation({
-  args: {
-    versionId: v.id('versions'),
-    symbol: v.string(),
-    frets: v.array(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const { version, song } = await loadVersion(ctx, args.versionId)
-    await canEditSong(ctx, song)
-    const shapes = await ctx.db
-      .query('chordShapes')
-      .withIndex('by_version', (q) => q.eq('versionId', version._id))
-      .collect()
-    const existing = shapes.find((shape) => shape.symbol === args.symbol)
-    if (existing) await ctx.db.patch(existing._id, { frets: args.frets })
-    else {
-      await ctx.db.insert('chordShapes', {
-        versionId: version._id,
-        symbol: args.symbol,
-        frets: args.frets,
-      })
-    }
-  },
-})

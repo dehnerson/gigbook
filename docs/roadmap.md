@@ -206,6 +206,8 @@ Chord symbols remain the shared source of truth, so sharing and jam stay consist
 - UI: tap a diagram in the chord strip to see alternative voicings, then choose "Use in this song" (editors only) or "Always use for me".
 - Alternative voicings need data. Either generate them from tuning and chord tones, or bundle an open dataset (for example `chords-db`, MIT licence).
 
+**Status: done.** Voicings are generated from the tuning and chord tones (`src/lib/music/voicings.ts`), so DADGAD, Drop D and Open G get real diagrams too; standard tuning still shows the hand-made shape first. `resolveChord` in `src/lib/music/shapes.ts` applies the order above. A version override also stores the capo/transpose offset (`shift`) it was chosen at, so it only shows when you play the same shapes; older overrides count as "as written". Customized diagrams get a small dot in the chord strip.
+
 ### 3.4 Repeat counts in the timeline (first part of #4)
 
 **Today:** "Repeat" adds the same section to the timeline again, so the content is shared and linked.

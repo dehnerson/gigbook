@@ -127,6 +127,8 @@ export function VersionEditor({
                 mode: 'both',
                 scale: 1,
               }}
+              versionId={version._id}
+              canEdit
             />
           </div>
         ) : (

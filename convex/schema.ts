@@ -151,8 +151,18 @@ export default defineSchema({
   chordShapes: defineTable({
     versionId: v.id('versions'),
     symbol: v.string(),
+    shift: v.optional(v.number()),
     frets: v.array(v.number()),
+    fingers: v.optional(v.array(v.number())),
   }).index('by_version', ['versionId']),
+
+  userChordShapes: defineTable({
+    userId: v.string(),
+    tuning: v.string(),
+    symbol: v.string(),
+    frets: v.array(v.number()),
+    fingers: v.optional(v.array(v.number())),
+  }).index('by_user_tuning_symbol', ['userId', 'tuning', 'symbol']),
 
   setlists: defineTable({
     name: v.string(),

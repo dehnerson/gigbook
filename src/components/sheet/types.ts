@@ -29,7 +29,12 @@ export type SheetVersion = {
 
 export type SheetSong = { title: string; artist: string }
 
-export type ChordShapeOverride = { symbol: string; frets: Array<number> }
+export type ChordShapeOverride = {
+  symbol: string
+  shift?: number
+  frets: Array<number>
+  fingers?: Array<number>
+}
 
 export type DisplayMode = 'both' | 'lyrics' | 'chords'
 

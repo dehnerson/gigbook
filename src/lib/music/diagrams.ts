@@ -245,8 +245,11 @@ export function lookupChordDiagram(
   return finish(movable(best.shape, best.fret))
 }
 
-export function diagramFromFrets(frets: Array<number>): ChordDiagram {
-  return finish({ frets, fingers: frets.map(() => 0) })
+export function diagramFromFrets(
+  frets: Array<number>,
+  fingers: Array<number> = frets.map(() => 0),
+): ChordDiagram {
+  return finish({ frets, fingers })
 }
 
 export const STANDARD_TUNING = ['E2', 'A2', 'D3', 'G3', 'B3', 'E4'] as const

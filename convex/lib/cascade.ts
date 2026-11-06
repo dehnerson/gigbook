@@ -62,7 +62,9 @@ export async function cloneVersionTree(
     await ctx.db.insert('chordShapes', {
       versionId: copyVersionId,
       symbol: shape.symbol,
+      shift: shape.shift,
       frets: shape.frets,
+      fingers: shape.fingers,
     })
   await ctx.db.patch(copyVersionId, {
     timeline: version.timeline.flatMap((entry) => {
