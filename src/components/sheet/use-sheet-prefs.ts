@@ -3,7 +3,6 @@ import {
   availableLayers,
   DEFAULT_LAYERS,
   effectiveLayers,
-  layersFromMode,
   parseLayers,
 } from '@/lib/sheet-layers'
 import type { LayerSet } from '@/lib/sheet-layers'
@@ -18,7 +17,6 @@ export function useSheetPrefs(
   defaultScale = 1,
 ) {
   const layersKey = `sheet:${scope}:layers`
-  const legacyModeKey = `sheet:${scope}:mode`
   const scaleKey = `sheet:${scope}:scale`
   const layoutKey = `sheet:${scope}:layout`
   const [layers, setLayersState] = useState<LayerSet>(DEFAULT_LAYERS)
@@ -26,15 +24,12 @@ export function useSheetPrefs(
   const [layout, setLayoutState] = useState<SheetLayout>('expanded')
 
   useEffect(() => {
-    const stored =
-      parseLayers(localStorage.getItem(layersKey)) ??
-      layersFromMode(localStorage.getItem(legacyModeKey))
+    const stored = parseLayers(localStorage.getItem(layersKey))
     if (stored) setLayersState(stored)
-    localStorage.removeItem(legacyModeKey)
     const storedScale = Number(localStorage.getItem(scaleKey))
     if (storedScale > 0) setScaleState(storedScale)
     if (localStorage.getItem(layoutKey) === 'compact') setLayoutState('compact')
-  }, [layersKey, legacyModeKey, scaleKey, layoutKey])
+  }, [layersKey, scaleKey, layoutKey])
 
   return {
     layers,

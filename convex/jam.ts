@@ -203,7 +203,6 @@ export const setMemberView = mutation({
       capo: args.capo,
       following: args.following,
       visibleTrackIds: args.visibleTrackIds,
-      visiblePartIds: undefined,
       personalVersionId: args.personalVersionId,
     })
   },

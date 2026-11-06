@@ -96,11 +96,3 @@ export function parseLayers(stored: string | null): LayerSet | null {
     return null
   }
 }
-
-/** Maps the old Both / Lyrics / Chords display mode. */
-export function layersFromMode(mode: string | null): LayerSet | null {
-  if (mode === 'lyrics')
-    return { ...DEFAULT_LAYERS, chords: false, strumming: false, tab: false }
-  if (mode === 'chords') return { ...DEFAULT_LAYERS, lyrics: false }
-  return null
-}

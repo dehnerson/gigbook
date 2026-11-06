@@ -46,23 +46,9 @@ Findings:
 - **Own renderer:** no extra download, renders instantly, and we have full control over the look (chord color, note-name row, highlighting in play mode). Every notation rule is hand-built, though, and the prototype already approximates rests and beaming. Triplets, ties, palm mute, let ring, slides across bar lines and two voices would each be more work, and there is no standard notation or audio.
 - **Phone width:** both fit only one or two bars per line for busy passages. That's a layout question, not a renderer question.
 
-### 0.2 Import without AI: feasibility check
-
-Collect about 10 real sources: Ultimate Guitar copy-pastes, songbook text, ChordPro files, a Guitar Pro file and a MusicXML file. Measure how many convert cleanly with the deterministic parsers from 2.1, without any AI. Also try the Chrome on-device model (2.4) on two or three pasted songs to judge its quality.
-
-**Output:** which import paths can skip AI entirely, and whether the on-device model is worth keeping.
-
-**Status: text paths answered, on-device model still open.** Samples live in `src/lib/import/samples.ts` and are checked by `src/lib/import/import.test.ts`. They are public-domain songs written in ten common source layouts, not real copy-pastes yet. Real pastes should be added to the same file as they turn up.
-
-- **9 of 10 convert cleanly without AI:** Ultimate Guitar copy-paste with a header block and a riff tab; Ultimate Guitar raw `[ch]`/`[tab]` markup; a German songbook with numbered verses, H notation and `Kapodaster`; a ChordPro file; plain chords over lyrics without any headers (verses and chorus named by structure); colon headers with chords on the header line; a tab block with chord names above; a bar grid with `[Chorus] x2`; chords in parentheses inline. Title, artist, capo, key, tuning, tempo, time signature and strumming come from metadata lines.
-- **The tenth is lyrics only.** It imports as text and is flagged with "No chords were found". With a key, it goes to AI automatically.
-- **Chord placement is exactly as good as the source's column alignment.** A chord typed two letters too far right lands mid-word, as it would on paper. AI doesn't fix this reliably either.
-- **Not covered by the text parser:** photos and scanned PDFs, web pages (the server strips the HTML down to one line, which destroys the chord columns) and Guitar Pro/MusicXML (waits for 4.1).
-- **On-device model:** Chromium 148 exposes `LanguageModel` (checked in Cursor's built-in browser), but the model was only `downloadable`, so no quality test yet. Downloading it takes several GB.
-
 ## Phase 1: Quick fixes
 
-**Status: done.** One manual step left: create the webhook in the Clerk dashboard and set `CLERK_WEBHOOK_SECRET` in Convex (dev and prod). Until then the endpoint answers 500 and names still update through `users.ensure`.
+**Status: done.** One manual step left: create the webhook in the Clerk dashboard and set `CLERK_WEBHOOK_SECRET` in Convex. Until then the endpoint answers 500 and names still update through `users.ensure`.
 
 ### 1.1 Clerk name sync (#1)
 
@@ -106,26 +92,13 @@ Collect about 10 real sources: Ultimate Guitar copy-pastes, songbook text, Chord
 
 ## Phase 2: Song import without hosting costs (#7)
 
-**Today:** pasted text and ChordPro files are parsed on the client without AI (2.1, 2.3). Everything else goes through the AI SDK with the user's own encrypted key for Google, OpenAI or Anthropic (2.2). The Convex AI Gateway is not used.
+**Today:** every import (pasted text, photo, PDF, web page, YouTube) goes through the AI SDK with the user's own encrypted key for Google, OpenAI or Anthropic (2.1). Without a key, the import page asks for one. The Convex AI Gateway is not used.
 
-**Constraint:** the app owner should not pay for imports yet. The Convex AI Gateway bills usage to the owner's Convex account and needs a paid plan, so it is postponed to 2.5.
+**Constraint:** the app owner should not pay for imports yet. The Convex AI Gateway bills usage to the owner's Convex account and needs a paid plan, so it is postponed to 2.3.
 
-**Strategy:** use free deterministic parsing wherever possible, and AI only where needed, paid for by the user's own key or a free tier.
+**Strategy:** song data is always read by AI, paid for by the user's own key or a free tier. There is no hand-written parser in front of it (see Decisions).
 
-### 2.1 Deterministic parsers (free, instant, no AI)
-
-Run them on the client in `src/lib/import/`. They produce the same `importOutput` shape and go straight to the existing draft review screen with status `ready`.
-
-**Status: text parsers done** (`parseSongText` in `src/lib/import/text.ts`, metadata in `meta.ts`). Guitar Pro and MusicXML are still open and wait for 4.1.
-
-- **Chords over lyrics** (Ultimate Guitar style) to ChordPro. Much of this already exists in `chordpro.ts`: `chordsOverLyricsToChordPro`, `isChordLine`, `sectionLabelOf` and `hasChordsOverLyrics`, with tests. The work is mostly wiring it into the import flow.
-- **Section headers** such as `[Verse 1]`, `Chorus:` and `INTRO`.
-- **Metadata lines** such as `Capo 2`, `Key: G`, `Tuning: DADGAD` and `BPM 120`.
-- **ASCII tabs** via the existing `parseAsciiTab`.
-- **ChordPro files** (`.cho`, `.chopro`, `.pro`), passed through almost unchanged.
-- **Guitar Pro and MusicXML files** via alphaTab's importer, which works without the renderer. Map tracks to parts, section markers to sections, beats with durations to tab beats, and include lyrics, chord names and repeats. This depends on the tab format chosen in 0.1 and 4.1.
-
-### 2.2 Bring your own key, any provider (AI SDK)
+### 2.1 Bring your own key, any provider (AI SDK)
 
 **Status: done.** The model list lives in `src/lib/import/models.ts`, provider setup and error mapping in `convex/lib/ai.ts`. AI SDK 7 deprecates `generateObject`, so the action uses `generateText` with `Output.object({ schema: draftSchema })`. Deployments need `AI_KEY_ENCRYPTION_SECRET` set before anyone can save a key (set on dev).
 
@@ -136,34 +109,19 @@ Run them on the client in `src/lib/import/`. They produce the same `importOutput
 - Make `testKey` work for every provider.
 - In settings, offer a provider select, key field and model select. Point out that Google is the free option: a Gemini key from Google AI Studio needs no billing account. Third-party measurements put the free tier at roughly 20 requests per day for Flash and 500 per day for Flash-Lite; AI Studio shows the real limits. OpenAI and Anthropic keys are paid per use.
 
-### 2.3 Hybrid pipeline
-
-- For pasted text, URLs and files, run the deterministic parser first. Only use AI when the parser's result looks weak (for example no sections or no chords found), or when the user chooses "Use AI".
-- Photos and scanned PDFs always go to AI.
-- This keeps most imports free and instant, even for users without a key.
-
-**Status: done for pasted text and ChordPro/text files.**
-
-- The import page reads the text as you type and shows what it recognized. The AI switch only appears for users with a key.
-- `importDrafts.createParsed` stores the result as a `ready` draft (`parser: 'text'`) and maps sections onto the target version by name. These drafts don't count against the hourly AI limit.
-- On the review page, "Try with AI" (`importDrafts.retryWithAi`) re-runs the same text through AI.
-- Users without a key can import text. Photo, PDF, URL and YouTube sources show a key notice instead of blocking the whole page.
-- Still open: URLs. The server would need to keep the `<pre>` layout of the page (or the chord site's embedded data) before the text parser can help.
-- Fixed on the way: `importDrafts.save`, `create` and `createParsed` now check that the user may edit the target version, and `save` ignores mapped sections from other versions.
-
-### 2.4 Experimental: on-device AI in Chrome
+### 2.2 Experimental: on-device AI in Chrome
 
 - The Chrome Prompt API (Gemini Nano) is stable in desktop Chrome 148. It accepts images and supports JSON Schema output (`responseConstraint`), and runs locally for free.
 - Use it as a fallback when the user has no key: feature-detect `LanguageModel`, run on the client, and send the result to the draft.
-- Keep it only if the quality check in 0.2 is acceptable.
+- Keep it only if its results on a handful of real songs are good enough. Chromium 148 exposes `LanguageModel`, but the model still has to be downloaded (several GB), so it hasn't been tested yet.
 
-### 2.5 Later: hosted AI via the Convex AI Gateway
+### 2.3 Later: hosted AI via the Convex AI Gateway
 
 Once the app has paying users, add the gateway as a hosted option. With the AI SDK in place this is a provider swap (`@convex-dev/ai-sdk-provider`, `convexGateway("provider/model")`), plus a rate limiter and probably a paid plan.
 
 ## Phase 3: Data model
 
-Use the usual Convex migration path for schema changes: add optional fields, backfill them (for example with `@convex-dev/migrations`), then make them required if needed.
+There is no released version yet, so schema changes go in directly, without migrations or compatibility code. Dev data that no longer fits is deleted.
 
 ### 3.1 Artist per version (#8)
 
@@ -179,13 +137,13 @@ Use the usual Convex migration path for schema changes: add optional fields, bac
 
 ### 3.2 Duplicate prevention (#10)
 
-**Status: done.** `songKey()` lives in `src/lib/song-key.ts`, the scoped lookups in `convex/lib/songs.ts`. `songs.backfillKeys` filled in existing songs on dev; run it once on prod after deploying (`vpx convex run songs:backfillKeys --prod`). Songs without a key are invisible to the check until then. An unknown artist counts as empty, so "Wonderwall" by Unknown matches "Wonderwall" with no artist. Renaming a song into an existing key is still allowed.
+**Status: done.** `songKey()` lives in `src/lib/song-key.ts`, the scoped lookups in `convex/lib/songs.ts`. Every song stores its `key`. An unknown artist counts as empty, so "Wonderwall" by Unknown matches "Wonderwall" with no artist. Renaming a song into an existing key is still allowed.
 
 Convex has no unique constraints. The recommended pattern is check-then-insert inside a mutation. Mutations are transactions, so this is race-free.
 
 Each scope is checked separately: the personal library only against personal songs (no `bandId`), and each band only against its own songs. Having the same song personally and in a band is allowed.
 
-- Add `songs.key`, a normalized form of `title|artist` (lowercase, accents and punctuation stripped, a leading "the" removed). Use a shared `songKey()` helper. Add indexes `by_creator_key` (personal songs) and `by_band_key`, and backfill existing songs.
+- Add `songs.key`, a normalized form of `title|artist` (lowercase, accents and punctuation stripped, a leading "the" removed). Use a shared `songKey()` helper. Add indexes `by_creator_key` (personal songs) and `by_band_key`.
 - Add a search index on `songs.title`, filtered by the target scope. As the user types in the new-song dialog, show similar songs in that scope: "You already have X. Open it, or add a new version?"
 - In `songs.create`, if the key already exists, return `{ existing: songId }` and let the UI ask the user.
 - Forking: if the user already has a song with the same key, add the fork as a new version under that song instead of creating a second song. The guard from 1.3 still applies.
@@ -206,7 +164,7 @@ Chord symbols remain the shared source of truth, so sharing and jam stay consist
 - UI: tap a diagram in the chord strip to see alternative voicings, then choose "Use in this song" (editors only) or "Always use for me".
 - Alternative voicings need data. Either generate them from tuning and chord tones, or bundle an open dataset (for example `chords-db`, MIT licence).
 
-**Status: done.** Voicings are generated from the tuning and chord tones (`src/lib/music/voicings.ts`), so DADGAD, Drop D and Open G get real diagrams too; standard tuning still shows the hand-made shape first. `resolveChord` in `src/lib/music/shapes.ts` applies the order above. A version override also stores the capo/transpose offset (`shift`) it was chosen at, so it only shows when you play the same shapes; older overrides count as "as written". Customized diagrams get a small dot in the chord strip.
+**Status: done.** Voicings are generated from the tuning and chord tones (`src/lib/music/voicings.ts`), so DADGAD, Drop D and Open G get real diagrams too; standard tuning still shows the hand-made shape first. `resolveChord` in `src/lib/music/shapes.ts` applies the order above. A version override also stores the capo/transpose offset (`shift`) it was chosen at, so it only shows when you play the same shapes. Customized diagrams get a small dot in the chord strip.
 
 ### 3.4 Repeat counts in the timeline (first part of #4)
 
@@ -228,7 +186,7 @@ This phase depends on the decision in 0.1.
 
 ### 4.1 Tab data model with note lengths (#2)
 
-**Today:** `tabMeasure = { chordAbove?, events: [{ position, notes: [{ string, fret, technique?, bendSemitones? }] }] }`. `position` is always the array index, so it's redundant, and there is no duration.
+**Before:** `tabMeasure = { chordAbove?, events: [{ position, notes: [{ string, fret, technique?, bendSemitones? }] }] }`. `position` is always the array index, so it's redundant, and there is no duration.
 
 **Proposal** (prototyped in `src/lib/music/tab-beats.ts`):
 
@@ -242,14 +200,12 @@ The chord name sits on the beat, not the measure, because chords often change mi
 
 - Durations let us draw rhythm, space notes by length, and check that each bar adds up to the time signature.
 - Note names come from tuning plus fret, so we can show them with no extra data. Rhythm plus tab is the default view. Note names are an optional layer (see 4.3), off by default, shown as a row of small names below the staff (stacked for chords) and respecting the German/English notation setting. If alphaTab wins in 0.1, its standard notation staff replaces the note-names layer.
-- Migrate existing measures with each event becoming a beat, defaulting to eighth notes. Mark migrated parts so the editor can suggest checking the rhythm.
 - Update `previewTabShift`, `saveWrittenKey`, the import schema and the AI prompt to the new shape.
 
 **Status: done.** The model lives in `src/lib/music/tab.ts` (the prototype file `tab-beats.ts` is merged into it). Sheets render tabs with alphaTab (`src/components/sheet/tab-staff.tsx`), lazy-loaded, themed, with notes that can't move with the key drawn in red and a "Listen" button that loads the soundfont only when pressed.
 
 - **Rhythm from ASCII tabs is guessed, not fixed at eighths.** `parseAsciiTab` reads note lengths from the column spacing: evenly spaced notes fill the bar (four in 4/4 become quarters), uneven spacing is split proportionally. `serializeAsciiTab` spaces notes by length so the round trip keeps them. The textarea editor keeps the stored lengths of every bar whose note count didn't change, so fixing a fret doesn't reset the rhythm.
-- **`parts.rhythmGuessed`** marks tabs whose rhythm was guessed: migrated parts, ASCII imports, and edits that changed a bar's note count. The AI sets it when the source shows no rhythm. The grid editor (4.2) should show the hint and clear the flag.
-- **Migration:** the schema accepts both shapes for now, reads convert old measures on the fly (`toTabMeasures`), and `migrations:tabBeats` rewrites parts and import drafts. Dev is migrated. For prod: deploy, run `npx convex run --prod migrations:tabBeats`, check that no part still has `events`, then remove `legacyTabMeasure` from `convex/schema.ts` and deploy again.
+- **`parts.rhythmGuessed`** marks tabs whose rhythm was guessed: ASCII tabs and edits that changed a bar's note count. The AI sets it when the source shows no rhythm. The grid editor (4.2) shows the hint and clears the flag.
 
 ### 4.2 Grid tab editor (#3)
 
@@ -278,7 +234,7 @@ Original plan:
 - Layers: Lyrics, Chords, Strumming, Tab and Notes. Notes is alphaTab's notation staff (decision in 0.1), off by default; Tab and Notes can be combined or shown alone.
 - Only layers the visible tracks contain get a toggle, and none are shown when there's only one. Chords off also hides the chord strip, bar grids and chord names above tabs.
 - The last visible layer can't be switched off. If saved choices would hide everything a song has (Tab off on a tab-only song), the defaults apply for that song.
-- Saved per page in `localStorage` (`sheet:{page}:layers`); the old `mode` value is carried over once and then removed.
+- Saved per page in `localStorage` (`sheet:{page}:layers`).
 
 **Today (before):** `DisplayModeToggle` always offers Both, Lyrics and Chords, even when a version only has tabs. Lyrics mode hides tabs, which is a side effect rather than a clear rule.
 
@@ -292,14 +248,12 @@ Original plan:
 
 **Status: done.** Helpers in `src/lib/tracks.ts` (with tests), mutations `addTrack`, `renameTrack` and `removeTrack` in `convex/versions.ts`, `TracksFilter` in `sheet-controls.tsx`. Differences from the plan:
 
-- The two built-in tracks aren't stored. A part without `trackId` (or with an unknown one) is on "Vocals & chords" (`vocals`) or "Guitar tab" (`guitar`) by kind, so existing data needed no migration and the names follow the reader's language. Renaming a built-in track stores `{ id: 'vocals', name }` in `versions.tracks`; clearing the name restores the default. Removing a custom track moves its parts back to the built-in one.
+- The two built-in tracks aren't stored. A part without `trackId` (or with an unknown one) is on "Vocals & chords" (`vocals`) or "Guitar tab" (`guitar`) by kind, so their names follow the reader's language. Renaming a built-in track stores `{ id: 'vocals', name }` in `versions.tracks`; clearing the name restores the default. Removing a custom track moves its parts back to the built-in one.
 - `instrument` is left out until something uses it.
 - Editor: each part card has a track picker with "New track…", and Version details has a Tracks card to rename, add and remove tracks.
 - The filter only appears when a version has two or more tracks with parts. On the read and play pages it lasts for the visit, like the old parts filter; in a jam it's saved per member (`visibleTrackIds`).
 - Sheets show a part's own label, or the track name for custom tracks. Generic labels ("Tab", "Chords", "Text & Akkorde" …) are dropped on write (`meaningfulLabel`), so `DEFAULT_LABELS` is gone.
-- **Migration:** `migrations:partLabels` clears generic labels and `migrations:jamTracks` drops the old `visiblePartIds`. Both ran on dev. For prod: deploy, run `npx convex run --prod migrations:partLabels` and `npx convex run --prod migrations:jamTracks`, then remove `visiblePartIds` from `jamMembers` in `convex/schema.ts` and deploy again.
-
-**Today (before):** `PartsFilter` lists every part of every section separately (section name plus part label). It's unclear what it's for, and it grows with every section. `song-sheet.tsx` also needs a `DEFAULT_LABELS` workaround to hide generic part labels.
+  **Today (before):** `PartsFilter` lists every part of every section separately (section name plus part label). It's unclear what it's for, and it grows with every section. `song-sheet.tsx` also needs a `DEFAULT_LABELS` workaround to hide generic part labels.
 
 **Approach:**
 
@@ -317,7 +271,7 @@ Original plan:
 - **Part count:** `parts.repeat` (2–16, unset means once), set with a ×N stepper on the part card next to the track picker and shown as "×4" after the part label on sheets. It works for chart and tab parts and is copied with sections and versions.
 - **Tabs:** the tab editor has a row for the bar under the cursor: "Repeat from here" (`repeat.start`), a "Repeat end" stepper (`repeat.times`, how often the passage is played in total) and endings 1.–3. The grid shows them as thick bar lines, `‖:` / `:‖ ×N` under the bar and a bracket for endings. alphaTab draws them on the sheet (it shows no number for a plain ×2). "Edit as text" keeps each bar's repeat marks by position.
 - **Bar grids:** `parseBarGrid` in `chordpro.ts` (with tests) reads `|: Em | G D :| x4`, `:|:`, `x4` / `4x` counts and `1.` / `2.` endings at the start of a bar. They're drawn with repeat barlines, an ending bracket and the count after the closing barline. Transposing and the chord list skip the colons. The chart editor hint mentions the syntax.
-- **Import:** the AI schema and prompt now include `repeat`/`ending` on tab measures (they were dropped before), `repeat` on parts, and the bar grid syntax. No migration is needed; the new fields are optional.
+- **Import:** the AI schema and prompt now include `repeat`/`ending` on tab measures (they were dropped before), `repeat` on parts, and the bar grid syntax.
 
 **Plan:**
 
@@ -327,7 +281,7 @@ Original plan:
 
 ## Dependencies
 
-- 0.1 decides 4.1, and 4.1 decides the Guitar Pro and MusicXML mapping in 2.1. The text parsers in 2.1 don't depend on it.
+- 0.1 decides 4.1.
 - 3.2 (song key) should land before the "add fork to existing song" behaviour.
 - 4.3 and 4.4 change sheet controls shared by the read, play, share and jam pages. Do them together.
 
@@ -337,6 +291,8 @@ Original plan:
 2. **Note names (4.1):** rhythm plus tab by default, note names as an optional layer. alphaTab's notation staff replaces that layer if alphaTab is chosen.
 3. **Repeats in play mode (3.4):** expanded by default, with a compact toggle.
 4. **Duplicate detection (3.2):** each scope separately (personal library, each band).
-5. **AI providers (2.2):** Google, OpenAI and Anthropic. Google is the free option for users.
-6. **Hosting costs (Phase 2):** the app owner pays nothing for AI for now. The Convex AI Gateway comes later (2.5).
+5. **AI providers (2.1):** Google, OpenAI and Anthropic. Google is the free option for users.
+6. **Hosting costs (Phase 2):** the app owner pays nothing for AI for now. The Convex AI Gateway comes later (2.3).
 7. **Tab renderer (0.1):** alphaTab, lazy-loaded only on sheets with tabs. Tabs are stored as our JSON model (4.1) and converted to alphaTex for rendering. The soundfont should load only when the user presses Play.
+8. **Import (Phase 2):** song data is always read by AI. A hand-written text parser was built and removed again, because keeping two import paths was more complex than it was worth.
+9. **No backward compatibility while there is no release:** schemas change in place, without migrations, compatibility shims or fallbacks for old local settings.

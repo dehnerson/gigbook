@@ -36,7 +36,7 @@ export type SheetSong = { title: string; artist: string }
 
 export type ChordShapeOverride = {
   symbol: string
-  shift?: number
+  shift: number
   frets: Array<number>
   fingers?: Array<number>
 }

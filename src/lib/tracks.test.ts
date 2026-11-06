@@ -3,7 +3,6 @@ import {
   availableLayers,
   DEFAULT_LAYERS,
   effectiveLayers,
-  layersFromMode,
   parseLayers,
   toggleLayer,
 } from './sheet-layers.ts'
@@ -84,15 +83,12 @@ describe('sheet layers', () => {
     expect(toggleLayer(only, 'chords', ['lyrics', 'chords']).chords).toBe(true)
   })
 
-  test('stored and legacy preferences', () => {
+  test('stored preferences', () => {
     expect(parseLayers('{"notes":true,"tab":false}')).toEqual({
       ...DEFAULT_LAYERS,
       notes: true,
       tab: false,
     })
     expect(parseLayers('nope')).toBeNull()
-    expect(layersFromMode('chords')?.lyrics).toBe(false)
-    expect(layersFromMode('lyrics')?.tab).toBe(false)
-    expect(layersFromMode('both')).toBeNull()
   })
 })

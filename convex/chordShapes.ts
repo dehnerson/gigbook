@@ -44,7 +44,7 @@ async function versionShape(
     .withIndex('by_version', (q) => q.eq('versionId', versionId))
     .collect()
   return shapes.find(
-    (shape) => shape.symbol === symbol && (shape.shift ?? 0) === shift,
+    (shape) => shape.symbol === symbol && shape.shift === shift,
   )
 }
 

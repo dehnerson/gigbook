@@ -13,7 +13,6 @@ import {
 import { lookupChordDiagram } from './diagrams.ts'
 import { parseStrum } from './strum.ts'
 import {
-  fromLegacyMeasure,
   keepRhythm,
   measureFill,
   noteName,
@@ -68,29 +67,6 @@ describe('tab beats', () => {
       { s: 1, f: 1, unplayable: true },
       { s: 2, f: 5, unplayable: false },
     ])
-  })
-
-  test('converts old event measures into eighth-note beats', () => {
-    expect(
-      fromLegacyMeasure({
-        chordAbove: 'G',
-        events: [
-          {
-            position: 0,
-            notes: [{ string: 2, fret: 3, technique: 'h', bendSemitones: 1 }],
-          },
-          { position: 1, notes: [{ string: 1, fret: 0 }] },
-        ],
-      }),
-    ).toEqual({
-      beats: [
-        { d: 8, chord: 'G', notes: [{ s: 2, f: 3, t: 'h', bend: 1 }] },
-        { d: 8, notes: [{ s: 1, f: 0 }] },
-      ],
-    })
-    expect(fromLegacyMeasure({ chordAbove: 'C', events: [] })).toEqual({
-      beats: [{ d: 1, rest: true, chord: 'C', notes: [] }],
-    })
   })
 
   test('keeps known note lengths when only frets change', () => {

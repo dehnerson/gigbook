@@ -3,10 +3,8 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation } from 'convex/react'
 import { cn } from 'cn'
 import {
-  ArrowRightIcon,
   ClipboardPasteIcon,
   FileImageIcon,
-  FileTextIcon,
   KeyRoundIcon,
   LinkIcon,
   SparklesIcon,
@@ -14,25 +12,22 @@ import {
   MonitorPlayIcon,
   XIcon,
 } from 'lucide-react'
-import { useMemo, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '../../../../convex/_generated/api'
 import type { Id } from '../../../../convex/_generated/dataModel'
+import { EmptyState } from '@/components/app/empty-state'
 import { Field } from '@/components/app/field'
 import { PageHeader } from '@/components/app/page-header'
 import { Segmented } from '@/components/app/segmented'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { PROVIDER_LABELS } from '@/lib/import/models'
-import { normalizeDraft } from '@/lib/import/normalize'
-import { parseSongText } from '@/lib/import/text'
 import { messageFor } from '@/lib/errors'
 import { useLiveQuery } from '@/lib/live'
 import { loadQuery } from '@/lib/load'
-import { currentLocale } from '@/lib/locale'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/import/')({
@@ -47,13 +42,6 @@ export const Route = createFileRoute('/_authed/import/')({
 
 type Source = 'paste' | 'file' | 'url' | 'youtube'
 
-const TEXT_FILE = /\.(?:cho|chopro|chordpro|crd|pro|txt)$/i
-const MAX_TEXT_FILE = 200_000
-
-function isTextFile(file: File) {
-  return TEXT_FILE.test(file.name) || file.type.startsWith('text/')
-}
-
 function youtubeIdOf(value: string) {
   const trimmed = value.trim()
   const fromUrl = trimmed.match(
@@ -67,7 +55,6 @@ function ImportPage() {
   const me = useLiveQuery(convexQuery(api.users.me, {}))
   const catalog = useLiveQuery(convexQuery(api.songs.catalog, {}))
   const create = useMutation(api.importDrafts.create)
-  const createParsed = useMutation(api.importDrafts.createParsed)
   const uploadUrl = useMutation(api.importDrafts.generateUploadUrl)
   const navigate = useNavigate()
   const fileInput = useRef<HTMLInputElement>(null)
@@ -75,70 +62,53 @@ function ImportPage() {
   const [text, setText] = useState('')
   const [url, setUrl] = useState('')
   const [file, setFile] = useState<File | null>(null)
-  const [fileText, setFileText] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState(false)
   const [youtube, setYoutube] = useState('')
   const [description, setDescription] = useState('')
   const [transcript, setTranscript] = useState('')
   const [target, setTarget] = useState('new')
-  const [aiChoice, setAiChoice] = useState<boolean | null>(null)
   const [busy, setBusy] = useState(false)
 
-  const hasKey = Boolean(me.data?.ai)
-  const sourceText =
-    source === 'paste' ? text : source === 'file' ? fileText : null
-  const locale = currentLocale()
-  const analysis = useMemo(
-    () => (sourceText?.trim() ? parseSongText(sourceText, locale) : null),
-    [sourceText, locale],
-  )
-  const aiOnly =
-    source === 'url' ||
-    source === 'youtube' ||
-    (source === 'file' && file !== null && fileText === null)
-  const useAi = analysis ? hasKey && (aiChoice ?? !analysis.strong) : aiOnly
-  const needsKey = useAi && !hasKey
   const ai = me.data?.ai
+  if (!ai) {
+    return (
+      <div>
+        <PageHeader title={m.importLabel()} subtitle={m.importHint()} />
+        <EmptyState
+          icon={KeyRoundIcon}
+          title={m.noApiKey()}
+          description={m.noApiKeyHint()}
+          action={
+            <ButtonLink to="/settings">
+              <KeyRoundIcon />
+              {m.addApiKey()}
+            </ButtonLink>
+          }
+        />
+      </div>
+    )
+  }
+
   const unsupported =
-    ai !== undefined &&
-    ai !== null &&
     source === 'file' &&
     file !== null &&
-    fileText === null &&
     (file.type === 'application/pdf' ? !ai.pdf : !ai.vision)
 
   const videoId = youtubeIdOf(youtube)
   const ready =
-    !needsKey &&
     !unsupported &&
     ((source === 'paste' && text.trim().length > 0) ||
       (source === 'file' && file !== null) ||
       (source === 'url' && /^https?:\/\/\S+$/.test(url.trim())) ||
       (source === 'youtube' && videoId !== null))
 
-  const clearFile = () => {
-    setFile(null)
-    setFileText(null)
-    if (fileInput.current) fileInput.current.value = ''
-  }
-
-  const pickFile = async (next: File | undefined) => {
+  const pickFile = (next: File | undefined) => {
     if (!next) return
-    if (isTextFile(next)) {
-      if (next.size > MAX_TEXT_FILE) {
-        toast.error(m.unsupportedFile())
-        return
-      }
-      setFile(next)
-      setFileText(await next.text())
-      return
-    }
     if (!next.type.startsWith('image/') && next.type !== 'application/pdf') {
       toast.error(m.unsupportedFile())
       return
     }
     setFile(next)
-    setFileText(null)
   }
 
   const start = async () => {
@@ -147,18 +117,10 @@ function ImportPage() {
       const targetVersionId =
         target === 'new' ? undefined : (target as Id<'versions'>)
       let draftId: Id<'importDrafts'>
-      if (analysis && sourceText && !useAi) {
-        const normalized = normalizeDraft(analysis.draft)
-        draftId = await createParsed({
-          sourceText,
-          output: normalized.output,
-          warnings: [...analysis.warnings, ...normalized.warnings],
-          targetVersionId,
-        })
-      } else if (sourceText !== null) {
+      if (source === 'paste') {
         draftId = await create({
           sourceKind: 'paste',
-          sourceText,
+          sourceText: text,
           targetVersionId,
         })
       } else if (source === 'file' && file) {
@@ -240,19 +202,15 @@ function ImportPage() {
             <input
               ref={fileInput}
               type="file"
-              accept="image/*,application/pdf,text/plain,.cho,.chopro,.chordpro,.crd,.pro,.txt"
+              accept="image/*,application/pdf"
               className="sr-only"
               tabIndex={-1}
-              onChange={(event) => void pickFile(event.target.files?.[0])}
+              onChange={(event) => pickFile(event.target.files?.[0])}
             />
             {file ? (
               <div className="flex items-center gap-3 rounded-2xl border bg-background/50 p-4">
                 <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
-                  {fileText === null ? (
-                    <FileImageIcon className="size-5" />
-                  ) : (
-                    <FileTextIcon className="size-5" />
-                  )}
+                  <FileImageIcon className="size-5" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-medium">{file.name}</div>
@@ -264,7 +222,10 @@ function ImportPage() {
                   variant="ghost"
                   size="icon"
                   aria-label={m.remove()}
-                  onPress={clearFile}
+                  onPress={() => {
+                    setFile(null)
+                    if (fileInput.current) fileInput.current.value = ''
+                  }}
                 >
                   <XIcon />
                 </Button>
@@ -281,7 +242,7 @@ function ImportPage() {
                 onDrop={(event) => {
                   event.preventDefault()
                   setDragOver(false)
-                  void pickFile(event.dataTransfer.files[0])
+                  pickFile(event.dataTransfer.files[0])
                 }}
                 className={cn(
                   'flex w-full flex-col items-center gap-3 rounded-2xl border-2 border-dashed px-6 py-12 text-center transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring',
@@ -344,59 +305,10 @@ function ImportPage() {
           </div>
         ) : null}
 
-        {analysis ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-background/50 p-4 text-sm">
-            <div className="min-w-0">
-              <div className="font-medium">
-                {m.textAnalysis({
-                  sections: analysis.stats.sections,
-                  chords: analysis.stats.chords,
-                  tabs: analysis.stats.tabMeasures,
-                })}
-              </div>
-              <div className="text-muted-foreground">
-                {useAi
-                  ? analysis.strong
-                    ? m.useAiHint()
-                    : m.textWeakAi()
-                  : analysis.strong
-                    ? m.textReadsFree()
-                    : m.textWeakNoKey()}
-              </div>
-            </div>
-            {hasKey ? (
-              <Switch
-                isSelected={useAi}
-                onChange={setAiChoice}
-                className="gap-2"
-              >
-                {m.useAi()}
-              </Switch>
-            ) : null}
-          </div>
-        ) : null}
-
         {unsupported ? (
           <p className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-sm">
             {m.errorModelUnsupported()}
           </p>
-        ) : null}
-
-        {needsKey ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-4">
-            <div className="flex min-w-0 items-start gap-3">
-              <KeyRoundIcon className="mt-0.5 size-5 shrink-0 text-primary" />
-              <div>
-                <div className="font-medium">{m.noApiKey()}</div>
-                <p className="text-sm text-muted-foreground">
-                  {m.noApiKeyHint()}
-                </p>
-              </div>
-            </div>
-            <ButtonLink to="/settings" variant="outline">
-              {m.addApiKey()}
-            </ButtonLink>
-          </div>
         ) : null}
 
         <Select
@@ -421,14 +333,10 @@ function ImportPage() {
 
         <div className="flex items-center justify-between gap-4 border-t pt-5">
           <p className="text-xs text-muted-foreground">
-            {useAi
-              ? m.importPrivacy({
-                  provider: PROVIDER_LABELS[ai?.provider ?? 'google'],
-                })
-              : m.importPrivacyLocal()}
+            {m.importPrivacy({ provider: PROVIDER_LABELS[ai.provider] })}
           </p>
           <Button type="submit" size="lg" isDisabled={!ready || busy}>
-            {useAi ? <SparklesIcon /> : <ArrowRightIcon />}
+            <SparklesIcon />
             {busy ? m.starting() : m.startImport()}
           </Button>
         </div>

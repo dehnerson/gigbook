@@ -49,64 +49,32 @@ export const tabMeasure = v.object({
   ending: v.optional(v.number()),
 })
 
-// Old shape, kept readable until migrations:tabBeats has run on every deployment.
-const legacyTabMeasure = v.object({
-  chordAbove: v.optional(v.string()),
-  events: v.array(
+export const importOutput = v.object({
+  title: v.string(),
+  artist: v.string(),
+  concertKey: v.string(),
+  timeSignature: v.string(),
+  bpm: v.optional(v.number()),
+  tuning: v.array(v.string()),
+  suggestedCapo: v.number(),
+  sections: v.array(
     v.object({
-      position: v.number(),
-      notes: v.array(
+      name: v.string(),
+      notes: v.optional(v.string()),
+      parts: v.array(
         v.object({
-          string: v.number(),
-          fret: v.number(),
-          technique: v.optional(
-            v.union(
-              v.literal('h'),
-              v.literal('p'),
-              v.literal('b'),
-              v.literal('/'),
-            ),
-          ),
-          bendSemitones: v.optional(v.number()),
+          kind: v.union(v.literal('chart'), v.literal('tab')),
+          label: v.string(),
+          chartBody: v.optional(v.string()),
+          strumming: v.optional(v.string()),
+          measures: v.optional(v.array(tabMeasure)),
+          rhythmGuessed: v.optional(v.boolean()),
+          repeat: v.optional(v.number()),
         }),
       ),
     }),
   ),
 })
-
-const storedTabMeasure = v.union(tabMeasure, legacyTabMeasure)
-
-function outputWith(measure: typeof tabMeasure | typeof storedTabMeasure) {
-  return v.object({
-    title: v.string(),
-    artist: v.string(),
-    concertKey: v.string(),
-    timeSignature: v.string(),
-    bpm: v.optional(v.number()),
-    tuning: v.array(v.string()),
-    suggestedCapo: v.number(),
-    sections: v.array(
-      v.object({
-        name: v.string(),
-        notes: v.optional(v.string()),
-        parts: v.array(
-          v.object({
-            kind: v.union(v.literal('chart'), v.literal('tab')),
-            label: v.string(),
-            chartBody: v.optional(v.string()),
-            strumming: v.optional(v.string()),
-            measures: v.optional(v.array(measure)),
-            rhythmGuessed: v.optional(v.boolean()),
-            repeat: v.optional(v.number()),
-          }),
-        ),
-      }),
-    ),
-  })
-}
-
-export const importOutput = outputWith(tabMeasure)
-const storedImportOutput = outputWith(storedTabMeasure)
 
 export default defineSchema({
   users: defineTable({
@@ -147,7 +115,7 @@ export default defineSchema({
   songs: defineTable({
     title: v.string(),
     artist: v.string(),
-    key: v.optional(v.string()),
+    key: v.string(),
     createdBy: v.string(),
     bandId: v.optional(v.id('bands')),
   })
@@ -201,7 +169,7 @@ export default defineSchema({
     trackId: v.optional(v.string()),
     chartBody: v.optional(v.string()),
     strumming: v.optional(v.string()),
-    measures: v.optional(v.array(storedTabMeasure)),
+    measures: v.optional(v.array(tabMeasure)),
     rhythmGuessed: v.optional(v.boolean()),
     repeat: v.optional(v.number()),
     order: v.number(),
@@ -212,7 +180,7 @@ export default defineSchema({
   chordShapes: defineTable({
     versionId: v.id('versions'),
     symbol: v.string(),
-    shift: v.optional(v.number()),
+    shift: v.number(),
     frets: v.array(v.number()),
     fingers: v.optional(v.array(v.number())),
   }).index('by_version', ['versionId']),
@@ -259,9 +227,7 @@ export default defineSchema({
     name: v.optional(v.string()),
     capo: v.number(),
     following: v.boolean(),
-    visibleTrackIds: v.optional(v.array(v.string())),
-    // Old per-part filter, kept readable until migrations:jamTracks has run on every deployment.
-    visiblePartIds: v.optional(v.array(v.string())),
+    visibleTrackIds: v.array(v.string()),
     personalVersionId: v.optional(v.id('versions')),
   })
     .index('by_room', ['roomId'])
@@ -288,8 +254,7 @@ export default defineSchema({
     storageId: v.optional(v.id('_storage')),
     targetVersionId: v.optional(v.id('versions')),
     youtubeId: v.optional(v.string()),
-    parser: v.optional(v.literal('text')),
-    output: v.optional(storedImportOutput),
+    output: v.optional(importOutput),
     mapping: v.array(v.union(v.string(), v.null())),
     warnings: v.array(v.string()),
     error: v.optional(v.string()),

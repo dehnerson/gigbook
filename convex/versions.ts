@@ -25,7 +25,6 @@ import {
   cleanTabMeasures,
   mapTabChords,
   previewTabShift,
-  toTabMeasures,
 } from '../src/lib/music/tab'
 
 const MAX_REPEAT = 16
@@ -84,12 +83,7 @@ async function bundle(ctx: any, version: any, song: any, canEdit: boolean) {
         section,
         parts: parts
           .filter((part: any) => part.sectionId === section._id)
-          .sort((a: any, b: any) => a.order - b.order)
-          .map((part: any) =>
-            part.measures
-              ? { ...part, measures: toTabMeasures(part.measures) }
-              : part,
-          ),
+          .sort((a: any, b: any) => a.order - b.order),
       }
     })
     .filter(Boolean)
@@ -181,7 +175,7 @@ export const saveWrittenKey = mutation({
     const preview = previewTabShift(
       parts
         .filter((part) => part.kind === 'tab')
-        .flatMap((part) => toTabMeasures(part.measures)),
+        .flatMap((part) => part.measures ?? []),
       args.semitones,
     )
     if (!preview.applied) fail('INVALID')
@@ -192,10 +186,7 @@ export const saveWrittenKey = mutation({
         })
       }
       if (part.kind === 'tab' && part.measures) {
-        const shifted = previewTabShift(
-          toTabMeasures(part.measures),
-          args.semitones,
-        )
+        const shifted = previewTabShift(part.measures, args.semitones)
         if (!shifted.applied) fail('INVALID')
         await ctx.db.patch(part._id, {
           measures: cleanTabMeasures(

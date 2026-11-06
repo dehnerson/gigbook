@@ -1,7 +1,6 @@
 import { v } from 'convex/values'
-import { internal } from './_generated/api'
 import type { Id } from './_generated/dataModel'
-import { internalMutation, mutation, query } from './_generated/server'
+import { mutation, query } from './_generated/server'
 import type { MutationCtx } from './_generated/server'
 import {
   canEditSong,
@@ -212,27 +211,10 @@ export const similar = query({
         _id: song._id,
         title: song.title,
         artist: song.artist,
-        exact: (song.key ?? songKey(song.title, song.artist)) === key,
+        exact: song.key === key,
       }))
       .sort((a, b) => Number(b.exact) - Number(a.exact))
       .slice(0, 5)
-  },
-})
-
-export const backfillKeys = internalMutation({
-  args: { cursor: v.optional(v.union(v.string(), v.null())) },
-  handler: async (ctx, args) => {
-    const page = await ctx.db
-      .query('songs')
-      .paginate({ cursor: args.cursor ?? null, numItems: 100 })
-    for (const song of page.page) {
-      const key = songKey(song.title, song.artist)
-      if (song.key !== key) await ctx.db.patch(song._id, { key })
-    }
-    if (!page.isDone)
-      await ctx.scheduler.runAfter(0, internal.songs.backfillKeys, {
-        cursor: page.continueCursor,
-      })
   },
 })
 

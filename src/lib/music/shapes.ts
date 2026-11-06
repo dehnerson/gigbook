@@ -9,7 +9,7 @@ import type { Notation } from './pitch.ts'
 import { chordVoicings, fingersFor } from './voicings.ts'
 
 export type StoredShape = { frets: Array<number>; fingers?: Array<number> }
-export type VersionShape = StoredShape & { symbol: string; shift?: number }
+export type VersionShape = StoredShape & { symbol: string; shift: number }
 export type PersonalShape = StoredShape & { symbol: string }
 export type ShapeSource = 'version' | 'mine' | 'default'
 
@@ -95,7 +95,7 @@ export function resolveChord({
     shift,
   }
   const fromVersion = versionShapes.find(
-    (shape) => shape.symbol === symbol && (shape.shift ?? 0) === shift,
+    (shape) => shape.symbol === symbol && shape.shift === shift,
   )
   if (fromVersion)
     return { ...base, diagram: shapeDiagram(fromVersion), source: 'version' }

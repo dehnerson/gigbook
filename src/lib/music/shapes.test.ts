@@ -18,7 +18,9 @@ describe('resolveChord', () => {
   })
 
   test('prefers the version shape, then the personal one', () => {
-    const versionShapes = [{ symbol: 'C', frets: [-1, 3, 5, 5, 5, 3] }]
+    const versionShapes = [
+      { symbol: 'C', shift: 0, frets: [-1, 3, 5, 5, 5, 3] },
+    ]
     const personalShapes = [{ symbol: 'C', frets: [8, 10, 10, 9, 8, 8] }]
     expect(
       resolveChord({ ...base, symbol: 'C', versionShapes, personalShapes })

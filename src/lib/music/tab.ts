@@ -29,19 +29,6 @@ export type TabMeasure = {
   ending?: number
 }
 
-export type LegacyTabMeasure = {
-  chordAbove?: string
-  events: Array<{
-    position: number
-    notes: Array<{
-      string: number
-      fret: number
-      technique?: 'h' | 'p' | 'b' | '/'
-      bendSemitones?: number
-    }>
-  }>
-}
-
 export type ShiftedNote = TabNote & { unplayable?: boolean }
 export type ShiftedBeat = Omit<TabBeat, 'notes'> & { notes: Array<ShiftedNote> }
 export type ShiftedMeasure = Omit<TabMeasure, 'beats'> & {
@@ -78,44 +65,6 @@ function nearestLength(length: number) {
     if (Math.abs(option.length - length) < Math.abs(best.length - length))
       best = option
   return { d: best.d, ...(best.dot ? { dot: true as const } : {}) }
-}
-
-function isLegacy(
-  measure: TabMeasure | LegacyTabMeasure,
-): measure is LegacyTabMeasure {
-  return 'events' in measure
-}
-
-export function fromLegacyMeasure(measure: LegacyTabMeasure): TabMeasure {
-  const beats: Array<TabBeat> = measure.events.map((event) => ({
-    d: 8,
-    notes: event.notes.map((note) => ({
-      s: note.string,
-      f: note.fret,
-      ...(note.technique ? { t: note.technique } : {}),
-      ...(note.bendSemitones !== undefined ? { bend: note.bendSemitones } : {}),
-    })),
-  }))
-  const first = beats.at(0)
-  if (measure.chordAbove) {
-    if (first) first.chord = measure.chordAbove
-    else beats.push({ d: 1, rest: true, chord: measure.chordAbove, notes: [] })
-  }
-  return { beats }
-}
-
-export function toTabMeasures(
-  measures: ReadonlyArray<TabMeasure | LegacyTabMeasure> | undefined,
-): Array<TabMeasure> {
-  return (measures ?? []).map((measure) =>
-    isLegacy(measure) ? fromLegacyMeasure(measure) : measure,
-  )
-}
-
-export function hasLegacyMeasures(
-  measures: ReadonlyArray<TabMeasure | LegacyTabMeasure> | undefined,
-) {
-  return (measures ?? []).some(isLegacy)
 }
 
 export function cleanTabMeasures(

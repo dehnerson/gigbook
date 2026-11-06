@@ -16,7 +16,6 @@ import { canEditSong, requireIdentity, songOfVersion } from './lib/access'
 import { fail } from './lib/errors'
 import { findSongByKey, insertSong, uniqueVersionName } from './lib/songs'
 import { songKey } from '../src/lib/song-key'
-import { toTabMeasures } from '../src/lib/music/tab'
 import { meaningfulLabel } from '../src/lib/tracks'
 import { readAiKey } from './users'
 
@@ -46,26 +45,9 @@ async function checkAiQuota(ctx: MutationCtx, ownerId: string) {
     .withIndex('by_owner', (q) => q.eq('ownerId', ownerId))
     .collect()
   const count = recent.filter(
-    (draft) => !draft.parser && draft.createdAt > Date.now() - HOUR,
+    (draft) => draft.createdAt > Date.now() - HOUR,
   ).length
   if (count >= LIMIT) fail('RATE_LIMIT')
-}
-
-function currentOutput(output: NonNullable<Doc<'importDrafts'>['output']>) {
-  return {
-    ...output,
-    sections: output.sections.map((section) => ({
-      ...section,
-      parts: section.parts.map((part) => ({
-        ...part,
-        measures: part.measures && toTabMeasures(part.measures),
-      })),
-    })),
-  }
-}
-
-function sameName(a: string, b: string) {
-  return a.trim().toLowerCase() === b.trim().toLowerCase()
 }
 
 export const generateUploadUrl = mutation({
@@ -118,80 +100,13 @@ export const create = mutation({
   },
 })
 
-export const createParsed = mutation({
-  args: {
-    sourceText: v.string(),
-    output: importOutput,
-    warnings: v.array(v.string()),
-    targetVersionId: v.optional(v.id('versions')),
-  },
-  handler: async (ctx, args) => {
-    const identity = await requireIdentity(ctx)
-    const target = await editableTarget(ctx, args.targetVersionId)
-    const existing = target
-      ? await ctx.db
-          .query('sections')
-          .withIndex('by_version', (q) => q.eq('versionId', target._id))
-          .collect()
-      : []
-    const used = new Set<string>()
-    const mapping = args.output.sections.map((section) => {
-      const match = existing.find(
-        (item) => !used.has(item._id) && sameName(item.name, section.name),
-      )
-      if (!match) return null
-      used.add(match._id)
-      return match._id
-    })
-    return ctx.db.insert('importDrafts', {
-      ownerId: identity.subject,
-      status: 'ready',
-      sourceKind: 'paste',
-      sourceText: args.sourceText.slice(0, 40_000),
-      targetVersionId: args.targetVersionId,
-      parser: 'text',
-      output: args.output,
-      mapping,
-      warnings: args.warnings,
-      createdAt: Date.now(),
-    })
-  },
-})
-
-export const retryWithAi = mutation({
-  args: { draftId: v.id('importDrafts') },
-  handler: async (ctx, args) => {
-    const identity = await requireIdentity(ctx)
-    const draft = await ctx.db.get(args.draftId)
-    if (!draft || draft.ownerId !== identity.subject) fail('FORBIDDEN')
-    if (!draft.parser || !draft.sourceText) fail('INVALID')
-    await readAiKey(ctx, identity.subject)
-    await checkAiQuota(ctx, identity.subject)
-    await ctx.db.patch(draft._id, {
-      status: 'queued',
-      parser: undefined,
-      output: undefined,
-      warnings: [],
-      mapping: [],
-      error: undefined,
-      createdAt: Date.now(),
-    })
-    await ctx.scheduler.runAfter(0, internal.importAction.run, {
-      draftId: draft._id,
-    })
-  },
-})
-
 export const get = query({
   args: { draftId: v.id('importDrafts') },
   handler: async (ctx, args) => {
     const identity = await requireIdentity(ctx)
     const draft = await ctx.db.get(args.draftId)
     if (!draft || draft.ownerId !== identity.subject) fail('NOT_FOUND')
-    return {
-      ...draft,
-      output: draft.output ? currentOutput(draft.output) : undefined,
-    }
+    return draft
   },
 })
 
@@ -233,7 +148,7 @@ export const save = mutation({
     const draft = await ctx.db.get(args.draftId)
     if (!draft || draft.ownerId !== identity.subject || !draft.output)
       fail('FORBIDDEN')
-    const output = currentOutput(draft.output)
+    const output = draft.output
     const version = await editableTarget(ctx, draft.targetVersionId)
     if (version) {
       const timeline = [...version.timeline]
