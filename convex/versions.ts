@@ -68,7 +68,7 @@ async function bundle(ctx: any, version: any, song: any, canEdit: boolean) {
     .withIndex('by_version', (q: any) => q.eq('versionId', version._id))
     .collect()
   const shapes = await ctx.db
-    .query('chordShapes')
+    .query('versionChordShapes')
     .withIndex('by_version', (q: any) => q.eq('versionId', version._id))
     .collect()
   const bySection = new Map(

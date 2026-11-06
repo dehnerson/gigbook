@@ -1,8 +1,6 @@
-import * as React from 'react'
 import { cn } from 'cn'
 import {
   DialogTrigger,
-  Heading,
   Popover as PopoverPrimitive,
 } from 'react-aria-components'
 import type {
@@ -42,46 +40,4 @@ function Popover({
   )
 }
 
-function PopoverHeader({ className, ...props }: React.ComponentProps<'div'>) {
-  return (
-    <div
-      data-slot="popover-header"
-      className={cn('flex flex-col gap-0.5 text-sm', className)}
-      {...props}
-    />
-  )
-}
-
-function PopoverTitle({
-  className,
-  ...props
-}: React.ComponentProps<typeof Heading>) {
-  return (
-    <Heading
-      data-slot="popover-title"
-      className={cn('font-medium', className)}
-      {...props}
-    />
-  )
-}
-
-function PopoverDescription({
-  className,
-  ...props
-}: React.ComponentProps<'div'>) {
-  return (
-    <div
-      data-slot="popover-description"
-      className={cn('text-muted-foreground', className)}
-      {...props}
-    />
-  )
-}
-
-export {
-  Popover,
-  PopoverDescription,
-  PopoverHeader,
-  PopoverTitle,
-  PopoverTrigger,
-}
+export { Popover, PopoverTrigger }

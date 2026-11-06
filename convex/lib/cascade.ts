@@ -59,11 +59,11 @@ export async function cloneVersionTree(
     }
   }
   const shapes = await ctx.db
-    .query('chordShapes')
+    .query('versionChordShapes')
     .withIndex('by_version', (q) => q.eq('versionId', version._id))
     .collect()
   for (const shape of shapes)
-    await ctx.db.insert('chordShapes', {
+    await ctx.db.insert('versionChordShapes', {
       versionId: copyVersionId,
       symbol: shape.symbol,
       shift: shape.shift,
@@ -94,7 +94,7 @@ export async function deleteVersionTree(
     .withIndex('by_version', (q) => q.eq('versionId', versionId))
     .collect()
   const shapes = await ctx.db
-    .query('chordShapes')
+    .query('versionChordShapes')
     .withIndex('by_version', (q) => q.eq('versionId', versionId))
     .collect()
   const items = await ctx.db

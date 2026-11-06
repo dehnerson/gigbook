@@ -17,7 +17,7 @@ export async function requireIdentity(ctx: {
 
 export async function membership(db: Db, bandId: string, userId: string) {
   const rows = await db
-    .query('memberships')
+    .query('bandMemberships')
     .withIndex('by_user', (q: any) => q.eq('userId', userId))
     .collect()
   return rows.find((row: any) => row.bandId === bandId) ?? null

@@ -2,23 +2,14 @@ import * as React from 'react'
 import { cn } from 'cn'
 import {
   Dialog as DialogPrimitive,
-  DialogTrigger as DialogTriggerPrimitive,
   Heading,
   ModalOverlay as ModalOverlayPrimitive,
   Modal as ModalPrimitive,
 } from 'react-aria-components'
-import type {
-  DialogProps as DialogPrimitiveProps,
-  DialogTriggerProps as DialogTriggerPrimitiveProps,
-  ModalOverlayProps as ModalOverlayPrimitiveProps,
-} from 'react-aria-components'
+import type { ModalOverlayProps as ModalOverlayPrimitiveProps } from 'react-aria-components'
 
 import { Button } from '@/components/ui/button'
 import { XIcon } from 'lucide-react'
-
-function DialogTrigger({ ...props }: DialogTriggerPrimitiveProps) {
-  return <DialogTriggerPrimitive data-slot="dialog-trigger" {...props} />
-}
 
 function DialogClose({
   className,
@@ -168,15 +159,4 @@ function DialogDescription({
   )
 }
 
-export {
-  type DialogPrimitiveProps,
-  type DialogTriggerPrimitiveProps,
-  Dialog,
-  DialogClose,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogOverlay,
-  DialogTitle,
-  DialogTrigger,
-}
+export { Dialog, DialogDescription, DialogFooter, DialogHeader, DialogTitle }

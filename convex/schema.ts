@@ -103,7 +103,7 @@ export default defineSchema({
     createdBy: v.string(),
   }),
 
-  memberships: defineTable({
+  bandMemberships: defineTable({
     bandId: v.id('bands'),
     userId: v.string(),
     role: v.union(v.literal('owner'), v.literal('editor'), v.literal('viewer')),
@@ -177,7 +177,7 @@ export default defineSchema({
     .index('by_section', ['sectionId'])
     .index('by_version', ['versionId']),
 
-  chordShapes: defineTable({
+  versionChordShapes: defineTable({
     versionId: v.id('versions'),
     symbol: v.string(),
     shift: v.number(),

@@ -9,7 +9,7 @@ export const list = query({
   handler: async (ctx) => {
     const identity = await requireIdentity(ctx)
     const rows = await ctx.db
-      .query('memberships')
+      .query('bandMemberships')
       .withIndex('by_user', (q) => q.eq('userId', identity.subject))
       .collect()
     const bands = await Promise.all(
@@ -17,7 +17,7 @@ export const list = query({
         const band = await ctx.db.get(row.bandId)
         if (!band) return []
         const members = await ctx.db
-          .query('memberships')
+          .query('bandMemberships')
           .withIndex('by_band', (q) => q.eq('bandId', band._id))
           .collect()
         const songs = await ctx.db
@@ -49,7 +49,7 @@ export const get = query({
     const members = await withNames(
       ctx,
       await ctx.db
-        .query('memberships')
+        .query('bandMemberships')
         .withIndex('by_band', (q) => q.eq('bandId', band._id))
         .collect(),
     )
@@ -89,7 +89,7 @@ export const create = mutation({
       name: args.name.trim() || 'Band',
       createdBy: identity.subject,
     })
-    await ctx.db.insert('memberships', {
+    await ctx.db.insert('bandMemberships', {
       bandId,
       userId: identity.subject,
       role: 'owner',
@@ -120,7 +120,7 @@ export const addMember = mutation({
       await ctx.db.patch(existing._id, { role: args.role })
       return
     }
-    await ctx.db.insert('memberships', {
+    await ctx.db.insert('bandMemberships', {
       bandId: args.bandId,
       userId: user.clerkUserId,
       role: args.role,
@@ -129,7 +129,7 @@ export const addMember = mutation({
 })
 
 export const removeMember = mutation({
-  args: { membershipId: v.id('memberships') },
+  args: { membershipId: v.id('bandMemberships') },
   handler: async (ctx, args) => {
     const identity = await requireIdentity(ctx)
     const row = await ctx.db.get(args.membershipId)

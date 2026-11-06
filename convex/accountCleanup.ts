@@ -37,7 +37,7 @@ async function deleteSetlist(ctx: MutationCtx, setlistId: Id<'setlists'>) {
   await ctx.db.delete(setlistId)
 }
 
-function successor(members: Array<Doc<'memberships'>>) {
+function successor(members: Array<Doc<'bandMemberships'>>) {
   const byAge = [...members].sort((a, b) => a._creationTime - b._creationTime)
   return (
     byAge.find((member) => member.role === 'owner') ??
@@ -48,12 +48,12 @@ function successor(members: Array<Doc<'memberships'>>) {
 
 async function leaveBand(
   ctx: MutationCtx,
-  row: Doc<'memberships'>,
+  row: Doc<'bandMemberships'>,
   clerkUserId: string,
 ) {
   const others = (
     await ctx.db
-      .query('memberships')
+      .query('bandMemberships')
       .withIndex('by_band', (q) => q.eq('bandId', row.bandId))
       .collect()
   ).filter((member) => member.userId !== clerkUserId)
@@ -101,7 +101,7 @@ const steps: Record<
 > = {
   bands: async (ctx, clerkUserId) => {
     const row = await ctx.db
-      .query('memberships')
+      .query('bandMemberships')
       .withIndex('by_user', (q) => q.eq('userId', clerkUserId))
       .first()
     if (!row) return 'songs'
@@ -208,7 +208,7 @@ export const deleteBand = internalMutation({
       return
     }
     const members = await ctx.db
-      .query('memberships')
+      .query('bandMemberships')
       .withIndex('by_band', (q) => q.eq('bandId', args.bandId))
       .collect()
     for (const member of members) await ctx.db.delete(member._id)

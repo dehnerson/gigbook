@@ -14,34 +14,6 @@ import { findSongByKey, insertSong, uniqueVersionName } from './lib/songs'
 import { STANDARD_TUNING } from '../src/lib/music/diagrams'
 import { songKey } from '../src/lib/song-key'
 
-export const list = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await requireIdentity(ctx)
-    const own = await ctx.db
-      .query('songs')
-      .withIndex('by_creator', (q) => q.eq('createdBy', identity.subject))
-      .collect()
-    const memberships = await ctx.db
-      .query('memberships')
-      .withIndex('by_user', (q) => q.eq('userId', identity.subject))
-      .collect()
-    const bandSongs = (
-      await Promise.all(
-        memberships.map((row) =>
-          ctx.db
-            .query('songs')
-            .withIndex('by_band', (q) => q.eq('bandId', row.bandId))
-            .collect(),
-        ),
-      )
-    ).flat()
-    const byId = new Map<string, (typeof own)[number]>()
-    for (const song of [...own, ...bandSongs]) byId.set(song._id, song)
-    return [...byId.values()].sort((a, b) => a.title.localeCompare(b.title))
-  },
-})
-
 export const catalog = query({
   args: {},
   handler: async (ctx) => {
@@ -51,7 +23,7 @@ export const catalog = query({
       .withIndex('by_creator', (q) => q.eq('createdBy', identity.subject))
       .collect()
     const memberships = await ctx.db
-      .query('memberships')
+      .query('bandMemberships')
       .withIndex('by_user', (q) => q.eq('userId', identity.subject))
       .collect()
     const bandSongs = (

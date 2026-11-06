@@ -40,7 +40,7 @@ async function versionShape(
   shift: number,
 ) {
   const shapes = await ctx.db
-    .query('chordShapes')
+    .query('versionChordShapes')
     .withIndex('by_version', (q) => q.eq('versionId', versionId))
     .collect()
   return shapes.find(
@@ -150,7 +150,7 @@ export const setForVersion = mutation({
         fingers: args.fingers,
       })
     else
-      await ctx.db.insert('chordShapes', {
+      await ctx.db.insert('versionChordShapes', {
         versionId: version._id,
         symbol: args.symbol,
         shift: args.shift,

@@ -24,7 +24,7 @@ export const list = query({
       .withIndex('by_owner', (q) => q.eq('ownerId', identity.subject))
       .collect()
     const memberships = await ctx.db
-      .query('memberships')
+      .query('bandMemberships')
       .withIndex('by_user', (q) => q.eq('userId', identity.subject))
       .collect()
     const bandLists = (
