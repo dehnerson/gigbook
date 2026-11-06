@@ -175,6 +175,7 @@ export default defineSchema({
         repeat: v.optional(v.number()),
       }),
     ),
+    tracks: v.optional(v.array(v.object({ id: v.string(), name: v.string() }))),
     parentVersionId: v.optional(v.id('versions')),
     bandId: v.optional(v.id('bands')),
     createdBy: v.string(),
@@ -196,6 +197,7 @@ export default defineSchema({
     versionId: v.id('versions'),
     kind: v.union(v.literal('chart'), v.literal('tab')),
     label: v.string(),
+    trackId: v.optional(v.string()),
     chartBody: v.optional(v.string()),
     strumming: v.optional(v.string()),
     measures: v.optional(v.array(storedTabMeasure)),
@@ -255,7 +257,9 @@ export default defineSchema({
     name: v.optional(v.string()),
     capo: v.number(),
     following: v.boolean(),
-    visiblePartIds: v.array(v.string()),
+    visibleTrackIds: v.optional(v.array(v.string())),
+    // Old per-part filter, kept readable until migrations:jamTracks has run on every deployment.
+    visiblePartIds: v.optional(v.array(v.string())),
     personalVersionId: v.optional(v.id('versions')),
   })
     .index('by_room', ['roomId'])

@@ -13,6 +13,12 @@ import { fail } from './lib/errors'
 import { cloneVersionTree, deleteVersionTree } from './lib/cascade'
 import { findSongByKey, insertSong, uniqueVersionName } from './lib/songs'
 import { songKey } from '../src/lib/song-key'
+import {
+  DEFAULT_TRACK,
+  isBuiltInTrack,
+  meaningfulLabel,
+  trackOf,
+} from '../src/lib/tracks'
 import { transposeSymbol } from '../src/lib/music/chords'
 import { transposeChordPro } from '../src/lib/music/chordpro'
 import {
@@ -347,6 +353,7 @@ export const detachEntry = mutation({
         versionId: version._id,
         kind: part.kind,
         label: part.label,
+        trackId: part.trackId,
         chartBody: part.chartBody,
         strumming: part.strumming,
         measures: part.measures,
@@ -449,16 +456,28 @@ export const removeEntry = mutation({
   },
 })
 
+function storedTrackId(
+  version: Doc<'versions'>,
+  kind: Doc<'parts'>['kind'],
+  trackId: string | undefined,
+) {
+  if (trackId === undefined) return undefined
+  const id = trackOf({ kind, trackId }, version.tracks)
+  if (id !== trackId) fail('NOT_FOUND')
+  return id === DEFAULT_TRACK[kind] ? undefined : id
+}
+
 export const addPart = mutation({
   args: {
     sectionId: v.id('sections'),
     kind: v.union(v.literal('chart'), v.literal('tab')),
-    label: v.string(),
+    label: v.optional(v.string()),
+    trackId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const section = await ctx.db.get(args.sectionId)
     if (!section) fail('NOT_FOUND')
-    const { song } = await loadVersion(ctx, section.versionId)
+    const { version, song } = await loadVersion(ctx, section.versionId)
     await canEditSong(ctx, song)
     const existing = await ctx.db
       .query('parts')
@@ -468,7 +487,8 @@ export const addPart = mutation({
       sectionId: section._id,
       versionId: section.versionId,
       kind: args.kind,
-      label: args.label.trim() || (args.kind === 'chart' ? 'Chords' : 'Tab'),
+      label: meaningfulLabel(args.label ?? ''),
+      trackId: storedTrackId(version, args.kind, args.trackId),
       chartBody: args.kind === 'chart' ? '' : undefined,
       measures: args.kind === 'tab' ? [] : undefined,
       order: existing.length,
@@ -480,6 +500,7 @@ export const updatePart = mutation({
   args: {
     partId: v.id('parts'),
     label: v.optional(v.string()),
+    trackId: v.optional(v.string()),
     chartBody: v.optional(v.string()),
     strumming: v.optional(v.string()),
     measures: v.optional(v.array(tabMeasure)),
@@ -488,10 +509,13 @@ export const updatePart = mutation({
   handler: async (ctx, args) => {
     const part = await ctx.db.get(args.partId)
     if (!part) fail('NOT_FOUND')
-    const { song } = await loadVersion(ctx, part.versionId)
+    const { version, song } = await loadVersion(ctx, part.versionId)
     await canEditSong(ctx, song)
     await ctx.db.patch(part._id, {
       ...(args.label !== undefined ? { label: args.label } : {}),
+      ...(args.trackId !== undefined
+        ? { trackId: storedTrackId(version, part.kind, args.trackId) }
+        : {}),
       ...(args.chartBody !== undefined ? { chartBody: args.chartBody } : {}),
       ...(args.strumming !== undefined ? { strumming: args.strumming } : {}),
       ...(args.measures !== undefined ? { measures: args.measures } : {}),
@@ -510,5 +534,69 @@ export const removePart = mutation({
     const { song } = await loadVersion(ctx, part.versionId)
     await canEditSong(ctx, song)
     await ctx.db.delete(part._id)
+  },
+})
+
+const MAX_TRACK_NAME = 60
+
+function trackName(name: string) {
+  const trimmed = name.trim().slice(0, MAX_TRACK_NAME)
+  if (!trimmed) fail('INVALID')
+  return trimmed
+}
+
+export const addTrack = mutation({
+  args: { versionId: v.id('versions'), name: v.string() },
+  handler: async (ctx, args) => {
+    const { version, song } = await loadVersion(ctx, args.versionId)
+    await canEditSong(ctx, song)
+    const id = crypto.randomUUID().slice(0, 8)
+    await ctx.db.patch(version._id, {
+      tracks: [...(version.tracks ?? []), { id, name: trackName(args.name) }],
+    })
+    return id
+  },
+})
+
+export const renameTrack = mutation({
+  args: { versionId: v.id('versions'), trackId: v.string(), name: v.string() },
+  handler: async (ctx, args) => {
+    const { version, song } = await loadVersion(ctx, args.versionId)
+    await canEditSong(ctx, song)
+    const tracks = version.tracks ?? []
+    const name = trackName(args.name)
+    if (tracks.some((track) => track.id === args.trackId)) {
+      await ctx.db.patch(version._id, {
+        tracks: tracks.map((track) =>
+          track.id === args.trackId ? { ...track, name } : track,
+        ),
+      })
+    } else if (isBuiltInTrack(args.trackId)) {
+      await ctx.db.patch(version._id, {
+        tracks: [...tracks, { id: args.trackId, name }],
+      })
+    } else fail('NOT_FOUND')
+  },
+})
+
+/** Built-in tracks go back to their default name; parts on a removed track fall back to the built-in one. */
+export const removeTrack = mutation({
+  args: { versionId: v.id('versions'), trackId: v.string() },
+  handler: async (ctx, args) => {
+    const { version, song } = await loadVersion(ctx, args.versionId)
+    await canEditSong(ctx, song)
+    await ctx.db.patch(version._id, {
+      tracks: (version.tracks ?? []).filter(
+        (track) => track.id !== args.trackId,
+      ),
+    })
+    if (isBuiltInTrack(args.trackId)) return
+    const parts = await ctx.db
+      .query('parts')
+      .withIndex('by_version', (q) => q.eq('versionId', version._id))
+      .collect()
+    for (const part of parts)
+      if (part.trackId === args.trackId)
+        await ctx.db.patch(part._id, { trackId: undefined })
   },
 })

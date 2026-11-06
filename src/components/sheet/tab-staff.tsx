@@ -58,6 +58,7 @@ export function TabStaff({
   const strings = tuning.length > 0 ? tuning : [...STANDARD_TUNING]
   const tuningKey = strings.join(' ')
   const { capo, transpose, notation } = settings
+  const { tab, notes, chords } = settings.layers
   const shifted = useMemo(
     () => previewTabShift(measures, transpose).measures,
     [measures, transpose],
@@ -68,9 +69,23 @@ export function TabStaff({
         tuning: tuningKey.split(' '),
         timeSignature,
         tempo: bpm,
+        score: notes,
+        tabs: tab,
+        chords,
         chordLabel: (symbol) => displayChord(symbol, capo, transpose, notation),
       }),
-    [shifted, tuningKey, timeSignature, bpm, capo, transpose, notation],
+    [
+      shifted,
+      tuningKey,
+      timeSignature,
+      bpm,
+      notes,
+      tab,
+      chords,
+      capo,
+      transpose,
+      notation,
+    ],
   )
   const flags = useMemo<Flags>(
     () => ({

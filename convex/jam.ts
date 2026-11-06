@@ -29,7 +29,7 @@ export const create = mutation({
       userId: identity.subject,
       capo: 0,
       following: true,
-      visiblePartIds: [],
+      visibleTrackIds: [],
     })
     return { roomId, code }
   },
@@ -58,7 +58,7 @@ export const join = mutation({
         userId: identity.subject,
         capo: 0,
         following: true,
-        visiblePartIds: [],
+        visibleTrackIds: [],
       })
     }
     return { roomId: room._id, code: room.code }
@@ -182,7 +182,7 @@ export const setMemberView = mutation({
     code: v.string(),
     capo: v.number(),
     following: v.boolean(),
-    visiblePartIds: v.array(v.string()),
+    visibleTrackIds: v.array(v.string()),
     personalVersionId: v.optional(v.id('versions')),
   },
   handler: async (ctx, args) => {
@@ -202,7 +202,8 @@ export const setMemberView = mutation({
     await ctx.db.patch(member._id, {
       capo: args.capo,
       following: args.following,
-      visiblePartIds: args.visiblePartIds,
+      visibleTrackIds: args.visibleTrackIds,
+      visiblePartIds: undefined,
       personalVersionId: args.personalVersionId,
     })
   },

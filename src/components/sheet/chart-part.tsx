@@ -153,6 +153,7 @@ export function ChartPart({
 }) {
   const show = (symbol: string) =>
     displayChord(symbol, settings.capo, settings.transpose, settings.notation)
+  const { lyrics, chords } = settings.layers
   const lines = body.split(/\r?\n/)
 
   return (
@@ -171,18 +172,18 @@ export function ChartPart({
           )
         }
         if (isBarGridLine(line)) {
-          return settings.mode === 'lyrics' ? null : (
-            <BarGrid key={index} line={line} show={show} />
-          )
+          return chords ? <BarGrid key={index} line={line} show={show} /> : null
         }
         const tokens = parseChordPro(line)[0]?.tokens ?? []
         const hasChords = tokens.some((token) => token.kind === 'chord')
         if (isChordOnlyLine(tokens)) {
-          return settings.mode === 'lyrics' ? null : (
+          return chords ? (
             <ChordOnlyRow key={index} tokens={tokens} show={show} />
-          )
+          ) : null
         }
-        if (settings.mode === 'lyrics' || !hasChords) {
+        if (lyrics && chords && hasChords)
+          return <LyricLine key={index} tokens={tokens} show={show} />
+        if (lyrics) {
           const text = tokens
             .map((token) => (token.kind === 'text' ? token.value : ''))
             .join('')
@@ -192,16 +193,13 @@ export function ChartPart({
             </p>
           )
         }
-        if (settings.mode === 'chords') {
-          return (
-            <ChordOnlyRow
-              key={index}
-              tokens={tokens.filter((token) => token.kind === 'chord')}
-              show={show}
-            />
-          )
-        }
-        return <LyricLine key={index} tokens={tokens} show={show} />
+        return chords && hasChords ? (
+          <ChordOnlyRow
+            key={index}
+            tokens={tokens.filter((token) => token.kind === 'chord')}
+            show={show}
+          />
+        ) : null
       })}
     </div>
   )

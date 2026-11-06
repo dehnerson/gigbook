@@ -449,15 +449,21 @@ export function toAlphaTex(
     timeSignature: string
     tempo?: number
     score?: boolean
+    tabs?: boolean
+    chords?: boolean
     chordLabel?: (symbol: string) => string
   },
 ) {
   const [top = '4', bottom = '4'] = options.timeSignature.split('/')
   const tuning = [...options.tuning].reverse().join(' ')
+  const staves = [
+    options.score ? 'score' : '',
+    options.tabs === false && options.score ? '' : 'tabs',
+  ]
   const head = [
     options.tempo ? `\\tempo ${options.tempo}` : '',
     '\\track "Guitar" { instrument 25 }',
-    `\\staff {${options.score ? 'score tabs' : 'tabs'}}`,
+    `\\staff {${staves.filter(Boolean).join(' ')}}`,
     `\\tuning (${tuning})`,
     `\\ts (${top} ${bottom})`,
   ]
@@ -469,7 +475,7 @@ export function toAlphaTex(
     const beats = measure.beats.map((beat) => {
       const props: Array<string> = []
       if (beat.dot) props.push('d')
-      if (beat.chord) {
+      if (beat.chord && options.chords !== false) {
         const label = options.chordLabel?.(beat.chord) ?? beat.chord
         props.push(`ch ${texString(label)}`)
       }

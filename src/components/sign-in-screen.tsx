@@ -6,6 +6,7 @@ import {
   SparklesIcon,
 } from 'lucide-react'
 import { ChordStrip } from '@/components/sheet/chord-strip'
+import { DEFAULT_LAYERS } from '@/lib/sheet-layers'
 import { m } from '@/paraglide/messages'
 
 const FEATURES = [
@@ -51,7 +52,7 @@ export function SignInScreen() {
               capo: 0,
               transpose: 0,
               notation: 'en',
-              mode: 'both',
+              layers: DEFAULT_LAYERS,
               scale: 1,
             }}
           />

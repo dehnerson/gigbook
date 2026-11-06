@@ -20,11 +20,11 @@ import {
   useSectionKeys,
 } from '@/components/play-view'
 import {
-  DisplayModeToggle,
   KeyControls,
+  LayerToggles,
   LayoutToggle,
-  PartsFilter,
   TextSizeControl,
+  TracksFilter,
 } from '@/components/sheet/sheet-controls'
 import { sheetPasses } from '@/components/sheet/passes'
 import {
@@ -33,7 +33,10 @@ import {
   useSectionCursor,
 } from '@/components/sheet/song-sheet'
 import type { SheetEntry, SheetSettings } from '@/components/sheet/types'
-import { useSheetPrefs } from '@/components/sheet/use-sheet-prefs'
+import {
+  useSheetLayers,
+  useSheetPrefs,
+} from '@/components/sheet/use-sheet-prefs'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { usePersonalCapo } from '@/components/use-capo'
 import { useNotation } from '@/components/use-notation'
@@ -78,8 +81,14 @@ function PlayPage() {
   const actions = useVersionActions()
   const [capo, setCapo] = usePersonalCapo(versionId, version.suggestedCapo)
   const [transpose, setTranspose] = useState(0)
-  const [parts, setParts] = useState<Array<string>>([])
+  const [trackIds, setTrackIds] = useState<Array<string>>([])
   const prefs = useSheetPrefs('play', 1.3)
+  const { layers, available } = useSheetLayers(
+    prefs.layers,
+    timeline,
+    version.tracks,
+    trackIds,
+  )
   const scroll = useAutoscrollState()
   const passes = sheetPasses(timeline)
   const entryIds = passes.map((item) => item.id)
@@ -122,7 +131,7 @@ function PlayPage() {
     capo,
     transpose,
     notation,
-    mode: prefs.mode,
+    layers,
     scale: prefs.scale,
   }
 
@@ -195,7 +204,7 @@ function PlayPage() {
           timeline={timeline}
           shapes={shapes}
           settings={settings}
-          visiblePartIds={parts}
+          visibleTrackIds={trackIds}
           highlightEntryId={active}
           layout={prefs.layout}
           versionId={version._id}
@@ -259,15 +268,22 @@ function PlayPage() {
           onSpeed={scroll.setSpeed}
         />
         <DockDivider />
-        <DisplayModeToggle mode={prefs.mode} onMode={prefs.setMode} iconOnly />
+        <LayerToggles
+          layers={layers}
+          available={available}
+          onLayers={prefs.setLayers}
+          iconOnly
+        />
         {hasRepeats ? (
           <LayoutToggle layout={prefs.layout} onLayout={prefs.setLayout} />
         ) : null}
         <TextSizeControl scale={prefs.scale} onScale={prefs.setScale} />
-        <PartsFilter
+        <TracksFilter
           timeline={timeline}
-          visiblePartIds={parts}
-          onVisiblePartIds={setParts}
+          tracks={version.tracks}
+          visibleTrackIds={trackIds}
+          onVisibleTrackIds={setTrackIds}
+          iconOnly
         />
       </StageDock>
     </div>

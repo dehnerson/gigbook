@@ -1,10 +1,12 @@
 import type { Id } from '../../../convex/_generated/dataModel'
 import type { TabMeasure } from '@/lib/music/tab'
+import type { StoredTrack } from '@/lib/tracks'
 
 export type EditorPart = {
   _id: Id<'parts'>
   kind: 'chart' | 'tab'
   label: string
+  trackId?: string
   chartBody?: string
   strumming?: string
   measures?: Array<TabMeasure>
@@ -30,4 +32,5 @@ export type EditorVersion = {
   bpm?: number
   tuning: Array<string>
   suggestedCapo: number
+  tracks?: Array<StoredTrack>
 }

@@ -2,8 +2,46 @@ import { v } from 'convex/values'
 import { internal } from './_generated/api'
 import { internalMutation } from './_generated/server'
 import { hasLegacyMeasures, toTabMeasures } from '../src/lib/music/tab'
+import { meaningfulLabel } from '../src/lib/tracks'
 
 const cursor = v.optional(v.union(v.string(), v.null()))
+
+export const partLabels = internalMutation({
+  args: { cursor },
+  handler: async (ctx, args) => {
+    const page = await ctx.db
+      .query('parts')
+      .paginate({ cursor: args.cursor ?? null, numItems: 100 })
+    for (const part of page.page) {
+      const label = meaningfulLabel(part.label)
+      if (label !== part.label) await ctx.db.patch(part._id, { label })
+    }
+    if (!page.isDone)
+      await ctx.scheduler.runAfter(0, internal.migrations.partLabels, {
+        cursor: page.continueCursor,
+      })
+  },
+})
+
+export const jamTracks = internalMutation({
+  args: { cursor },
+  handler: async (ctx, args) => {
+    const page = await ctx.db
+      .query('jamMembers')
+      .paginate({ cursor: args.cursor ?? null, numItems: 100 })
+    for (const member of page.page) {
+      if (member.visiblePartIds === undefined) continue
+      await ctx.db.patch(member._id, {
+        visiblePartIds: undefined,
+        visibleTrackIds: member.visibleTrackIds ?? [],
+      })
+    }
+    if (!page.isDone)
+      await ctx.scheduler.runAfter(0, internal.migrations.jamTracks, {
+        cursor: page.continueCursor,
+      })
+  },
+})
 
 export const tabBeats = internalMutation({
   args: { cursor },

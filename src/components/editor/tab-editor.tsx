@@ -61,6 +61,7 @@ import {
   toggleTechnique,
 } from '@/lib/music/tab-edit'
 import type { TabCursor, TabEdit } from '@/lib/music/tab-edit'
+import { DEFAULT_LAYERS } from '@/lib/sheet-layers'
 import { m } from '@/paraglide/messages'
 import { textareaClass } from './chart-editor'
 import { LENGTH_LABELS, TabGrid, noteLabel } from './tab-grid'
@@ -323,7 +324,7 @@ export function TabEditor({
     capo: 0,
     transpose: 0,
     notation,
-    mode: 'both',
+    layers: DEFAULT_LAYERS,
     scale: 1,
   }
 

@@ -1,16 +1,19 @@
 import { cn } from 'cn'
 import {
   ALargeSmallIcon,
-  FileMusicIcon,
+  ArrowDownUpIcon,
   GuitarIcon,
-  LayersIcon,
+  ListFilterIcon,
   ListIcon,
   MicVocalIcon,
   MinusIcon,
+  Music2Icon,
   PlusIcon,
   Repeat2Icon,
+  Rows3Icon,
 } from 'lucide-react'
-import { Dialog } from 'react-aria-components'
+import type * as React from 'react'
+import { Dialog, ToggleButton } from 'react-aria-components'
 import { signed, Stepper } from '@/components/app/stepper'
 import { Segmented } from '@/components/app/segmented'
 import { Button } from '@/components/ui/button'
@@ -18,52 +21,60 @@ import { Popover, PopoverTrigger } from '@/components/ui/popover'
 import { Switch } from '@/components/ui/switch'
 import { soundsAs } from '@/lib/music/chords'
 import type { Notation } from '@/lib/music/pitch'
+import { toggleLayer } from '@/lib/sheet-layers'
+import type { Layer, LayerSet } from '@/lib/sheet-layers'
+import { usedTracks } from '@/lib/tracks'
+import type { StoredTrack } from '@/lib/tracks'
 import { m } from '@/paraglide/messages'
-import type { DisplayMode, SheetEntry, SheetLayout } from './types'
+import { trackName } from './tracks'
+import type { SheetEntry, SheetLayout } from './types'
 import { stepScale } from './use-sheet-prefs'
 
-export function partOptions(timeline: Array<SheetEntry>) {
-  const seen = new Set<string>()
-  const options: Array<{ id: string; label: string; section: string }> = []
-  for (const entry of timeline) {
-    for (const part of entry.parts) {
-      if (seen.has(part._id)) continue
-      seen.add(part._id)
-      options.push({
-        id: part._id,
-        label: part.label,
-        section: entry.section.name,
-      })
-    }
-  }
-  return options
+const LAYER_INFO: Record<
+  Layer,
+  { name: () => string; icon: React.ComponentType<{ className?: string }> }
+> = {
+  lyrics: { name: m.layerLyrics, icon: MicVocalIcon },
+  chords: { name: m.layerChords, icon: GuitarIcon },
+  strumming: { name: m.layerStrumming, icon: ArrowDownUpIcon },
+  tab: { name: m.layerTab, icon: Rows3Icon },
+  notes: { name: m.layerNotes, icon: Music2Icon },
 }
 
-export function DisplayModeToggle({
-  mode,
-  onMode,
-  size,
+export function LayerToggles({
+  layers,
+  available,
+  onLayers,
   iconOnly = false,
 }: {
-  mode: DisplayMode
-  onMode: (mode: DisplayMode) => void
-  size?: 'sm' | 'default'
+  layers: LayerSet
+  available: Array<Layer>
+  onLayers: (layers: LayerSet) => void
   iconOnly?: boolean
 }) {
-  const label = (text: string) =>
-    iconOnly ? <span className="sr-only">{text}</span> : text
+  if (available.length < 2) return null
   return (
-    <Segmented
-      aria-label={m.displayMode()}
-      value={mode}
-      onChange={onMode}
-      size={size}
-      options={[
-        { id: 'both', label: label(m.modeBoth()), icon: FileMusicIcon },
-        { id: 'lyrics', label: label(m.modeLyrics()), icon: MicVocalIcon },
-        { id: 'chords', label: label(m.modeChords()), icon: GuitarIcon },
-      ]}
-    />
+    <div
+      role="group"
+      aria-label={m.layers()}
+      className="inline-flex items-center gap-0.5 rounded-xl border bg-muted/40 p-1"
+    >
+      {available.map((layer) => {
+        const { name, icon: Icon } = LAYER_INFO[layer]
+        return (
+          <ToggleButton
+            key={layer}
+            isSelected={layers[layer]}
+            onChange={() => onLayers(toggleLayer(layers, layer, available))}
+            aria-label={iconOnly ? name() : undefined}
+            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-2.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors outline-none hover:text-foreground data-focus-visible:ring-2 data-focus-visible:ring-ring data-selected:bg-background data-selected:text-foreground data-selected:shadow-sm dark:data-selected:bg-raised"
+          >
+            <Icon className="size-4" />
+            {iconOnly ? null : name()}
+          </ToggleButton>
+        )
+      })}
+    </div>
   )
 }
 
@@ -129,65 +140,81 @@ export function TextSizeControl({
   )
 }
 
-export function PartsFilter({
+export function TracksFilter({
   timeline,
-  visiblePartIds,
-  onVisiblePartIds,
+  tracks,
+  visibleTrackIds,
+  onVisibleTrackIds,
+  iconOnly = false,
 }: {
   timeline: Array<SheetEntry>
-  visiblePartIds: Array<string>
-  onVisiblePartIds: (ids: Array<string>) => void
+  tracks: Array<StoredTrack> | undefined
+  visibleTrackIds: Array<string>
+  onVisibleTrackIds: (ids: Array<string>) => void
+  iconOnly?: boolean
 }) {
-  const options = partOptions(timeline)
+  const options = usedTracks(
+    tracks,
+    timeline.flatMap((entry) => entry.parts),
+  )
   if (options.length < 2) return null
   const all = options.map((option) => option.id)
-  const visible = visiblePartIds.length === 0 ? all : visiblePartIds
+  const chosen = visibleTrackIds.filter((id) => all.includes(id))
+  const visible = chosen.length === 0 ? all : chosen
   const hidden = all.length - visible.length
   return (
     <PopoverTrigger>
-      <Button variant="outline" className="rounded-xl">
-        <LayersIcon />
-        {m.visibleParts()}
+      <Button
+        variant="outline"
+        size={iconOnly ? 'icon' : 'default'}
+        aria-label={iconOnly ? m.showTracks() : undefined}
+        className="relative rounded-xl"
+      >
+        <ListFilterIcon />
+        {iconOnly ? null : m.showTracks()}
         {hidden > 0 ? (
-          <span className="rounded-full bg-primary px-1.5 text-[0.7rem] text-primary-foreground">
+          <span
+            className={cn(
+              'rounded-full bg-primary px-1.5 text-[0.7rem] text-primary-foreground',
+              iconOnly && 'absolute -top-1.5 -right-1.5',
+            )}
+          >
             −{hidden}
           </span>
         ) : null}
       </Button>
-      <Popover placement="bottom end" className="w-80">
-        <Dialog className="outline-none" aria-label={m.visibleParts()}>
+      <Popover placement="bottom end" className="w-72">
+        <Dialog className="outline-none" aria-label={m.showTracks()}>
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm font-semibold">{m.visibleParts()}</span>
+            <span className="text-sm font-semibold">{m.showTracks()}</span>
             <Button
               variant="ghost"
               size="sm"
-              onPress={() => onVisiblePartIds([])}
+              onPress={() => onVisibleTrackIds([])}
             >
               {m.showAll()}
             </Button>
           </div>
-          <ul className="max-h-80 space-y-1 overflow-y-auto">
+          <ul className="space-y-1">
             {options.map((option) => (
-              <li key={option.id}>
+              <li
+                key={option.id}
+                className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5"
+              >
+                <span className="min-w-0 truncate text-sm font-medium">
+                  {trackName(option)}
+                </span>
                 <Switch
+                  aria-label={trackName(option)}
                   isSelected={visible.includes(option.id)}
                   onChange={(on) => {
                     const next = on
                       ? [...visible, option.id]
                       : visible.filter((id) => id !== option.id)
-                    onVisiblePartIds(next.length === all.length ? [] : next)
+                    if (next.length === 0) return
+                    onVisibleTrackIds(next.length === all.length ? [] : next)
                   }}
-                  className="flex w-full flex-row-reverse items-center justify-between gap-3 rounded-lg px-2 py-1.5 hover:bg-muted"
-                >
-                  <span className="min-w-0 text-sm">
-                    <span className="block truncate font-medium">
-                      {option.section}
-                    </span>
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {option.label}
-                    </span>
-                  </span>
-                </Switch>
+                />
               </li>
             ))}
           </ul>

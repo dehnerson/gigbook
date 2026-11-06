@@ -15,6 +15,7 @@ import {
   transposeChordPro,
 } from '@/lib/music/chordpro'
 import type { Notation } from '@/lib/music/pitch'
+import { DEFAULT_LAYERS } from '@/lib/sheet-layers'
 import { m } from '@/paraglide/messages'
 import type { EditorPart } from './types'
 import { useEditor } from './use-editor'
@@ -93,7 +94,7 @@ export function ChartEditor({
     capo: 0,
     transpose: 0,
     notation,
-    mode: 'both',
+    layers: DEFAULT_LAYERS,
     scale: 0.95,
   }
 

@@ -16,6 +16,9 @@ export function useEditorMutations() {
     addPart: useMutation(api.versions.addPart),
     updatePart: useMutation(api.versions.updatePart),
     removePart: useMutation(api.versions.removePart),
+    addTrack: useMutation(api.versions.addTrack),
+    renameTrack: useMutation(api.versions.renameTrack),
+    removeTrack: useMutation(api.versions.removeTrack),
     removeVersion: useMutation(api.versions.remove),
   }
 }

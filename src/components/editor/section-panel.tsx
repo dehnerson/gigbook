@@ -8,10 +8,11 @@ import {
   Trash2Icon,
   UnlinkIcon,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { ConfirmDialog } from '@/components/app/confirm-dialog'
 import { useDebounced } from '@/components/app/save'
 import { Stepper } from '@/components/app/stepper'
+import { trackName } from '@/components/sheet/tracks'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -19,12 +20,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Select } from '@/components/ui/select'
 import type { Notation } from '@/lib/music/pitch'
+import { allTracks, trackOf } from '@/lib/tracks'
 import { m } from '@/paraglide/messages'
 import { ChartEditor, textareaClass } from './chart-editor'
 import { TabEditor } from './tab-editor'
 import type { EditorEntry, EditorPart, EditorVersion } from './types'
 import { useEditor } from './use-editor'
+
+const NEW_TRACK = '__new'
 
 function PartCard({
   part,
@@ -39,22 +44,42 @@ function PartCard({
 }) {
   const { mutations, save } = useEditor()
   const [label, setLabel] = useState(part.label)
+  const [newTrack, setNewTrack] = useState<string | null>(null)
   const [confirm, setConfirm] = useState(false)
   const saveLabel = useDebounced((value: string) => {
-    if (value.trim())
-      void save(() =>
-        mutations.updatePart({ partId: part._id, label: value.trim() }),
-      )
+    void save(() =>
+      mutations.updatePart({ partId: part._id, label: value.trim() }),
+    )
   })
   const Icon = part.kind === 'chart' ? FileMusicIcon : GuitarIcon
   const isEmpty =
     part.kind === 'chart'
       ? !part.chartBody?.trim()
       : (part.measures?.length ?? 0) === 0
+  const setTrack = (trackId: string) =>
+    void save(() => mutations.updatePart({ partId: part._id, trackId }))
+  const naming = useRef(false)
+  const startTrack = () => {
+    naming.current = true
+    setNewTrack('')
+  }
+  const createTrack = (name: string) => {
+    if (!naming.current) return
+    naming.current = false
+    setNewTrack(null)
+    if (!name.trim()) return
+    void save(async () => {
+      const trackId = await mutations.addTrack({
+        versionId: version._id,
+        name,
+      })
+      await mutations.updatePart({ partId: part._id, trackId })
+    })
+  }
 
   return (
     <div className="rounded-2xl border bg-card">
-      <div className="flex items-center gap-3 border-b px-4 py-2.5">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-2.5">
         <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
           <Icon className="size-4" />
         </span>
@@ -65,13 +90,51 @@ function PartCard({
           <input
             value={label}
             aria-label={m.partLabel()}
+            placeholder={m.partLabelPlaceholder()}
             onChange={(event) => {
               setLabel(event.target.value)
               saveLabel.call(event.target.value)
             }}
-            className="w-full bg-transparent text-sm font-medium outline-none"
+            className="w-full bg-transparent text-sm font-medium outline-none placeholder:font-normal placeholder:text-muted-foreground/70"
           />
         </div>
+        {newTrack === null ? (
+          <Select
+            aria-label={m.track()}
+            value={trackOf(part, version.tracks)}
+            className="w-44"
+            triggerClassName="h-8"
+            options={[
+              ...allTracks(version.tracks).map((track) => ({
+                id: track.id,
+                label: trackName(track),
+              })),
+              { id: NEW_TRACK, label: m.newTrack() },
+            ]}
+            onChange={(id) => {
+              if (id === NEW_TRACK) startTrack()
+              else setTrack(id)
+            }}
+          />
+        ) : (
+          <input
+            autoFocus
+            value={newTrack}
+            aria-label={m.newTrackName()}
+            placeholder={m.newTrackName()}
+            maxLength={60}
+            onChange={(event) => setNewTrack(event.target.value)}
+            onBlur={() => createTrack(newTrack)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') createTrack(newTrack)
+              if (event.key === 'Escape') {
+                naming.current = false
+                setNewTrack(null)
+              }
+            }}
+            className="h-8 w-44 rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          />
+        )}
         <Button
           variant="ghost"
           size="icon-sm"
@@ -173,13 +236,7 @@ export function SectionPanel({
   }
 
   const addPart = (kind: 'chart' | 'tab') =>
-    void save(() =>
-      mutations.addPart({
-        sectionId: entry.section._id,
-        kind,
-        label: kind === 'chart' ? m.lyricsAndChords() : m.tabPart(),
-      }),
-    )
+    void save(() => mutations.addPart({ sectionId: entry.section._id, kind }))
 
   return (
     <div className="space-y-5">

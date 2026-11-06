@@ -273,7 +273,14 @@ Original plan:
 
 ### 4.3 Layers instead of the display mode buttons (#5)
 
-**Today:** `DisplayModeToggle` always offers Both, Lyrics and Chords, even when a version only has tabs. Lyrics mode hides tabs, which is a side effect rather than a clear rule.
+**Status: done.** `src/lib/sheet-layers.ts` works out which layers a song has (with tests); `LayerToggles` in `sheet-controls.tsx` replaces `DisplayModeToggle` on the read, play, share and jam pages. Details:
+
+- Layers: Lyrics, Chords, Strumming, Tab and Notes. Notes is alphaTab's notation staff (decision in 0.1), off by default; Tab and Notes can be combined or shown alone.
+- Only layers the visible tracks contain get a toggle, and none are shown when there's only one. Chords off also hides the chord strip, bar grids and chord names above tabs.
+- The last visible layer can't be switched off. If saved choices would hide everything a song has (Tab off on a tab-only song), the defaults apply for that song.
+- Saved per page in `localStorage` (`sheet:{page}:layers`); the old `mode` value is carried over once and then removed.
+
+**Today (before):** `DisplayModeToggle` always offers Both, Lyrics and Chords, even when a version only has tabs. Lyrics mode hides tabs, which is a side effect rather than a clear rule.
 
 **Approach:**
 
@@ -283,7 +290,16 @@ Original plan:
 
 ### 4.4 Tracks instead of the parts filter (#9)
 
-**Today:** `PartsFilter` lists every part of every section separately (section name plus part label). It's unclear what it's for, and it grows with every section. `song-sheet.tsx` also needs a `DEFAULT_LABELS` workaround to hide generic part labels.
+**Status: done.** Helpers in `src/lib/tracks.ts` (with tests), mutations `addTrack`, `renameTrack` and `removeTrack` in `convex/versions.ts`, `TracksFilter` in `sheet-controls.tsx`. Differences from the plan:
+
+- The two built-in tracks aren't stored. A part without `trackId` (or with an unknown one) is on "Vocals & chords" (`vocals`) or "Guitar tab" (`guitar`) by kind, so existing data needed no migration and the names follow the reader's language. Renaming a built-in track stores `{ id: 'vocals', name }` in `versions.tracks`; clearing the name restores the default. Removing a custom track moves its parts back to the built-in one.
+- `instrument` is left out until something uses it.
+- Editor: each part card has a track picker with "New track…", and Version details has a Tracks card to rename, add and remove tracks.
+- The filter only appears when a version has two or more tracks with parts. On the read and play pages it lasts for the visit, like the old parts filter; in a jam it's saved per member (`visibleTrackIds`).
+- Sheets show a part's own label, or the track name for custom tracks. Generic labels ("Tab", "Chords", "Text & Akkorde" …) are dropped on write (`meaningfulLabel`), so `DEFAULT_LABELS` is gone.
+- **Migration:** `migrations:partLabels` clears generic labels and `migrations:jamTracks` drops the old `visiblePartIds`. Both ran on dev. For prod: deploy, run `npx convex run --prod migrations:partLabels` and `npx convex run --prod migrations:jamTracks`, then remove `visiblePartIds` from `jamMembers` in `convex/schema.ts` and deploy again.
+
+**Today (before):** `PartsFilter` lists every part of every section separately (section name plus part label). It's unclear what it's for, and it grows with every section. `song-sheet.tsx` also needs a `DEFAULT_LABELS` workaround to hide generic part labels.
 
 **Approach:**
 

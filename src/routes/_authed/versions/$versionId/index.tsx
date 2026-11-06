@@ -16,11 +16,11 @@ import type { Id } from '../../../../../convex/_generated/dataModel'
 import { Crumb } from '@/components/app/page-header'
 import {
   ControlBar,
-  DisplayModeToggle,
   KeyControls,
+  LayerToggles,
   LayoutToggle,
-  PartsFilter,
   TextSizeControl,
+  TracksFilter,
 } from '@/components/sheet/sheet-controls'
 import { sheetPasses } from '@/components/sheet/passes'
 import {
@@ -30,7 +30,10 @@ import {
   useSectionCursor,
 } from '@/components/sheet/song-sheet'
 import type { SheetEntry, SheetSettings } from '@/components/sheet/types'
-import { useSheetPrefs } from '@/components/sheet/use-sheet-prefs'
+import {
+  useSheetLayers,
+  useSheetPrefs,
+} from '@/components/sheet/use-sheet-prefs'
 import { Button, ButtonLink } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -69,8 +72,14 @@ function ReadPage() {
   const navigate = useNavigate()
   const [capo, setCapo] = usePersonalCapo(versionId, version.suggestedCapo)
   const [transpose, setTranspose] = useState(0)
-  const [parts, setParts] = useState<Array<string>>([])
+  const [trackIds, setTrackIds] = useState<Array<string>>([])
   const prefs = useSheetPrefs('read')
+  const { layers, available } = useSheetLayers(
+    prefs.layers,
+    timeline,
+    version.tracks,
+    trackIds,
+  )
   const passes = sheetPasses(timeline)
   const { active, move } = useSectionCursor(
     passes.map((item) => item.id),
@@ -92,7 +101,7 @@ function ReadPage() {
     capo,
     transpose,
     notation,
-    mode: prefs.mode,
+    layers,
     scale: prefs.scale,
   }
 
@@ -208,15 +217,20 @@ function ReadPage() {
             </Button>
           ) : null}
           <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
-            <DisplayModeToggle mode={prefs.mode} onMode={prefs.setMode} />
+            <LayerToggles
+              layers={layers}
+              available={available}
+              onLayers={prefs.setLayers}
+            />
             {passes.length > timeline.length ? (
               <LayoutToggle layout={prefs.layout} onLayout={prefs.setLayout} />
             ) : null}
             <TextSizeControl scale={prefs.scale} onScale={prefs.setScale} />
-            <PartsFilter
+            <TracksFilter
               timeline={timeline}
-              visiblePartIds={parts}
-              onVisiblePartIds={setParts}
+              tracks={version.tracks}
+              visibleTrackIds={trackIds}
+              onVisibleTrackIds={setTrackIds}
             />
           </div>
         </ControlBar>
@@ -229,7 +243,7 @@ function ReadPage() {
         timeline={timeline}
         shapes={shapes}
         settings={settings}
-        visiblePartIds={parts}
+        visibleTrackIds={trackIds}
         layout={prefs.layout}
         showHeader={false}
         versionId={version._id}

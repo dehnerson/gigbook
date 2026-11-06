@@ -5,13 +5,16 @@ import { useState } from 'react'
 import { api } from '../../../../convex/_generated/api'
 import {
   ControlBar,
-  DisplayModeToggle,
   KeyControls,
+  LayerToggles,
   TextSizeControl,
 } from '@/components/sheet/sheet-controls'
 import { SongSheet } from '@/components/sheet/song-sheet'
 import type { SheetEntry, SheetSettings } from '@/components/sheet/types'
-import { useSheetPrefs } from '@/components/sheet/use-sheet-prefs'
+import {
+  useSheetLayers,
+  useSheetPrefs,
+} from '@/components/sheet/use-sheet-prefs'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { useNotation } from '@/components/use-notation'
 import { useVersionActions } from '@/components/version-actions'
@@ -40,12 +43,17 @@ function SharePage() {
   const [capo, setCapo] = useState<number>(version.suggestedCapo)
   const [transpose, setTranspose] = useState(0)
   const [busy, setBusy] = useState(false)
+  const { layers, available } = useSheetLayers(
+    prefs.layers,
+    timeline,
+    version.tracks,
+  )
 
   const settings: SheetSettings = {
     capo,
     transpose,
     notation,
-    mode: prefs.mode,
+    layers,
     scale: prefs.scale,
   }
 
@@ -98,7 +106,11 @@ function SharePage() {
             notation={notation}
           />
           <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
-            <DisplayModeToggle mode={prefs.mode} onMode={prefs.setMode} />
+            <LayerToggles
+              layers={layers}
+              available={available}
+              onLayers={prefs.setLayers}
+            />
             <TextSizeControl scale={prefs.scale} onScale={prefs.setScale} />
           </div>
         </ControlBar>

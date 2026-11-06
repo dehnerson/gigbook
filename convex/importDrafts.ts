@@ -17,6 +17,7 @@ import { fail } from './lib/errors'
 import { findSongByKey, insertSong, uniqueVersionName } from './lib/songs'
 import { songKey } from '../src/lib/song-key'
 import { toTabMeasures } from '../src/lib/music/tab'
+import { meaningfulLabel } from '../src/lib/tracks'
 import { readAiKey } from './users'
 
 const HOUR = 60 * 60 * 1000
@@ -261,7 +262,7 @@ export const save = mutation({
             sectionId,
             versionId: version._id,
             kind: part.kind,
-            label: part.label,
+            label: meaningfulLabel(part.label),
             chartBody: part.chartBody,
             strumming: part.strumming,
             measures: part.measures,
@@ -326,7 +327,7 @@ export const save = mutation({
           sectionId,
           versionId,
           kind: part.kind,
-          label: part.label,
+          label: meaningfulLabel(part.label),
           chartBody: part.chartBody,
           strumming: part.strumming,
           measures: part.measures,

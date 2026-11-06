@@ -15,6 +15,7 @@ import { SongSheet } from '@/components/sheet/song-sheet'
 import type { ChordShapeOverride } from '@/components/sheet/types'
 import { ButtonLink } from '@/components/ui/button'
 import { chartChords } from '@/lib/music/chordpro'
+import { DEFAULT_LAYERS } from '@/lib/sheet-layers'
 import { m } from '@/paraglide/messages'
 import { useNotation } from './use-notation'
 
@@ -124,7 +125,7 @@ export function VersionEditor({
                 capo: version.suggestedCapo,
                 transpose: 0,
                 notation,
-                mode: 'both',
+                layers: DEFAULT_LAYERS,
                 scale: 1,
               }}
               versionId={version._id}
@@ -172,6 +173,7 @@ export function VersionEditor({
                 <DetailsPanel
                   key={version._id}
                   version={version}
+                  timeline={timeline}
                   songArtist={song.artist}
                   notation={notation}
                 />

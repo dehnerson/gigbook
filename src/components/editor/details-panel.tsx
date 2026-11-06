@@ -8,11 +8,15 @@ import { Stepper } from '@/components/app/stepper'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
+import { trackName } from '@/components/sheet/tracks'
 import { TUNING_PRESETS } from '@/lib/music/diagrams'
 import { keyOptions, TIME_SIGNATURES } from '@/lib/music/keys'
 import type { Notation } from '@/lib/music/pitch'
+import { allTracks, trackOf } from '@/lib/tracks'
+import type { Track } from '@/lib/tracks'
 import { m } from '@/paraglide/messages'
-import type { EditorVersion } from './types'
+import type { Id } from '../../../convex/_generated/dataModel'
+import type { EditorEntry, EditorVersion } from './types'
 import { useEditor } from './use-editor'
 
 function presetName(id: string) {
@@ -24,12 +28,137 @@ function presetName(id: string) {
   return m.tuningCustom()
 }
 
+function TrackRow({
+  track,
+  count,
+  versionId,
+}: {
+  track: Track
+  count: number
+  versionId: Id<'versions'>
+}) {
+  const { mutations, save } = useEditor()
+  const [name, setName] = useState(track.name ?? '')
+  const commit = () => {
+    const trimmed = name.trim()
+    if (trimmed === (track.name ?? '')) return
+    if (!trimmed) {
+      if (track.builtIn)
+        void save(() => mutations.removeTrack({ versionId, trackId: track.id }))
+      else setName(track.name ?? '')
+      return
+    }
+    void save(() =>
+      mutations.renameTrack({ versionId, trackId: track.id, name: trimmed }),
+    )
+  }
+  return (
+    <li className="flex items-center gap-2">
+      <Input
+        value={name}
+        aria-label={m.trackName()}
+        placeholder={
+          track.builtIn ? trackName({ ...track, name: undefined }) : undefined
+        }
+        maxLength={60}
+        onChange={(event) => setName(event.target.value)}
+        onBlur={commit}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') event.currentTarget.blur()
+        }}
+      />
+      <span className="w-20 shrink-0 text-right text-xs text-muted-foreground tabular-nums">
+        {m.partCount({ count: String(count) })}
+      </span>
+      {track.builtIn ? (
+        <span className="size-9 shrink-0" />
+      ) : (
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={m.removeTrack()}
+          onPress={() =>
+            void save(() =>
+              mutations.removeTrack({ versionId, trackId: track.id }),
+            )
+          }
+        >
+          <Trash2Icon />
+        </Button>
+      )}
+    </li>
+  )
+}
+
+function TracksCard({
+  version,
+  timeline,
+}: {
+  version: EditorVersion
+  timeline: Array<EditorEntry>
+}) {
+  const { mutations, save } = useEditor()
+  const [name, setName] = useState('')
+  const parts = [
+    ...new Map(
+      timeline.flatMap((entry) => entry.parts).map((part) => [part._id, part]),
+    ).values(),
+  ]
+  const add = () => {
+    if (!name.trim()) return
+    void save(() => mutations.addTrack({ versionId: version._id, name }))
+    setName('')
+  }
+  return (
+    <div className="space-y-4 rounded-2xl border bg-card p-5">
+      <div>
+        <div className="font-medium">{m.tracks()}</div>
+        <p className="text-sm text-muted-foreground">{m.tracksHint()}</p>
+      </div>
+      <ul className="space-y-2">
+        {allTracks(version.tracks).map((track) => (
+          <TrackRow
+            key={`${track.id}:${track.name ?? ''}`}
+            track={track}
+            count={
+              parts.filter((part) => trackOf(part, version.tracks) === track.id)
+                .length
+            }
+            versionId={version._id}
+          />
+        ))}
+      </ul>
+      <form
+        className="flex items-center gap-2"
+        onSubmit={(event) => {
+          event.preventDefault()
+          add()
+        }}
+      >
+        <Input
+          value={name}
+          aria-label={m.newTrackName()}
+          placeholder={m.newTrackPlaceholder()}
+          maxLength={60}
+          onChange={(event) => setName(event.target.value)}
+        />
+        <Button type="submit" variant="outline" isDisabled={!name.trim()}>
+          <PlusIcon />
+          {m.addTrack()}
+        </Button>
+      </form>
+    </div>
+  )
+}
+
 export function DetailsPanel({
   version,
+  timeline,
   songArtist,
   notation,
 }: {
   version: EditorVersion
+  timeline: Array<EditorEntry>
   songArtist: string
   notation: Notation
 }) {
@@ -196,6 +325,8 @@ export function DetailsPanel({
           </Field>
         ) : null}
       </div>
+
+      <TracksCard version={version} timeline={timeline} />
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-5">
         <div>

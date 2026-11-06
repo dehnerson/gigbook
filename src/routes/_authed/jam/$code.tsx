@@ -26,11 +26,11 @@ import {
   useSectionKeys,
 } from '@/components/play-view'
 import {
-  DisplayModeToggle,
   KeyControls,
+  LayerToggles,
   LayoutToggle,
-  PartsFilter,
   TextSizeControl,
+  TracksFilter,
 } from '@/components/sheet/sheet-controls'
 import { sheetPasses } from '@/components/sheet/passes'
 import {
@@ -39,7 +39,10 @@ import {
   useSectionCursor,
 } from '@/components/sheet/song-sheet'
 import type { SheetEntry } from '@/components/sheet/types'
-import { useSheetPrefs } from '@/components/sheet/use-sheet-prefs'
+import {
+  useSheetLayers,
+  useSheetPrefs,
+} from '@/components/sheet/use-sheet-prefs'
 import {
   Avatar,
   AvatarFallback,
@@ -76,7 +79,7 @@ export const Route = createFileRoute('/_authed/jam/$code')({
 type MemberView = {
   capo: number
   following: boolean
-  visiblePartIds: Array<string>
+  visibleTrackIds: Array<string>
   personalVersionId?: Id<'versions'>
 }
 
@@ -104,7 +107,7 @@ function JamRoomPage() {
   const isHost = me?.userId === room.hostUserId
   const [capo, setCapo] = useState(me?.capo ?? 0)
   const [visible, setVisible] = useState<Array<string>>(
-    me?.visiblePartIds ?? [],
+    me?.visibleTrackIds ?? [],
   )
   const following = !isHost && (me?.following ?? true)
 
@@ -113,7 +116,7 @@ function JamRoomPage() {
       code,
       capo,
       following: me?.following ?? true,
-      visiblePartIds: visible,
+      visibleTrackIds: visible,
       personalVersionId: me?.personalVersionId,
       ...patch,
     }).catch(fail)
@@ -143,6 +146,13 @@ function JamRoomPage() {
   })
 
   const timeline = (bundle.data?.timeline ?? []) as Array<SheetEntry>
+  const tracks = bundle.data?.version.tracks
+  const { layers, available } = useSheetLayers(
+    prefs.layers,
+    timeline,
+    tracks,
+    visible,
+  )
   const passes = sheetPasses(timeline)
   const entryIds = passes.map((item) => item.id)
   const entryKey = entryIds.join(',')
@@ -208,10 +218,10 @@ function JamRoomPage() {
         capo,
         transpose: room.concertTranspose,
         notation,
-        mode: prefs.mode,
+        layers,
         scale: prefs.scale,
       }}
-      visiblePartIds={visible}
+      visibleTrackIds={visible}
       highlightEntryId={following ? hostEntryId : active}
       layout={prefs.layout}
       versionId={bundle.data.version._id}
@@ -507,21 +517,26 @@ function JamRoomPage() {
           </>
         ) : null}
         <DockDivider />
-        <DisplayModeToggle mode={prefs.mode} onMode={prefs.setMode} iconOnly />
+        <LayerToggles
+          layers={layers}
+          available={available}
+          onLayers={prefs.setLayers}
+          iconOnly
+        />
         {passes.length > timeline.length ? (
           <LayoutToggle layout={prefs.layout} onLayout={prefs.setLayout} />
         ) : null}
         <TextSizeControl scale={prefs.scale} onScale={prefs.setScale} />
-        {timeline.length > 0 ? (
-          <PartsFilter
-            timeline={timeline}
-            visiblePartIds={visible}
-            onVisiblePartIds={(ids) => {
-              setVisible(ids)
-              updateMe({ visiblePartIds: ids })
-            }}
-          />
-        ) : null}
+        <TracksFilter
+          timeline={timeline}
+          tracks={tracks}
+          visibleTrackIds={visible}
+          onVisibleTrackIds={(ids) => {
+            setVisible(ids)
+            updateMe({ visibleTrackIds: ids })
+          }}
+          iconOnly
+        />
       </StageDock>
     </div>
   )

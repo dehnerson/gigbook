@@ -31,6 +31,7 @@ import { useNotation } from '@/components/use-notation'
 import { messageFor } from '@/lib/errors'
 import { useLiveQuery } from '@/lib/live'
 import { loadQuery } from '@/lib/load'
+import { DEFAULT_LAYERS } from '@/lib/sheet-layers'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/import/$draftId')({
@@ -421,7 +422,7 @@ function ReadyReview({ draft, output }: { draft: Draft; output: Output }) {
             capo: output.suggestedCapo,
             transpose: 0,
             notation,
-            mode: 'both',
+            layers: DEFAULT_LAYERS,
             scale: 1,
           }}
         />

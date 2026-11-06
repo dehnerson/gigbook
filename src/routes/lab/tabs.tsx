@@ -13,6 +13,7 @@ import { Switch } from '@/components/ui/switch'
 import { displayChord } from '@/lib/music/chords'
 import type { Notation } from '@/lib/music/pitch'
 import { measureFill, previewTabShift, toAlphaTex } from '@/lib/music/tab'
+import { DEFAULT_LAYERS } from '@/lib/sheet-layers'
 
 export const Route = createFileRoute('/lab/tabs')({
   component: TabLab,
@@ -77,7 +78,7 @@ function TabLab() {
     capo: 0,
     transpose,
     notation,
-    mode: 'both',
+    layers: DEFAULT_LAYERS,
     scale,
   }
   const shifted = previewTabShift(piece.measures, transpose).measures
