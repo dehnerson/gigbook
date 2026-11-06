@@ -16,6 +16,7 @@ export type SelectOption = {
   id: string
   label: string
   description?: string
+  isDisabled?: boolean
 }
 
 function Select({
@@ -88,6 +89,7 @@ function SelectItem({ option }: { option: SelectOption }) {
     <ListBoxItem
       id={option.id}
       textValue={option.label}
+      isDisabled={option.isDisabled}
       className="group/item relative flex cursor-default flex-col rounded-md py-1.5 pr-8 pl-2 text-sm outline-none select-none data-disabled:opacity-50 data-focused:bg-accent data-focused:text-accent-foreground"
     >
       {({ isSelected }) => (

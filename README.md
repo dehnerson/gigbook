@@ -17,4 +17,4 @@ The server is built with Nitro, which picks the host's preset on its own (Netlif
 
 Set these on the host: `CONVEX_DEPLOY_KEY` (from the Convex dashboard of the deployment to target), `VITE_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, and `CLERK_JWT_ISSUER_DOMAIN`.
 
-Set these on the Convex deployment itself (`vpx convex env set` or the dashboard): `CLERK_JWT_ISSUER_DOMAIN` and `AI_KEY_ENCRYPTION_SECRET`. Keep the encryption secret unchanged once people have saved Gemini keys; a new secret cannot decrypt the old ones.
+Set these on the Convex deployment itself (`vpx convex env set` or the dashboard): `CLERK_JWT_ISSUER_DOMAIN` and `AI_KEY_ENCRYPTION_SECRET`. Keep the encryption secret unchanged once people have saved AI keys; a new secret cannot decrypt the old ones.

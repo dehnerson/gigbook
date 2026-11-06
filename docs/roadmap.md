@@ -106,7 +106,7 @@ Collect about 10 real sources: Ultimate Guitar copy-pastes, songbook text, Chord
 
 ## Phase 2: Song import without hosting costs (#7)
 
-**Today:** `convex/importAction.ts` calls Google's Gemini API directly with each user's own encrypted key (`userAiCredentials`, provider fixed to `google`). The model is hardcoded to `gemini-2.5-flash`, also in `importDrafts.testKey`. JSON is pulled out of the reply by hand. The Convex AI Gateway is not used.
+**Today:** pasted text and ChordPro files are parsed on the client without AI (2.1, 2.3). Everything else goes through the AI SDK with the user's own encrypted key for Google, OpenAI or Anthropic (2.2). The Convex AI Gateway is not used.
 
 **Constraint:** the app owner should not pay for imports yet. The Convex AI Gateway bills usage to the owner's Convex account and needs a paid plan, so it is postponed to 2.5.
 
@@ -126,6 +126,8 @@ Run them on the client in `src/lib/import/`. They produce the same `importOutput
 - **Guitar Pro and MusicXML files** via alphaTab's importer, which works without the renderer. Map tracks to parts, section markers to sections, beats with durations to tab beats, and include lyrics, chord names and repeats. This depends on the tab format chosen in 0.1 and 4.1.
 
 ### 2.2 Bring your own key, any provider (AI SDK)
+
+**Status: done.** The model list lives in `src/lib/import/models.ts`, provider setup and error mapping in `convex/lib/ai.ts`. AI SDK 7 deprecates `generateObject`, so the action uses `generateText` with `Output.object({ schema: draftSchema })`. Deployments need `AI_KEY_ENCRYPTION_SECRET` set before anyone can save a key (set on dev).
 
 - Switch to the AI SDK (`ai` package) and use `generateObject` with the existing Zod `draftSchema`. This removes the hand-written JSON and code-fence parsing.
 - Providers: Google (`@ai-sdk/google`), OpenAI (`@ai-sdk/openai`) and Anthropic (`@ai-sdk/anthropic`).

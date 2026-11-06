@@ -1,6 +1,12 @@
 import { defineSchema, defineTable } from 'convex/server'
 import { v } from 'convex/values'
 
+export const aiProvider = v.union(
+  v.literal('google'),
+  v.literal('openai'),
+  v.literal('anthropic'),
+)
+
 export const tabNote = v.object({
   string: v.number(),
   fret: v.number(),
@@ -53,16 +59,19 @@ export default defineSchema({
     email: v.optional(v.string()),
     locale: v.optional(v.union(v.literal('en'), v.literal('de'))),
     notation: v.optional(v.union(v.literal('en'), v.literal('de'))),
+    aiModel: v.optional(v.string()),
   })
     .index('by_clerk', ['clerkUserId'])
     .index('by_email', ['email']),
 
   userAiCredentials: defineTable({
     userId: v.id('users'),
-    provider: v.literal('google'),
+    provider: aiProvider,
     ciphertext: v.string(),
     last4: v.string(),
-  }).index('by_user', ['userId']),
+  })
+    .index('by_user', ['userId'])
+    .index('by_user_provider', ['userId', 'provider']),
 
   bands: defineTable({
     name: v.string(),

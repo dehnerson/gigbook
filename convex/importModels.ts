@@ -1,6 +1,3 @@
-export const TEXT_MODEL = 'gemini-2.5-flash'
-export const VISION_MODEL = 'gemini-2.5-flash'
-
 export const IMPORT_PROMPT = `Convert the source into one guitar version.
 Return JSON with title, artist, concertKey, timeSignature, bpm, tuning, suggestedCapo, tabRelativeToCapo, and sections.
 Each section has name, optional notes, and parts.

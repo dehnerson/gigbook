@@ -26,6 +26,7 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+import { PROVIDER_LABELS } from '@/lib/import/models'
 import { normalizeDraft } from '@/lib/import/normalize'
 import { parseSongText } from '@/lib/import/text'
 import { messageFor } from '@/lib/errors'
@@ -97,10 +98,19 @@ function ImportPage() {
     (source === 'file' && file !== null && fileText === null)
   const useAi = analysis ? hasKey && (aiChoice ?? !analysis.strong) : aiOnly
   const needsKey = useAi && !hasKey
+  const ai = me.data?.ai
+  const unsupported =
+    ai !== undefined &&
+    ai !== null &&
+    source === 'file' &&
+    file !== null &&
+    fileText === null &&
+    (file.type === 'application/pdf' ? !ai.pdf : !ai.vision)
 
   const videoId = youtubeIdOf(youtube)
   const ready =
     !needsKey &&
+    !unsupported &&
     ((source === 'paste' && text.trim().length > 0) ||
       (source === 'file' && file !== null) ||
       (source === 'url' && /^https?:\/\/\S+$/.test(url.trim())) ||
@@ -366,6 +376,12 @@ function ImportPage() {
           </div>
         ) : null}
 
+        {unsupported ? (
+          <p className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-sm">
+            {m.errorModelUnsupported()}
+          </p>
+        ) : null}
+
         {needsKey ? (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-4">
             <div className="flex min-w-0 items-start gap-3">
@@ -405,7 +421,11 @@ function ImportPage() {
 
         <div className="flex items-center justify-between gap-4 border-t pt-5">
           <p className="text-xs text-muted-foreground">
-            {useAi ? m.importPrivacy() : m.importPrivacyLocal()}
+            {useAi
+              ? m.importPrivacy({
+                  provider: PROVIDER_LABELS[ai?.provider ?? 'google'],
+                })
+              : m.importPrivacyLocal()}
           </p>
           <Button type="submit" size="lg" isDisabled={!ready || busy}>
             {useAi ? <SparklesIcon /> : <ArrowRightIcon />}

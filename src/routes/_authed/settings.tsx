@@ -1,6 +1,7 @@
 import { convexQuery } from '@convex-dev/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { useAction, useMutation } from 'convex/react'
+import { cn } from 'cn'
 import {
   CheckCircle2Icon,
   KeyRoundIcon,
@@ -22,7 +23,10 @@ import { PageHeader } from '@/components/app/page-header'
 import { Segmented } from '@/components/app/segmented'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 import { messageFor } from '@/lib/errors'
+import { AI_MODELS, AI_PROVIDERS, PROVIDER_LABELS } from '@/lib/import/models'
+import type { AiProvider } from '@/lib/import/models'
 import { useLiveQuery } from '@/lib/live'
 import { loadQuery } from '@/lib/load'
 import { displayChord } from '@/lib/music/chords'
@@ -151,13 +155,86 @@ function SettingsPage() {
             ))}
           </div>
         </SettingsCard>
-        <ApiKeyCard last4={me?.ai?.last4} />
+        <AiCard model={me?.ai?.model ?? null} keys={me?.aiKeys ?? []} />
       </div>
     </div>
   )
 }
 
-function ApiKeyCard({ last4 }: { last4?: string }) {
+const KEY_PLACEHOLDER: Record<AiProvider, string> = {
+  google: 'AIza…',
+  openai: 'sk-…',
+  anthropic: 'sk-ant-…',
+}
+
+const PROVIDER_HINTS: Record<AiProvider, () => string> = {
+  google: m.providerGoogleHint,
+  openai: m.providerOpenaiHint,
+  anthropic: m.providerAnthropicHint,
+}
+
+function AiCard({
+  model,
+  keys,
+}: {
+  model: string | null
+  keys: Array<{ provider: AiProvider; last4: string }>
+}) {
+  const setAiModel = useMutation(api.users.setAiModel)
+  const withKey = new Set(keys.map((key) => key.provider))
+
+  return (
+    <SettingsCard
+      icon={KeyRoundIcon}
+      title={m.apiKey()}
+      description={m.apiKeyHelp()}
+    >
+      <div className="space-y-5">
+        {keys.length > 0 ? (
+          <div className="space-y-1.5">
+            <Select
+              label={m.aiModel()}
+              value={model}
+              onChange={(next) =>
+                void setAiModel({ model: next }).catch((error: unknown) =>
+                  toast.error(messageFor(error)),
+                )
+              }
+              options={AI_MODELS.map((item) => ({
+                id: item.id,
+                label: item.label,
+                description:
+                  item.provider === 'google'
+                    ? `${PROVIDER_LABELS[item.provider]} · ${m.freeTier()}`
+                    : PROVIDER_LABELS[item.provider],
+                isDisabled: !withKey.has(item.provider),
+              }))}
+            />
+            <p className="text-xs text-muted-foreground">{m.aiModelHint()}</p>
+          </div>
+        ) : null}
+        {AI_PROVIDERS.map((provider, index) => (
+          <ProviderKeyRow
+            key={provider}
+            divided={index > 0 || keys.length > 0}
+            provider={provider}
+            last4={keys.find((key) => key.provider === provider)?.last4}
+          />
+        ))}
+      </div>
+    </SettingsCard>
+  )
+}
+
+function ProviderKeyRow({
+  provider,
+  last4,
+  divided,
+}: {
+  provider: AiProvider
+  last4?: string
+  divided: boolean
+}) {
   const saveKey = useMutation(api.users.saveAiKey)
   const deleteKey = useMutation(api.users.deleteAiKey)
   const testKey = useAction(api.importDrafts.testKey)
@@ -165,30 +242,33 @@ function ApiKeyCard({ last4 }: { last4?: string }) {
   const [busy, setBusy] = useState<'save' | 'test' | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const fail = (error: unknown) => toast.error(messageFor(error))
+  const label = PROVIDER_LABELS[provider]
 
   return (
-    <SettingsCard
-      icon={KeyRoundIcon}
-      title={m.apiKey()}
-      description={m.apiKeyHelp()}
-      control={
-        last4 ? (
+    <div className={cn(divided && 'border-t pt-5')}>
+      <div className="mb-2 flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-sm font-semibold">{label}</h3>
+          <p className="text-xs text-muted-foreground">
+            {PROVIDER_HINTS[provider]()}
+          </p>
+        </div>
+        {last4 ? (
           <Chip tone="success">
             <CheckCircle2Icon className="size-3" />
             {m.keyLast4({ last4 })}
           </Chip>
         ) : (
           <Chip>{m.notConnected()}</Chip>
-        )
-      }
-    >
+        )}
+      </div>
       <form
         className="flex flex-col gap-2 sm:flex-row"
         onSubmit={(event) => {
           event.preventDefault()
           if (!apiKey.trim()) return
           setBusy('save')
-          saveKey({ apiKey: apiKey.trim() })
+          saveKey({ provider, apiKey: apiKey.trim() })
             .then(() => {
               setApiKey('')
               toast.success(m.keySaved())
@@ -199,10 +279,12 @@ function ApiKeyCard({ last4 }: { last4?: string }) {
       >
         <Input
           type="password"
-          aria-label={m.apiKey()}
+          aria-label={label}
           value={apiKey}
           autoComplete="off"
-          placeholder={last4 ? m.replaceKeyPlaceholder() : 'AIza…'}
+          placeholder={
+            last4 ? m.replaceKeyPlaceholder() : KEY_PLACEHOLDER[provider]
+          }
           onChange={(event) => setApiKey(event.target.value)}
           className="h-10 font-mono"
         />
@@ -221,7 +303,7 @@ function ApiKeyCard({ last4 }: { last4?: string }) {
             isDisabled={busy !== null}
             onPress={() => {
               setBusy('test')
-              testKey({})
+              testKey({ provider })
                 .then(() => toast.success(m.keyWorks()))
                 .catch(fail)
                 .finally(() => setBusy(null))
@@ -241,10 +323,10 @@ function ApiKeyCard({ last4 }: { last4?: string }) {
       <ConfirmDialog
         isOpen={confirmDelete}
         onOpenChange={setConfirmDelete}
-        title={m.deleteKeyConfirm()}
+        title={m.deleteKeyConfirm({ provider: label })}
         description={m.deleteKeyHint()}
-        onConfirm={() => deleteKey({})}
+        onConfirm={() => deleteKey({ provider })}
       />
-    </SettingsCard>
+    </div>
   )
 }

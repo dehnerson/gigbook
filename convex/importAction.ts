@@ -1,18 +1,12 @@
+import { generateText, Output } from 'ai'
+import type { UserContent } from 'ai'
 import { ConvexError, v } from 'convex/values'
 import { internalAction } from './_generated/server'
 import { internal } from './_generated/api'
-import { IMPORT_PROMPT, TEXT_MODEL, VISION_MODEL } from './importModels'
+import { IMPORT_PROMPT } from './importModels'
+import { aiErrorCode, languageModel } from './lib/ai'
 import { draftSchema } from '../src/lib/import/schema'
 import { normalizeDraft } from '../src/lib/import/normalize'
-
-function bytesToBase64(bytes: Uint8Array) {
-  let binary = ''
-  const size = 0x8000
-  for (let index = 0; index < bytes.length; index += size) {
-    binary += String.fromCharCode(...bytes.subarray(index, index + size))
-  }
-  return btoa(binary)
-}
 
 function pageText(html: string) {
   return html
@@ -57,39 +51,6 @@ async function fetchOembed(youtubeId: string) {
   return [payload.title, payload.author_name].filter(Boolean).join(' — ')
 }
 
-async function gemini(
-  apiKey: string,
-  model: string,
-  parts: Array<Record<string, unknown>>,
-) {
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-    {
-      method: 'POST',
-      signal: AbortSignal.timeout(50_000),
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey,
-      },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts }],
-        generationConfig: { responseMimeType: 'application/json' },
-      }),
-    },
-  )
-  if (!response.ok) throw new ConvexError('IMPORT_FAILED')
-  const payload = (await response.json()) as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>
-  }
-  const text =
-    payload.candidates?.[0]?.content?.parts
-      ?.map((part) => part.text ?? '')
-      .join('') ?? ''
-  const trimmed = text.trim()
-  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/)
-  return JSON.parse(fenced?.[1] ?? trimmed)
-}
-
 export const run = internalAction({
   args: { draftId: v.id('importDrafts') },
   handler: async (ctx, args) => {
@@ -102,10 +63,11 @@ export const run = internalAction({
         draftId: args.draftId,
         status: 'reading',
       })
-      const apiKey = await ctx.runQuery(internal.users.internalReadAiKey, {
-        clerkUserId: draft.ownerId,
-      })
-      const parts: Array<Record<string, unknown>> = [{ text: IMPORT_PROMPT }]
+      const { model, apiKey } = await ctx.runQuery(
+        internal.users.internalReadAi,
+        { clerkUserId: draft.ownerId },
+      )
+      const parts: Exclude<UserContent, string> = []
       let knownIds: Array<string> = []
       if (draft.targetVersionId) {
         const sections = await ctx.runQuery(internal.versions.sectionIndex, {
@@ -113,40 +75,51 @@ export const run = internalAction({
         })
         knownIds = sections.map((section: { id: string }) => section.id)
         parts.push({
+          type: 'text',
           text: `Existing sections: ${JSON.stringify(sections)}. mapping must use these ids or null.`,
         })
       }
-      const visual = draft.sourceKind === 'photo' || draft.sourceKind === 'pdf'
       if (draft.sourceKind === 'url') {
         if (!draft.sourceText) throw new ConvexError('INVALID')
-        parts.push({ text: await fetchPage(draft.sourceText) })
-      } else if (visual) {
+        parts.push({ type: 'text', text: await fetchPage(draft.sourceText) })
+      } else if (draft.sourceKind === 'photo' || draft.sourceKind === 'pdf') {
+        const pdf = draft.sourceKind === 'pdf'
+        if (pdf ? !model.pdf : !model.vision)
+          throw new ConvexError('MODEL_UNSUPPORTED')
         if (!draft.storageId) throw new ConvexError('INVALID')
         const file = await ctx.storage.get(draft.storageId)
         if (!file) throw new ConvexError('IMPORT_FAILED')
         if (file.size > 8_000_000) throw new ConvexError('INVALID')
-        const bytes = new Uint8Array(await file.arrayBuffer())
-        const mimeType =
-          file.type ||
-          (draft.sourceKind === 'pdf' ? 'application/pdf' : 'image/jpeg')
-        parts.push({ inlineData: { mimeType, data: bytesToBase64(bytes) } })
-        if (draft.sourceText) parts.push({ text: draft.sourceText })
+        parts.push({
+          type: 'file',
+          mediaType: file.type || (pdf ? 'application/pdf' : 'image/jpeg'),
+          data: new Uint8Array(await file.arrayBuffer()),
+        })
+        if (draft.sourceText)
+          parts.push({ type: 'text', text: draft.sourceText })
       } else if (draft.sourceKind === 'youtube') {
         const meta = draft.youtubeId ? await fetchOembed(draft.youtubeId) : ''
         const text = [meta, draft.sourceText ?? ''].filter(Boolean).join('\n')
         if (!text.trim()) throw new ConvexError('PASTE_REQUIRED')
-        parts.push({ text })
+        parts.push({ type: 'text', text })
       } else {
         if (!draft.sourceText?.trim()) throw new ConvexError('INVALID')
-        parts.push({ text: draft.sourceText })
+        parts.push({ type: 'text', text: draft.sourceText })
       }
       await ctx.runMutation(internal.importDrafts.mark, {
         draftId: args.draftId,
         status: 'structuring',
       })
-      const parsed = draftSchema.parse(
-        await gemini(apiKey, visual ? VISION_MODEL : TEXT_MODEL, parts),
-      )
+      const result = await generateText({
+        model: languageModel(model, apiKey),
+        instructions: IMPORT_PROMPT,
+        messages: [{ role: 'user', content: parts }],
+        output: Output.object({ schema: draftSchema }),
+        providerOptions: { openai: { strictJsonSchema: false } },
+        abortSignal: AbortSignal.timeout(90_000),
+        maxRetries: 1,
+      })
+      const parsed = draftSchema.parse(result.output)
       const normalized = normalizeDraft(parsed)
       const allowed = new Set(knownIds)
       const mapping = (parsed.mapping ?? []).map((id) =>
@@ -163,7 +136,7 @@ export const run = internalAction({
       })
     } catch (error) {
       const message =
-        error instanceof ConvexError ? String(error.data) : 'IMPORT_FAILED'
+        error instanceof ConvexError ? String(error.data) : aiErrorCode(error)
       await ctx.runMutation(internal.importDrafts.mark, {
         draftId: args.draftId,
         status: 'failed',

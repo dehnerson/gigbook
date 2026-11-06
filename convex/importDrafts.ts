@@ -1,3 +1,4 @@
+import { generateText } from 'ai'
 import { v } from 'convex/values'
 import {
   action,
@@ -9,7 +10,8 @@ import {
 import { internal } from './_generated/api'
 import type { Id } from './_generated/dataModel'
 import type { MutationCtx } from './_generated/server'
-import { importOutput } from './schema'
+import { aiProvider, importOutput } from './schema'
+import { aiErrorCode, languageModel } from './lib/ai'
 import { canEditSong, requireIdentity, songOfVersion } from './lib/access'
 import { fail } from './lib/errors'
 import { readAiKey } from './users'
@@ -67,7 +69,12 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await requireIdentity(ctx)
-    await readAiKey(ctx, identity.subject)
+    const { model } = await readAiKey(ctx, identity.subject)
+    if (
+      (args.sourceKind === 'pdf' && !model.pdf) ||
+      (args.sourceKind === 'photo' && !model.vision)
+    )
+      fail('MODEL_UNSUPPORTED')
     await editableTarget(ctx, args.targetVersionId)
     await checkAiQuota(ctx, identity.subject)
     const text = args.sourceText?.slice(0, 40_000)
@@ -321,28 +328,28 @@ export const load = internalQuery({
 })
 
 export const testKey = action({
-  args: {},
-  handler: async (ctx) => {
+  args: { provider: aiProvider },
+  handler: async (ctx, args) => {
     const identity = await requireIdentity(ctx)
-    const apiKey = await ctx.runQuery(internal.users.internalReadAiKey, {
-      clerkUserId: identity.subject,
-    })
-    const response = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+    const { model, apiKey } = await ctx.runQuery(
+      internal.users.internalReadAi,
       {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey,
-        },
-        body: JSON.stringify({
-          contents: [
-            { role: 'user', parts: [{ text: 'Reply with the word ready.' }] },
-          ],
-        }),
+        clerkUserId: identity.subject,
+        provider: args.provider,
       },
     )
-    if (!response.ok) fail('INVALID')
+    try {
+      await generateText({
+        model: languageModel(model, apiKey),
+        prompt: 'Reply with the word ready.',
+        maxOutputTokens: 16,
+        abortSignal: AbortSignal.timeout(20_000),
+        maxRetries: 0,
+      })
+    } catch (error) {
+      const code = aiErrorCode(error)
+      fail(code === 'AI_RATE_LIMIT' ? code : 'INVALID_KEY')
+    }
     return { ok: true }
   },
 })

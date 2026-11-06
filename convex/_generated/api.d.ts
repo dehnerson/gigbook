@@ -16,6 +16,7 @@ import type * as importDrafts from "../importDrafts.js";
 import type * as importModels from "../importModels.js";
 import type * as jam from "../jam.js";
 import type * as lib_access from "../lib/access.js";
+import type * as lib_ai from "../lib/ai.js";
 import type * as lib_cascade from "../lib/cascade.js";
 import type * as lib_crypto from "../lib/crypto.js";
 import type * as lib_errors from "../lib/errors.js";
@@ -40,6 +41,7 @@ declare const fullApi: ApiFromModules<{
   importModels: typeof importModels;
   jam: typeof jam;
   "lib/access": typeof lib_access;
+  "lib/ai": typeof lib_ai;
   "lib/cascade": typeof lib_cascade;
   "lib/crypto": typeof lib_crypto;
   "lib/errors": typeof lib_errors;
