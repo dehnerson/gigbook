@@ -253,6 +253,16 @@ The chord name sits on the beat, not the measure, because chords often change mi
 
 ### 4.2 Grid tab editor (#3)
 
+**Status: done.** Editing operations live in `src/lib/music/tab-edit.ts` (with tests), the grid in `src/components/editor/tab-grid.tsx` and the toolbar, undo and saving in `tab-editor.tsx`. Differences from the plan:
+
+- Digits always type frets (two digits within a second make 12, 15 and so on), so lengths moved to `Alt+1`–`Alt+6` and the length buttons in the toolbar.
+- "Insert shape" uses the chord name typed for the beat and the default voicing for the version's tuning.
+- The ASCII textarea became an "Edit as text" dialog, prefilled with the current tab. It covers pasting a tab and quick text edits; bars with an unchanged note count keep their lengths.
+- The guessed-rhythm hint has a "Lengths are right" button that clears `rhythmGuessed`. Editing lengths doesn't clear it on its own, because one fixed bar doesn't mean the rest are right.
+- Also: `r` rest, `~` and `\` techniques, bend amount (½, full, 1½), insert/delete beat and bar, undo/redo, a warning under bars that are too short or too long.
+
+Original plan:
+
 - The default editor is a grid of strings × beats with a cursor:
   - Type a fret number into the selected cell; arrow keys move.
   - Number keys set the length (for example 1 = whole … 5 = sixteenth), and `.` toggles a dot.

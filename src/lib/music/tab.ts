@@ -48,7 +48,7 @@ export type ShiftedMeasure = Omit<TabMeasure, 'beats'> & {
   beats: Array<ShiftedBeat>
 }
 
-const DURATIONS: Array<Duration> = [1, 2, 4, 8, 16, 32]
+export const DURATIONS: Array<Duration> = [1, 2, 4, 8, 16, 32]
 
 const LENGTHS = DURATIONS.flatMap((d) => [
   { d, dot: false, length: 1 / d },
