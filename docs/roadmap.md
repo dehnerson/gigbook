@@ -52,6 +52,14 @@ Collect about 10 real sources: Ultimate Guitar copy-pastes, songbook text, Chord
 
 **Output:** which import paths can skip AI entirely, and whether the on-device model is worth keeping.
 
+**Status: text paths answered, on-device model still open.** Samples live in `src/lib/import/samples.ts` and are checked by `src/lib/import/import.test.ts`. They are public-domain songs written in ten common source layouts, not real copy-pastes yet. Real pastes should be added to the same file as they turn up.
+
+- **9 of 10 convert cleanly without AI:** Ultimate Guitar copy-paste with a header block and a riff tab; Ultimate Guitar raw `[ch]`/`[tab]` markup; a German songbook with numbered verses, H notation and `Kapodaster`; a ChordPro file; plain chords over lyrics without any headers (verses and chorus named by structure); colon headers with chords on the header line; a tab block with chord names above; a bar grid with `[Chorus] x2`; chords in parentheses inline. Title, artist, capo, key, tuning, tempo, time signature and strumming come from metadata lines.
+- **The tenth is lyrics only.** It imports as text and is flagged with "No chords were found". With a key, it goes to AI automatically.
+- **Chord placement is exactly as good as the source's column alignment.** A chord typed two letters too far right lands mid-word, as it would on paper. AI doesn't fix this reliably either.
+- **Not covered by the text parser:** photos and scanned PDFs, web pages (the server strips the HTML down to one line, which destroys the chord columns) and Guitar Pro/MusicXML (waits for 4.1).
+- **On-device model:** Chromium 148 exposes `LanguageModel` (checked in Cursor's built-in browser), but the model was only `downloadable`, so no quality test yet. Downloading it takes several GB.
+
 ## Phase 1: Quick fixes
 
 **Status: done.** One manual step left: create the webhook in the Clerk dashboard and set `CLERK_WEBHOOK_SECRET` in Convex (dev and prod). Until then the endpoint answers 500 and names still update through `users.ensure`.
@@ -108,6 +116,8 @@ Collect about 10 real sources: Ultimate Guitar copy-pastes, songbook text, Chord
 
 Run them on the client in `src/lib/import/`. They produce the same `importOutput` shape and go straight to the existing draft review screen with status `ready`.
 
+**Status: text parsers done** (`parseSongText` in `src/lib/import/text.ts`, metadata in `meta.ts`). Guitar Pro and MusicXML are still open and wait for 4.1.
+
 - **Chords over lyrics** (Ultimate Guitar style) to ChordPro. Much of this already exists in `chordpro.ts`: `chordsOverLyricsToChordPro`, `isChordLine`, `sectionLabelOf` and `hasChordsOverLyrics`, with tests. The work is mostly wiring it into the import flow.
 - **Section headers** such as `[Verse 1]`, `Chorus:` and `INTRO`.
 - **Metadata lines** such as `Capo 2`, `Key: G`, `Tuning: DADGAD` and `BPM 120`.
@@ -129,6 +139,15 @@ Run them on the client in `src/lib/import/`. They produce the same `importOutput
 - For pasted text, URLs and files, run the deterministic parser first. Only use AI when the parser's result looks weak (for example no sections or no chords found), or when the user chooses "Use AI".
 - Photos and scanned PDFs always go to AI.
 - This keeps most imports free and instant, even for users without a key.
+
+**Status: done for pasted text and ChordPro/text files.**
+
+- The import page reads the text as you type and shows what it recognized. The AI switch only appears for users with a key.
+- `importDrafts.createParsed` stores the result as a `ready` draft (`parser: 'text'`) and maps sections onto the target version by name. These drafts don't count against the hourly AI limit.
+- On the review page, "Try with AI" (`importDrafts.retryWithAi`) re-runs the same text through AI.
+- Users without a key can import text. Photo, PDF, URL and YouTube sources show a key notice instead of blocking the whole page.
+- Still open: URLs. The server would need to keep the `<pre>` layout of the page (or the chord site's embedded data) before the text parser can help.
+- Fixed on the way: `importDrafts.save`, `create` and `createParsed` now check that the user may edit the target version, and `save` ignores mapped sections from other versions.
 
 ### 2.4 Experimental: on-device AI in Chrome
 

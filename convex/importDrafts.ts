@@ -7,13 +7,41 @@ import {
   query,
 } from './_generated/server'
 import { internal } from './_generated/api'
+import type { Id } from './_generated/dataModel'
+import type { MutationCtx } from './_generated/server'
 import { importOutput } from './schema'
-import { requireIdentity } from './lib/access'
+import { canEditSong, requireIdentity, songOfVersion } from './lib/access'
 import { fail } from './lib/errors'
 import { readAiKey } from './users'
 
 const HOUR = 60 * 60 * 1000
 const LIMIT = 15
+
+async function editableTarget(
+  ctx: MutationCtx,
+  versionId: Id<'versions'> | undefined,
+) {
+  if (!versionId) return null
+  const version = await ctx.db.get(versionId)
+  if (!version) fail('NOT_FOUND')
+  await canEditSong(ctx, await songOfVersion(ctx, version))
+  return version
+}
+
+async function checkAiQuota(ctx: MutationCtx, ownerId: string) {
+  const recent = await ctx.db
+    .query('importDrafts')
+    .withIndex('by_owner', (q) => q.eq('ownerId', ownerId))
+    .collect()
+  const count = recent.filter(
+    (draft) => !draft.parser && draft.createdAt > Date.now() - HOUR,
+  ).length
+  if (count >= LIMIT) fail('RATE_LIMIT')
+}
+
+function sameName(a: string, b: string) {
+  return a.trim().toLowerCase() === b.trim().toLowerCase()
+}
 
 export const generateUploadUrl = mutation({
   args: {},
@@ -40,14 +68,8 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const identity = await requireIdentity(ctx)
     await readAiKey(ctx, identity.subject)
-    const recent = await ctx.db
-      .query('importDrafts')
-      .withIndex('by_owner', (q) => q.eq('ownerId', identity.subject))
-      .collect()
-    const count = recent.filter(
-      (draft) => draft.createdAt > Date.now() - HOUR,
-    ).length
-    if (count >= LIMIT) fail('RATE_LIMIT')
+    await editableTarget(ctx, args.targetVersionId)
+    await checkAiQuota(ctx, identity.subject)
     const text = args.sourceText?.slice(0, 40_000)
     const draftId = await ctx.db.insert('importDrafts', {
       ownerId: identity.subject,
@@ -63,6 +85,70 @@ export const create = mutation({
     })
     await ctx.scheduler.runAfter(0, internal.importAction.run, { draftId })
     return draftId
+  },
+})
+
+export const createParsed = mutation({
+  args: {
+    sourceText: v.string(),
+    output: importOutput,
+    warnings: v.array(v.string()),
+    targetVersionId: v.optional(v.id('versions')),
+  },
+  handler: async (ctx, args) => {
+    const identity = await requireIdentity(ctx)
+    const target = await editableTarget(ctx, args.targetVersionId)
+    const existing = target
+      ? await ctx.db
+          .query('sections')
+          .withIndex('by_version', (q) => q.eq('versionId', target._id))
+          .collect()
+      : []
+    const used = new Set<string>()
+    const mapping = args.output.sections.map((section) => {
+      const match = existing.find(
+        (item) => !used.has(item._id) && sameName(item.name, section.name),
+      )
+      if (!match) return null
+      used.add(match._id)
+      return match._id
+    })
+    return ctx.db.insert('importDrafts', {
+      ownerId: identity.subject,
+      status: 'ready',
+      sourceKind: 'paste',
+      sourceText: args.sourceText.slice(0, 40_000),
+      targetVersionId: args.targetVersionId,
+      parser: 'text',
+      output: args.output,
+      mapping,
+      warnings: args.warnings,
+      createdAt: Date.now(),
+    })
+  },
+})
+
+export const retryWithAi = mutation({
+  args: { draftId: v.id('importDrafts') },
+  handler: async (ctx, args) => {
+    const identity = await requireIdentity(ctx)
+    const draft = await ctx.db.get(args.draftId)
+    if (!draft || draft.ownerId !== identity.subject) fail('FORBIDDEN')
+    if (!draft.parser || !draft.sourceText) fail('INVALID')
+    await readAiKey(ctx, identity.subject)
+    await checkAiQuota(ctx, identity.subject)
+    await ctx.db.patch(draft._id, {
+      status: 'queued',
+      parser: undefined,
+      output: undefined,
+      warnings: [],
+      mapping: [],
+      error: undefined,
+      createdAt: Date.now(),
+    })
+    await ctx.scheduler.runAfter(0, internal.importAction.run, {
+      draftId: draft._id,
+    })
   },
 })
 
@@ -112,13 +198,16 @@ export const save = mutation({
     if (!draft || draft.ownerId !== identity.subject || !draft.output)
       fail('FORBIDDEN')
     const output = draft.output
-    if (draft.targetVersionId) {
-      const version = await ctx.db.get(draft.targetVersionId)
-      if (!version) fail('NOT_FOUND')
+    const version = await editableTarget(ctx, draft.targetVersionId)
+    if (version) {
       const timeline = [...version.timeline]
       for (const [index, section] of output.sections.entries()) {
         const mapped = draft.mapping[index]
         let sectionId = mapped ? ctx.db.normalizeId('sections', mapped) : null
+        if (sectionId) {
+          const mappedSection = await ctx.db.get(sectionId)
+          if (mappedSection?.versionId !== version._id) sectionId = null
+        }
         if (!sectionId) {
           sectionId = await ctx.db.insert('sections', {
             versionId: version._id,

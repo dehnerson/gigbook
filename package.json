@@ -10,7 +10,7 @@
     "build": "vp build",
     "preview": "vp preview",
     "lint": "vp lint",
-    "test": "bun test src/lib/music",
+    "test": "bun test src/lib",
     "format": "vp fmt . && vp lint --fix",
     "check": "vp check",
     "prepare": "vp config"

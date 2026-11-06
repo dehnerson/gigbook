@@ -197,6 +197,7 @@ export default defineSchema({
     storageId: v.optional(v.id('_storage')),
     targetVersionId: v.optional(v.id('versions')),
     youtubeId: v.optional(v.string()),
+    parser: v.optional(v.literal('text')),
     output: v.optional(importOutput),
     mapping: v.array(v.union(v.string(), v.null())),
     warnings: v.array(v.string()),

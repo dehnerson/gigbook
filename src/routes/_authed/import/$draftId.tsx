@@ -9,6 +9,7 @@ import {
   CircleAlertIcon,
   LoaderCircleIcon,
   SaveIcon,
+  SparklesIcon,
   Trash2Icon,
   TriangleAlertIcon,
 } from 'lucide-react'
@@ -32,12 +33,15 @@ import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/import/$draftId')({
   loader: async ({ context, params }) => {
-    await loadQuery(
-      context.queryClient,
-      convexQuery(api.importDrafts.get, {
-        draftId: params.draftId as Id<'importDrafts'>,
-      }),
-    )
+    await Promise.all([
+      loadQuery(
+        context.queryClient,
+        convexQuery(api.importDrafts.get, {
+          draftId: params.draftId as Id<'importDrafts'>,
+        }),
+      ),
+      loadQuery(context.queryClient, convexQuery(api.users.me, {})),
+    ])
   },
   component: ReviewPage,
 })
@@ -52,6 +56,12 @@ function stepLabel(step: (typeof STEPS)[number]) {
   if (step === 'reading') return m.statusReading()
   if (step === 'structuring') return m.statusStructuring()
   return m.statusReady()
+}
+
+function warningText(warning: string) {
+  if (warning === 'outOfRange') return m.outOfRange()
+  if (warning === 'noChords') return m.noChordsFound()
+  return warning
 }
 
 function StatusSteps({ status }: { status: Draft['status'] }) {
@@ -129,7 +139,9 @@ function ReviewPage() {
   const draft = useLiveQuery(
     convexQuery(api.importDrafts.get, { draftId }),
   ).data
+  const me = useLiveQuery(convexQuery(api.users.me, {})).data
   const discard = useMutation(api.importDrafts.discard)
+  const retryWithAi = useMutation(api.importDrafts.retryWithAi)
   const navigate = useNavigate()
   const working = draft.status !== 'ready' && draft.status !== 'failed'
   const videoId = draft.youtubeId?.match(/[A-Za-z0-9_-]{11}/)?.[0]
@@ -150,7 +162,34 @@ function ReviewPage() {
       />
 
       <div className="mb-8 rounded-2xl border bg-card p-4 sm:p-5">
-        <StatusSteps status={draft.status} />
+        {draft.parser === 'text' ? (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <CheckIcon className="mt-0.5 size-5 shrink-0 text-primary" />
+              <div>
+                <div className="font-medium">{m.readWithoutAi()}</div>
+                <p className="text-sm text-muted-foreground">
+                  {m.readWithoutAiHint()}
+                </p>
+              </div>
+            </div>
+            {me?.ai ? (
+              <Button
+                variant="outline"
+                onPress={() =>
+                  void retryWithAi({ draftId }).catch((error: unknown) =>
+                    toast.error(messageFor(error)),
+                  )
+                }
+              >
+                <SparklesIcon />
+                {m.tryWithAi()}
+              </Button>
+            ) : null}
+          </div>
+        ) : (
+          <StatusSteps status={draft.status} />
+        )}
         {draft.status === 'failed' ? (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
             <div className="flex items-start gap-3">
@@ -283,9 +322,7 @@ function ReadyReview({ draft, output }: { draft: Draft; output: Output }) {
             </div>
             <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
               {draft.warnings.map((warning) => (
-                <li key={warning}>
-                  {warning === 'outOfRange' ? m.outOfRange() : warning}
-                </li>
+                <li key={warning}>{warningText(warning)}</li>
               ))}
             </ul>
           </div>

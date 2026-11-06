@@ -34,7 +34,7 @@ const config = defineConfig({
       '**/vite.config.*.timestamp-*.*',
       'src/paraglide/**',
       'src/routeTree.gen.ts',
-      'src/lib/music/music.test.ts',
+      'src/**/*.test.ts',
     ],
     rules: {
       'vite-plus/prefer-vite-plus-imports': 'error',
