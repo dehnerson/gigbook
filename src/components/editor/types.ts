@@ -8,6 +8,7 @@ export type EditorPart = {
   chartBody?: string
   strumming?: string
   measures?: Array<TabMeasure>
+  rhythmGuessed?: boolean
   order: number
 }
 

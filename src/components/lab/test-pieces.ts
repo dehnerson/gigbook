@@ -1,9 +1,4 @@
-import type {
-  BeatMeasure,
-  BeatNote,
-  Duration,
-  TabBeat,
-} from '@/lib/music/tab-beats'
+import type { TabMeasure, TabNote, Duration, TabBeat } from '@/lib/music/tab'
 
 export type TestPiece = {
   id: string
@@ -12,16 +7,16 @@ export type TestPiece = {
   timeSignature: string
   tempo: number
   tuning: Array<string>
-  measures: Array<BeatMeasure>
+  measures: Array<TabMeasure>
 }
 
 const STANDARD = ['E2', 'A2', 'D3', 'G3', 'B3', 'E4']
 
-function n(spec: string): BeatNote {
+function n(spec: string): TabNote {
   const match = spec.match(/^(\d+)\.(\d)([hpb/\\~])?(\d)?$/)
   if (!match) throw new Error(`Bad note ${spec}`)
-  const note: BeatNote = { f: Number(match[1]), s: Number(match[2]) }
-  if (match[3]) note.t = match[3] as BeatNote['t']
+  const note: TabNote = { f: Number(match[1]), s: Number(match[2]) }
+  if (match[3]) note.t = match[3] as TabNote['t']
   if (match[4]) note.bend = Number(match[4])
   return note
 }

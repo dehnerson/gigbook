@@ -163,6 +163,17 @@ body {
   ::selection {
     background: color-mix(in oklch, var(--primary) 35%, transparent);
   }
+  .at-cursor-bar {
+    background: color-mix(in oklch, var(--primary) 12%, transparent);
+  }
+  .at-cursor-beat {
+    width: 3px;
+    background: var(--primary);
+  }
+  .at-highlight * {
+    fill: var(--primary);
+    stroke: var(--primary);
+  }
 }
 
 @utility stage-glow {

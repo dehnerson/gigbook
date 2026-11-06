@@ -2,6 +2,7 @@ import { convexQuery } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation } from 'convex/react'
+import type { FunctionReturnType } from 'convex/server'
 import { ConvexError } from 'convex/values'
 import { cn } from 'cn'
 import {
@@ -16,7 +17,7 @@ import {
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '../../../../convex/_generated/api'
-import type { Doc, Id } from '../../../../convex/_generated/dataModel'
+import type { Id } from '../../../../convex/_generated/dataModel'
 import { ConfirmDialog } from '@/components/app/confirm-dialog'
 import { Field } from '@/components/app/field'
 import { Crumb, PageHeader, SectionTitle } from '@/components/app/page-header'
@@ -47,7 +48,7 @@ export const Route = createFileRoute('/_authed/import/$draftId')({
   component: ReviewPage,
 })
 
-type Draft = Doc<'importDrafts'>
+type Draft = FunctionReturnType<typeof api.importDrafts.get>
 type Output = NonNullable<Draft['output']>
 
 const STEPS = ['queued', 'reading', 'structuring', 'ready'] as const

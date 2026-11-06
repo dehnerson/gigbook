@@ -12,11 +12,7 @@ import type { SheetSettings } from '@/components/sheet/types'
 import { Switch } from '@/components/ui/switch'
 import { displayChord } from '@/lib/music/chords'
 import type { Notation } from '@/lib/music/pitch'
-import {
-  measureFill,
-  shiftBeatMeasures,
-  toAlphaTex,
-} from '@/lib/music/tab-beats'
+import { measureFill, previewTabShift, toAlphaTex } from '@/lib/music/tab'
 
 export const Route = createFileRoute('/lab/tabs')({
   component: TabLab,
@@ -84,7 +80,7 @@ function TabLab() {
     mode: 'both',
     scale,
   }
-  const shifted = shiftBeatMeasures(piece.measures, transpose)
+  const shifted = previewTabShift(piece.measures, transpose).measures
   const outOfRange = shifted.some((measure) =>
     measure.beats.some((beat) => beat.notes.some((note) => note.unplayable)),
   )

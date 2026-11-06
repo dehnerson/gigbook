@@ -16,6 +16,7 @@ import { canEditSong, requireIdentity, songOfVersion } from './lib/access'
 import { fail } from './lib/errors'
 import { findSongByKey, insertSong, uniqueVersionName } from './lib/songs'
 import { songKey } from '../src/lib/song-key'
+import { toTabMeasures } from '../src/lib/music/tab'
 import { readAiKey } from './users'
 
 const HOUR = 60 * 60 * 1000
@@ -47,6 +48,19 @@ async function checkAiQuota(ctx: MutationCtx, ownerId: string) {
     (draft) => !draft.parser && draft.createdAt > Date.now() - HOUR,
   ).length
   if (count >= LIMIT) fail('RATE_LIMIT')
+}
+
+function currentOutput(output: NonNullable<Doc<'importDrafts'>['output']>) {
+  return {
+    ...output,
+    sections: output.sections.map((section) => ({
+      ...section,
+      parts: section.parts.map((part) => ({
+        ...part,
+        measures: part.measures && toTabMeasures(part.measures),
+      })),
+    })),
+  }
 }
 
 function sameName(a: string, b: string) {
@@ -173,7 +187,10 @@ export const get = query({
     const identity = await requireIdentity(ctx)
     const draft = await ctx.db.get(args.draftId)
     if (!draft || draft.ownerId !== identity.subject) fail('NOT_FOUND')
-    return draft
+    return {
+      ...draft,
+      output: draft.output ? currentOutput(draft.output) : undefined,
+    }
   },
 })
 
@@ -215,7 +232,7 @@ export const save = mutation({
     const draft = await ctx.db.get(args.draftId)
     if (!draft || draft.ownerId !== identity.subject || !draft.output)
       fail('FORBIDDEN')
-    const output = draft.output
+    const output = currentOutput(draft.output)
     const version = await editableTarget(ctx, draft.targetVersionId)
     if (version) {
       const timeline = [...version.timeline]
@@ -248,6 +265,7 @@ export const save = mutation({
             chartBody: part.chartBody,
             strumming: part.strumming,
             measures: part.measures,
+            rhythmGuessed: part.rhythmGuessed,
             order,
           })
           order += 1
@@ -312,6 +330,7 @@ export const save = mutation({
           chartBody: part.chartBody,
           strumming: part.strumming,
           measures: part.measures,
+          rhythmGuessed: part.rhythmGuessed,
           order,
         })
       }

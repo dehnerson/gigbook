@@ -1,12 +1,18 @@
 import { LightbulbIcon, PlusIcon, Rows3Icon } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useDebounced } from '@/components/app/save'
 import { TabStaff } from '@/components/sheet/tab-staff'
 import type { SheetSettings } from '@/components/sheet/types'
 import { Button } from '@/components/ui/button'
 import { stringLabels } from '@/lib/music/diagrams'
 import type { Notation } from '@/lib/music/pitch'
-import { parseAsciiTab, serializeAsciiTab } from '@/lib/music/tab'
+import {
+  cleanTabMeasures,
+  keepRhythm,
+  parseAsciiTab,
+  serializeAsciiTab,
+} from '@/lib/music/tab'
+import type { TabMeasure } from '@/lib/music/tab'
 import { m } from '@/paraglide/messages'
 import { textareaClass } from './chart-editor'
 import type { EditorPart } from './types'
@@ -41,29 +47,51 @@ function addBar(text: string) {
   return lines.join('\n')
 }
 
+function sameShape(a: Array<TabMeasure>, b: Array<TabMeasure>) {
+  return (
+    a.length === b.length &&
+    a.every((measure, index) => measure.beats.length === b[index]?.beats.length)
+  )
+}
+
 export function TabEditor({
   part,
   tuning,
+  timeSignature,
+  bpm,
   notation,
 }: {
   part: EditorPart
   tuning: Array<string>
+  timeSignature: string
+  bpm?: number
   notation: Notation
 }) {
   const { mutations, save } = useEditor()
   const labels = stringLabels(tuning, tuning.length || 6)
+  const saved = useRef(part.measures ?? [])
+  const guessed = useRef(part.rhythmGuessed ?? false)
   const [text, setText] = useState(() =>
     part.measures && part.measures.length > 0
       ? serializeAsciiTab(part.measures, labels)
       : emptySystem(labels),
   )
-  const measures = useMemo(() => parseAsciiTab(text), [text])
+  const read = (value: string) =>
+    keepRhythm(parseAsciiTab(value, timeSignature), saved.current)
+  const measures = useMemo(
+    () => keepRhythm(parseAsciiTab(text, timeSignature), saved.current),
+    [text, timeSignature],
+  )
 
   const saveTab = useDebounced((value: string) => {
+    const next = read(value)
+    if (!sameShape(next, saved.current)) guessed.current = true
+    saved.current = next
     void save(() =>
       mutations.updatePart({
         partId: part._id,
-        measures: parseAsciiTab(value),
+        measures: cleanTabMeasures(next),
+        rhythmGuessed: guessed.current,
       }),
     )
   }, 900)
@@ -120,7 +148,13 @@ export function TabEditor({
           {m.preview()}
         </div>
         {measures.length > 0 ? (
-          <TabStaff measures={measures} tuning={tuning} settings={settings} />
+          <TabStaff
+            measures={measures}
+            tuning={tuning}
+            timeSignature={timeSignature}
+            bpm={bpm}
+            settings={settings}
+          />
         ) : (
           <p className="text-sm text-muted-foreground">{m.previewEmpty()}</p>
         )}

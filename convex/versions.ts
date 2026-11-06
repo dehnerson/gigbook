@@ -15,7 +15,12 @@ import { findSongByKey, insertSong, uniqueVersionName } from './lib/songs'
 import { songKey } from '../src/lib/song-key'
 import { transposeSymbol } from '../src/lib/music/chords'
 import { transposeChordPro } from '../src/lib/music/chordpro'
-import { previewTabShift } from '../src/lib/music/tab'
+import {
+  cleanTabMeasures,
+  mapTabChords,
+  previewTabShift,
+  toTabMeasures,
+} from '../src/lib/music/tab'
 
 const MAX_REPEAT = 16
 
@@ -73,7 +78,12 @@ async function bundle(ctx: any, version: any, song: any, canEdit: boolean) {
         section,
         parts: parts
           .filter((part: any) => part.sectionId === section._id)
-          .sort((a: any, b: any) => a.order - b.order),
+          .sort((a: any, b: any) => a.order - b.order)
+          .map((part: any) =>
+            part.measures
+              ? { ...part, measures: toTabMeasures(part.measures) }
+              : part,
+          ),
       }
     })
     .filter(Boolean)
@@ -165,10 +175,10 @@ export const saveWrittenKey = mutation({
     const preview = previewTabShift(
       parts
         .filter((part) => part.kind === 'tab')
-        .flatMap((part) => part.measures ?? []),
+        .flatMap((part) => toTabMeasures(part.measures)),
       args.semitones,
     )
-    if (!preview.applied && args.semitones !== 0) fail('INVALID')
+    if (!preview.applied) fail('INVALID')
     for (const part of parts) {
       if (part.kind === 'chart' && part.chartBody) {
         await ctx.db.patch(part._id, {
@@ -176,25 +186,17 @@ export const saveWrittenKey = mutation({
         })
       }
       if (part.kind === 'tab' && part.measures) {
-        const shifted = previewTabShift(part.measures, args.semitones)
+        const shifted = previewTabShift(
+          toTabMeasures(part.measures),
+          args.semitones,
+        )
         if (!shifted.applied) fail('INVALID')
         await ctx.db.patch(part._id, {
-          measures: shifted.measures.map((measure) => ({
-            chordAbove: measure.chordAbove
-              ? transposeSymbol(measure.chordAbove, args.semitones)
-              : undefined,
-            events: measure.events.map((event) => ({
-              position: event.position,
-              notes: event.notes.map((note) => ({
-                string: note.string,
-                fret: note.fret,
-                ...(note.technique ? { technique: note.technique } : {}),
-                ...(note.bendSemitones !== undefined
-                  ? { bendSemitones: note.bendSemitones }
-                  : {}),
-              })),
-            })),
-          })),
+          measures: cleanTabMeasures(
+            mapTabChords(shifted.measures, (symbol) =>
+              transposeSymbol(symbol, args.semitones),
+            ),
+          ),
         })
       }
     }
@@ -348,6 +350,7 @@ export const detachEntry = mutation({
         chartBody: part.chartBody,
         strumming: part.strumming,
         measures: part.measures,
+        rhythmGuessed: part.rhythmGuessed,
         order: part.order,
       })
     }
@@ -480,6 +483,7 @@ export const updatePart = mutation({
     chartBody: v.optional(v.string()),
     strumming: v.optional(v.string()),
     measures: v.optional(v.array(tabMeasure)),
+    rhythmGuessed: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const part = await ctx.db.get(args.partId)
@@ -491,6 +495,9 @@ export const updatePart = mutation({
       ...(args.chartBody !== undefined ? { chartBody: args.chartBody } : {}),
       ...(args.strumming !== undefined ? { strumming: args.strumming } : {}),
       ...(args.measures !== undefined ? { measures: args.measures } : {}),
+      ...(args.rhythmGuessed !== undefined
+        ? { rhythmGuessed: args.rhythmGuessed || undefined }
+        : {}),
     })
   },
 })

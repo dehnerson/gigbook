@@ -14,7 +14,9 @@ Chord symbols are English (B, Bb), never German H.
 concertKey is the sounding key. suggestedCapo is only a display hint.
 If the source says Capo N and prints the easy shapes, keep those shapes and set suggestedCapo to N. Do not transpose them.
 When existing section ids are provided, also return mapping: an array aligned with sections, each value an existing section id or null for a new section.
-Tab parts use measures of events. Each note is {string, fret} where string 1 is the highest string.
+Tab parts use measures of beats. A beat is {d, notes} where d is the note length (1 whole, 2 half, 4 quarter, 8 eighth, 16 sixteenth, 32), dot: true makes it dotted, rest: true with empty notes is a rest, and chord is a chord name that starts on that beat.
+Each note is {s, f} where s is the string (1 is the highest string) and f the fret. t is an optional technique: h hammer-on, p pull-off, b bend (bend is the number of semitones), / slide up, \\ slide down, ~ vibrato.
+Each measure's beats should add up to the time signature. When the source shows no rhythm, use eighth notes and set rhythmGuessed true on the part.
 Set tabRelativeToCapo true only when the tab fret numbers are written relative to a capo.
 Do not invent frets that are not in the source.
 Do not move notes to a different string.

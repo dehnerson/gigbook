@@ -6,14 +6,14 @@ import {
   beatLength,
   measureCapacity,
   noteName,
-  shiftBeatMeasures,
-} from '@/lib/music/tab-beats'
+  previewTabShift,
+} from '@/lib/music/tab'
 import type {
-  BeatMeasure,
+  TabMeasure,
   ShiftedBeat,
   ShiftedMeasure,
   ShiftedNote,
-} from '@/lib/music/tab-beats'
+} from '@/lib/music/tab'
 
 const LABEL_WIDTH = 22
 const LINE_GAP = 13
@@ -94,7 +94,7 @@ export function RhythmTabStaff({
   settings,
   showNames,
 }: {
-  measures: Array<BeatMeasure>
+  measures: Array<TabMeasure>
   tuning: Array<string>
   timeSignature: string
   settings: SheetSettings
@@ -102,7 +102,7 @@ export function RhythmTabStaff({
 }) {
   const [ref, available] = useWidth()
   const scale = settings.scale
-  const shifted = shiftBeatMeasures(measures, settings.transpose)
+  const shifted = previewTabShift(measures, settings.transpose).measures
   const stringCount = Math.max(
     tuning.length || 6,
     ...shifted.flatMap((measure) =>

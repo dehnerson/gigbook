@@ -7,8 +7,7 @@ import {
   sectionLabelOf,
 } from '../music/chordpro'
 import type { Notation } from '../music/pitch'
-import { parseAsciiTab } from '../music/tab'
-import type { TabMeasure } from '../music/tab'
+import { mapTabChords, parseAsciiTab, tabChords } from '../music/tab'
 import {
   STANDARD_TUNING,
   keyFromChord,
@@ -208,7 +207,11 @@ function chartBody(lines: Array<string>, notation: Notation) {
     .trim()
 }
 
-function toParts(section: RawSection, notation: Notation) {
+function toParts(
+  section: RawSection,
+  notation: Notation,
+  timeSignature: string,
+) {
   const parts: DraftOutput['sections'][number]['parts'] = []
   let chart: Array<string> = []
   const flushChart = () => {
@@ -244,14 +247,12 @@ function toParts(section: RawSection, notation: Notation) {
     if (above !== undefined && isChordLine(above)) header = chart.pop()
     flushChart()
     const block = [header ?? '', ...lines.slice(start, index)].join('\n')
-    const measures = parseAsciiTab(block).map((measure) => ({
-      ...measure,
-      ...(measure.chordAbove
-        ? { chordAbove: toEnglish(measure.chordAbove, notation) }
-        : {}),
-    }))
+    const measures = mapTabChords(
+      parseAsciiTab(block, timeSignature),
+      (symbol) => toEnglish(symbol, notation),
+    )
     if (measures.length > 0) {
-      parts.push({ kind: 'tab', label: 'Tab', measures })
+      parts.push({ kind: 'tab', label: 'Tab', measures, rhythmGuessed: true })
     }
   }
   flushChart()
@@ -577,7 +578,7 @@ export function parseSongText(
     .map((section) => ({
       name: section.name ?? names.verse,
       notes: section.notes.length > 0 ? section.notes.join('\n') : undefined,
-      parts: toParts(section, notation),
+      parts: toParts(section, notation, meta.timeSignature ?? '4/4'),
     }))
     .filter((section) => section.parts.length > 0)
 
@@ -592,13 +593,11 @@ export function parseSongText(
           chords.add(symbol)
         }
       } else {
-        const measures = (part.measures ?? []) as Array<TabMeasure>
+        const measures = part.measures ?? []
         tabMeasures += measures.length
-        for (const measure of measures) {
-          if (measure.chordAbove) {
-            firstChord ??= measure.chordAbove
-            chords.add(measure.chordAbove)
-          }
+        for (const symbol of tabChords(measures)) {
+          firstChord ??= symbol
+          chords.add(symbol)
         }
       }
     }

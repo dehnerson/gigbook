@@ -5,6 +5,7 @@ import { Chip } from '@/components/app/chip'
 import { soundsAs } from '@/lib/music/chords'
 import { chartChords } from '@/lib/music/chordpro'
 import { STANDARD_TUNING, stringLabels } from '@/lib/music/diagrams'
+import { tabChords } from '@/lib/music/tab'
 import { m } from '@/paraglide/messages'
 import type { Id } from '../../../convex/_generated/dataModel'
 import { ChartPart } from './chart-part'
@@ -56,9 +57,7 @@ export function versionChords(
       if (!isVisible(part, visiblePartIds)) continue
       if (part.kind === 'chart' && part.chartBody)
         symbols.push(...chartChords(part.chartBody))
-      if (part.kind === 'tab')
-        for (const measure of part.measures ?? [])
-          if (measure.chordAbove) symbols.push(measure.chordAbove)
+      if (part.kind === 'tab') symbols.push(...tabChords(part.measures ?? []))
     }
   }
   return [...new Set(symbols)]
@@ -215,6 +214,8 @@ function SectionBlock({
                 <TabStaff
                   measures={part.measures}
                   tuning={version.tuning}
+                  timeSignature={version.timeSignature}
+                  bpm={version.bpm}
                   settings={settings}
                 />
               ) : null}

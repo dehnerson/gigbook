@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test'
+import { tabChords } from '../music/tab.ts'
 import { parseTuning, readMetaLine, splitTitleArtist } from './meta.ts'
 import { IMPORT_SAMPLES } from './samples.ts'
 import { parseSongText } from './text.ts'
@@ -133,10 +134,8 @@ describe('text import samples', () => {
     const result = sample('greensleeves')
     const tab = result.draft.sections[0]?.parts[0]
     expect(tab?.kind).toBe('tab')
-    expect(tab?.measures?.map((measure) => measure.chordAbove)).toEqual([
-      'Am',
-      'G',
-    ])
+    expect(tabChords(tab?.measures ?? [])).toEqual(['Am', 'G'])
+    expect(tab?.rhythmGuessed).toBe(true)
     expect(result.draft.artist).toBe('Traditional')
   })
 

@@ -8,48 +8,104 @@ export const aiProvider = v.union(
 )
 
 export const tabNote = v.object({
-  string: v.number(),
-  fret: v.number(),
-  technique: v.optional(
-    v.union(v.literal('h'), v.literal('p'), v.literal('b'), v.literal('/')),
+  s: v.number(),
+  f: v.number(),
+  t: v.optional(
+    v.union(
+      v.literal('h'),
+      v.literal('p'),
+      v.literal('b'),
+      v.literal('/'),
+      v.literal('\\'),
+      v.literal('~'),
+    ),
   ),
-  bendSemitones: v.optional(v.number()),
+  bend: v.optional(v.number()),
+})
+
+export const tabBeat = v.object({
+  d: v.union(
+    v.literal(1),
+    v.literal(2),
+    v.literal(4),
+    v.literal(8),
+    v.literal(16),
+    v.literal(32),
+  ),
+  dot: v.optional(v.literal(true)),
+  rest: v.optional(v.literal(true)),
+  chord: v.optional(v.string()),
+  notes: v.array(tabNote),
 })
 
 export const tabMeasure = v.object({
+  beats: v.array(tabBeat),
+  repeat: v.optional(
+    v.object({
+      start: v.optional(v.literal(true)),
+      times: v.optional(v.number()),
+    }),
+  ),
+  ending: v.optional(v.number()),
+})
+
+// Old shape, kept readable until migrations:tabBeats has run on every deployment.
+const legacyTabMeasure = v.object({
   chordAbove: v.optional(v.string()),
   events: v.array(
     v.object({
       position: v.number(),
-      notes: v.array(tabNote),
+      notes: v.array(
+        v.object({
+          string: v.number(),
+          fret: v.number(),
+          technique: v.optional(
+            v.union(
+              v.literal('h'),
+              v.literal('p'),
+              v.literal('b'),
+              v.literal('/'),
+            ),
+          ),
+          bendSemitones: v.optional(v.number()),
+        }),
+      ),
     }),
   ),
 })
 
-export const importSection = v.object({
-  name: v.string(),
-  notes: v.optional(v.string()),
-  parts: v.array(
-    v.object({
-      kind: v.union(v.literal('chart'), v.literal('tab')),
-      label: v.string(),
-      chartBody: v.optional(v.string()),
-      strumming: v.optional(v.string()),
-      measures: v.optional(v.array(tabMeasure)),
-    }),
-  ),
-})
+const storedTabMeasure = v.union(tabMeasure, legacyTabMeasure)
 
-export const importOutput = v.object({
-  title: v.string(),
-  artist: v.string(),
-  concertKey: v.string(),
-  timeSignature: v.string(),
-  bpm: v.optional(v.number()),
-  tuning: v.array(v.string()),
-  suggestedCapo: v.number(),
-  sections: v.array(importSection),
-})
+function outputWith(measure: typeof tabMeasure | typeof storedTabMeasure) {
+  return v.object({
+    title: v.string(),
+    artist: v.string(),
+    concertKey: v.string(),
+    timeSignature: v.string(),
+    bpm: v.optional(v.number()),
+    tuning: v.array(v.string()),
+    suggestedCapo: v.number(),
+    sections: v.array(
+      v.object({
+        name: v.string(),
+        notes: v.optional(v.string()),
+        parts: v.array(
+          v.object({
+            kind: v.union(v.literal('chart'), v.literal('tab')),
+            label: v.string(),
+            chartBody: v.optional(v.string()),
+            strumming: v.optional(v.string()),
+            measures: v.optional(v.array(measure)),
+            rhythmGuessed: v.optional(v.boolean()),
+          }),
+        ),
+      }),
+    ),
+  })
+}
+
+export const importOutput = outputWith(tabMeasure)
+const storedImportOutput = outputWith(storedTabMeasure)
 
 export default defineSchema({
   users: defineTable({
@@ -142,7 +198,8 @@ export default defineSchema({
     label: v.string(),
     chartBody: v.optional(v.string()),
     strumming: v.optional(v.string()),
-    measures: v.optional(v.array(tabMeasure)),
+    measures: v.optional(v.array(storedTabMeasure)),
+    rhythmGuessed: v.optional(v.boolean()),
     order: v.number(),
   })
     .index('by_section', ['sectionId'])
@@ -226,7 +283,7 @@ export default defineSchema({
     targetVersionId: v.optional(v.id('versions')),
     youtubeId: v.optional(v.string()),
     parser: v.optional(v.literal('text')),
-    output: v.optional(importOutput),
+    output: v.optional(storedImportOutput),
     mapping: v.array(v.union(v.string(), v.null())),
     warnings: v.array(v.string()),
     error: v.optional(v.string()),

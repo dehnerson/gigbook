@@ -50,6 +50,7 @@ export async function cloneVersionTree(
         chartBody: part.chartBody,
         strumming: part.strumming,
         measures: part.measures,
+        rhythmGuessed: part.rhythmGuessed,
         order: part.order,
       })
     }

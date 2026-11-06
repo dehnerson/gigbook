@@ -245,6 +245,12 @@ The chord name sits on the beat, not the measure, because chords often change mi
 - Migrate existing measures with each event becoming a beat, defaulting to eighth notes. Mark migrated parts so the editor can suggest checking the rhythm.
 - Update `previewTabShift`, `saveWrittenKey`, the import schema and the AI prompt to the new shape.
 
+**Status: done.** The model lives in `src/lib/music/tab.ts` (the prototype file `tab-beats.ts` is merged into it). Sheets render tabs with alphaTab (`src/components/sheet/tab-staff.tsx`), lazy-loaded, themed, with notes that can't move with the key drawn in red and a "Listen" button that loads the soundfont only when pressed.
+
+- **Rhythm from ASCII tabs is guessed, not fixed at eighths.** `parseAsciiTab` reads note lengths from the column spacing: evenly spaced notes fill the bar (four in 4/4 become quarters), uneven spacing is split proportionally. `serializeAsciiTab` spaces notes by length so the round trip keeps them. The textarea editor keeps the stored lengths of every bar whose note count didn't change, so fixing a fret doesn't reset the rhythm.
+- **`parts.rhythmGuessed`** marks tabs whose rhythm was guessed: migrated parts, ASCII imports, and edits that changed a bar's note count. The AI sets it when the source shows no rhythm. The grid editor (4.2) should show the hint and clear the flag.
+- **Migration:** the schema accepts both shapes for now, reads convert old measures on the fly (`toTabMeasures`), and `migrations:tabBeats` rewrites parts and import drafts. Dev is migrated. For prod: deploy, run `npx convex run --prod migrations:tabBeats`, check that no part still has `events`, then remove `legacyTabMeasure` from `convex/schema.ts` and deploy again.
+
 ### 4.2 Grid tab editor (#3)
 
 - The default editor is a grid of strings × beats with a cursor:

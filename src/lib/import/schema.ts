@@ -23,16 +23,25 @@ export const draftSchema = z.object({
             measures: z
               .array(
                 z.object({
-                  chordAbove: z.string().optional(),
-                  events: z.array(
+                  beats: z.array(
                     z.object({
-                      position: z.number(),
+                      d: z.union([
+                        z.literal(1),
+                        z.literal(2),
+                        z.literal(4),
+                        z.literal(8),
+                        z.literal(16),
+                        z.literal(32),
+                      ]),
+                      dot: z.literal(true).optional(),
+                      rest: z.literal(true).optional(),
+                      chord: z.string().optional(),
                       notes: z.array(
                         z.object({
-                          string: z.number(),
-                          fret: z.number(),
-                          technique: z.enum(['h', 'p', 'b', '/']).optional(),
-                          bendSemitones: z.number().optional(),
+                          s: z.number(),
+                          f: z.number(),
+                          t: z.enum(['h', 'p', 'b', '/', '\\', '~']).optional(),
+                          bend: z.number().optional(),
                         }),
                       ),
                     }),
@@ -40,6 +49,7 @@ export const draftSchema = z.object({
                 }),
               )
               .optional(),
+            rhythmGuessed: z.boolean().optional(),
           }),
         ),
       }),

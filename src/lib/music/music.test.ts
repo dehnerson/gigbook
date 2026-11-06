@@ -11,13 +11,17 @@ import {
 } from './chordpro.ts'
 import { lookupChordDiagram } from './diagrams.ts'
 import { parseStrum } from './strum.ts'
-import { parseAsciiTab, previewTabShift, serializeAsciiTab } from './tab.ts'
 import {
+  fromLegacyMeasure,
+  keepRhythm,
   measureFill,
   noteName,
-  shiftBeatMeasures,
+  parseAsciiTab,
+  previewTabShift,
+  serializeAsciiTab,
   toAlphaTex,
-} from './tab-beats.ts'
+} from './tab.ts'
+import type { TabMeasure } from './tab.ts'
 
 describe('tab beats', () => {
   const tuning = ['E2', 'A2', 'D3', 'G3', 'B3', 'E4']
@@ -42,7 +46,7 @@ describe('tab beats', () => {
   })
 
   test('flags notes that leave the fretboard when shifted', () => {
-    const [measure] = shiftBeatMeasures(
+    const shifted = previewTabShift(
       [
         {
           beats: [
@@ -58,10 +62,52 @@ describe('tab beats', () => {
       ],
       -2,
     )
-    expect(measure?.beats[0]?.notes).toEqual([
+    expect(shifted.applied).toBe(false)
+    expect(shifted.measures[0]?.beats[0]?.notes).toEqual([
       { s: 1, f: 1, unplayable: true },
-      { s: 2, f: 3, unplayable: false },
+      { s: 2, f: 5, unplayable: false },
     ])
+  })
+
+  test('converts old event measures into eighth-note beats', () => {
+    expect(
+      fromLegacyMeasure({
+        chordAbove: 'G',
+        events: [
+          {
+            position: 0,
+            notes: [{ string: 2, fret: 3, technique: 'h', bendSemitones: 1 }],
+          },
+          { position: 1, notes: [{ string: 1, fret: 0 }] },
+        ],
+      }),
+    ).toEqual({
+      beats: [
+        { d: 8, chord: 'G', notes: [{ s: 2, f: 3, t: 'h', bend: 1 }] },
+        { d: 8, notes: [{ s: 1, f: 0 }] },
+      ],
+    })
+    expect(fromLegacyMeasure({ chordAbove: 'C', events: [] })).toEqual({
+      beats: [{ d: 1, rest: true, chord: 'C', notes: [] }],
+    })
+  })
+
+  test('keeps known note lengths when only frets change', () => {
+    const before: Array<TabMeasure> = [
+      {
+        beats: [
+          { d: 4, dot: true, notes: [{ s: 1, f: 0 }] },
+          { d: 8, notes: [{ s: 1, f: 2 }] },
+        ],
+      },
+    ]
+    const edited = parseAsciiTab('e|--0--5--|')
+    expect(keepRhythm(edited, before)[0]?.beats).toEqual([
+      { d: 4, dot: true, notes: [{ s: 1, f: 0 }] },
+      { d: 8, notes: [{ s: 1, f: 5 }] },
+    ])
+    const longer = parseAsciiTab('e|--0--5--7--|')
+    expect(keepRhythm(longer, before)).toEqual(longer)
   })
 
   test('writes alphaTex with durations, effects, chords and repeats', () => {
@@ -136,25 +182,43 @@ describe('tabs', () => {
     const measures = parseAsciiTab(
       'e|--0--2--|\nB|--1-----|\nG|--------|\nD|--------|\nA|--------|\nE|--------|',
     )
-    expect(measures[0]?.events[0]?.notes).toEqual([
-      { string: 1, fret: 0 },
-      { string: 2, fret: 1 },
+    expect(measures[0]?.beats[0]?.notes).toEqual([
+      { s: 1, f: 0 },
+      { s: 2, f: 1 },
     ])
-    expect(measures[0]?.events[1]?.notes).toEqual([{ string: 1, fret: 2 }])
+    expect(measures[0]?.beats[1]?.notes).toEqual([{ s: 1, f: 2 }])
+  })
+
+  test('guesses note lengths from the spacing', () => {
+    const lengths = (ascii: string, time?: string) =>
+      parseAsciiTab(ascii, time)[0]?.beats.map(
+        (beat) => `${beat.d}${beat.dot ? '.' : ''}`,
+      )
+    expect(lengths('e|--0--2--3--5--|')).toEqual(['4', '4', '4', '4'])
+    expect(lengths('e|-0-2-3-5-7-5-3-2-|')).toEqual(Array(8).fill('8'))
+    expect(lengths('e|--0-------2---3---|')).toEqual(['2', '4', '4'])
+    expect(lengths('e|--0--2--3--|', '3/4')).toEqual(['4', '4', '4'])
+  })
+
+  test('places chords on the beat below them', () => {
+    const [measure] = parseAsciiTab(
+      '   G       D\ne|--3---2---|\nB|--0---3---|',
+    )
+    expect(measure?.beats.map((beat) => beat.chord)).toEqual(['G', 'D'])
   })
 
   test('shifts frets only when every note stays on the neck', () => {
     const measures = parseAsciiTab('e|--0--2--|')
     const blocked = previewTabShift(measures, -1)
     expect(blocked.applied).toBe(false)
-    expect(blocked.measures[0]?.events[0]?.notes[0]?.unplayable).toBe(true)
-    expect(blocked.measures[0]?.events[0]?.notes[0]?.fret).toBe(0)
+    expect(blocked.measures[0]?.beats[0]?.notes[0]?.unplayable).toBe(true)
+    expect(blocked.measures[0]?.beats[0]?.notes[0]?.f).toBe(0)
 
     const moved = previewTabShift(measures, 1)
     expect(moved.applied).toBe(true)
-    expect(
-      moved.measures[0]?.events.map((event) => event.notes[0]?.fret),
-    ).toEqual([1, 3])
+    expect(moved.measures[0]?.beats.map((beat) => beat.notes[0]?.f)).toEqual([
+      1, 3,
+    ])
   })
 })
 
@@ -255,23 +319,22 @@ describe('chords over lyrics', () => {
 
 describe('tab round trip', () => {
   test('serializes measures back to ascii and parses them again', () => {
-    const measures = [
+    const measures: Array<TabMeasure> = [
       {
-        chordAbove: 'G',
-        events: [
-          { position: 0, notes: [{ string: 1, fret: 3 }] },
+        beats: [
+          { d: 4, chord: 'G', notes: [{ s: 1, f: 3 }] },
           {
-            position: 1,
+            d: 4,
             notes: [
-              { string: 2, fret: 10, technique: 'h' as const },
-              { string: 6, fret: 3 },
+              { s: 2, f: 10, t: 'h' },
+              { s: 6, f: 3 },
             ],
           },
+          { d: 2, chord: 'D', notes: [{ s: 1, f: 2 }] },
         ],
       },
       {
-        chordAbove: 'Em',
-        events: [{ position: 0, notes: [{ string: 3, fret: 0 }] }],
+        beats: [{ d: 1, chord: 'Em', notes: [{ s: 3, f: 0 }] }],
       },
     ]
     const labels = ['e', 'B', 'G', 'D', 'A', 'E']
@@ -283,9 +346,9 @@ describe('tab round trip', () => {
     const ascii = 'e|--0--|\nB|-----|\n\ne|--2--|\nB|--3--|'
     const measures = parseAsciiTab(ascii)
     expect(measures.length).toBe(2)
-    expect(measures[1]?.events[0]?.notes).toEqual([
-      { string: 1, fret: 2 },
-      { string: 2, fret: 3 },
+    expect(measures[1]?.beats[0]?.notes).toEqual([
+      { s: 1, f: 2 },
+      { s: 2, f: 3 },
     ])
   })
 })

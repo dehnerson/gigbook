@@ -94,7 +94,13 @@ function PartCard({
             timeSignature={version.timeSignature}
           />
         ) : (
-          <TabEditor part={part} tuning={version.tuning} notation={notation} />
+          <TabEditor
+            part={part}
+            tuning={version.tuning}
+            timeSignature={version.timeSignature}
+            bpm={version.bpm}
+            notation={notation}
+          />
         )}
       </div>
       <ConfirmDialog

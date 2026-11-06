@@ -8,6 +8,7 @@ import {
   PlayIcon,
   SaveIcon,
   Share2Icon,
+  TriangleAlertIcon,
 } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '../../../../../convex/_generated/api'
@@ -41,6 +42,7 @@ import { useNotation } from '@/components/use-notation'
 import { useVersionActions } from '@/components/version-actions'
 import { useLiveQuery } from '@/lib/live'
 import { loadQuery } from '@/lib/load'
+import { previewTabShift } from '@/lib/music/tab'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/versions/$versionId/')({
@@ -74,6 +76,17 @@ function ReadPage() {
     passes.map((item) => item.id),
     prefs.layout,
   )
+
+  const blocked =
+    transpose !== 0 &&
+    !previewTabShift(
+      timeline.flatMap((entry) =>
+        entry.parts.flatMap((part) =>
+          part.kind === 'tab' ? (part.measures ?? []) : [],
+        ),
+      ),
+      transpose,
+    ).applied
 
   const settings: SheetSettings = {
     capo,
@@ -175,7 +188,13 @@ function ReadPage() {
             concertKey={version.concertKey}
             notation={notation}
           />
-          {canEdit && transpose !== 0 ? (
+          {blocked ? (
+            <span className="flex items-center gap-1.5 text-xs text-destructive">
+              <TriangleAlertIcon className="size-4 shrink-0" />
+              {m.outOfRange()}
+            </span>
+          ) : null}
+          {canEdit && transpose !== 0 && !blocked ? (
             <Button
               variant="secondary"
               onPress={() =>
