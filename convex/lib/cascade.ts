@@ -14,6 +14,7 @@ export async function cloneVersionTree(
   const copyVersionId = await ctx.db.insert('versions', {
     songId: target.songId,
     name: target.name,
+    artist: version.artist,
     concertKey: version.concertKey,
     timeSignature: version.timeSignature,
     bpm: version.bpm,

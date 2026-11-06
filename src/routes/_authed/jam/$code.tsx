@@ -233,7 +233,8 @@ function JamRoomPage() {
               {bundle.data ? (
                 <>
                   <span className="truncate">
-                    {bundle.data.song.artist} · {bundle.data.version.name}
+                    {bundle.data.version.artist ?? bundle.data.song.artist} ·{' '}
+                    {bundle.data.version.name}
                   </span>
                   {personal ? (
                     <span className="shrink-0 text-primary">

@@ -167,6 +167,8 @@ Use the usual Convex migration path for schema changes: add optional fields, bac
 
 ### 3.1 Artist per version (#8)
 
+**Status: done.** `updateMeta` clears `versions.artist` when it's empty or equal to the song's artist. Library search also matches version artists.
+
 - A song is the composition: title plus original artist. A version is an arrangement.
 - Add an optional `versions.artist` ("performed by"). Display it as `version.artist ?? song.artist`.
   - A cover is a version whose artist differs from the song's.
@@ -176,6 +178,8 @@ Use the usual Convex migration path for schema changes: add optional fields, bac
 - Import into an existing song with a different artist sets `version.artist`.
 
 ### 3.2 Duplicate prevention (#10)
+
+**Status: done.** `songKey()` lives in `src/lib/song-key.ts`, the scoped lookups in `convex/lib/songs.ts`. `songs.backfillKeys` filled in existing songs on dev; run it once on prod after deploying (`vpx convex run songs:backfillKeys --prod`). Songs without a key are invisible to the check until then. An unknown artist counts as empty, so "Wonderwall" by Unknown matches "Wonderwall" with no artist. Renaming a song into an existing key is still allowed.
 
 Convex has no unique constraints. The recommended pattern is check-then-insert inside a mutation. Mutations are transactions, so this is race-free.
 

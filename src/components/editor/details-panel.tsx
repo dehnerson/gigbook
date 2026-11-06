@@ -26,14 +26,17 @@ function presetName(id: string) {
 
 export function DetailsPanel({
   version,
+  songArtist,
   notation,
 }: {
   version: EditorVersion
+  songArtist: string
   notation: Notation
 }) {
   const { mutations, save } = useEditor()
   const navigate = useNavigate()
   const [name, setName] = useState(version.name)
+  const [artist, setArtist] = useState(version.artist ?? '')
   const [bpm, setBpm] = useState(version.bpm ? String(version.bpm) : '')
   const [tuningText, setTuningText] = useState(version.tuning.join(' '))
   const preset =
@@ -48,6 +51,7 @@ export function DetailsPanel({
   const saveName = useDebounced((value: string) => {
     if (value.trim()) patch({ name: value.trim() })
   })
+  const saveArtist = useDebounced((value: string) => patch({ artist: value }))
   const saveBpm = useDebounced((value: string) => {
     const parsed = Number(value)
     if (parsed >= 20 && parsed <= 400) patch({ bpm: Math.round(parsed) })
@@ -77,6 +81,20 @@ export function DetailsPanel({
             onChange={(event) => {
               setName(event.target.value)
               saveName.call(event.target.value)
+            }}
+          />
+        </Field>
+        <Field
+          label={m.performedBy()}
+          hint={m.performedByHint({ artist: songArtist })}
+          className="sm:col-span-2"
+        >
+          <Input
+            value={artist}
+            placeholder={songArtist}
+            onChange={(event) => {
+              setArtist(event.target.value)
+              saveArtist.call(event.target.value)
             }}
           />
         </Field>

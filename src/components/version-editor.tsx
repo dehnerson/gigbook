@@ -170,6 +170,7 @@ export function VersionEditor({
                 <DetailsPanel
                   key={version._id}
                   version={version}
+                  songArtist={song.artist}
                   notation={notation}
                 />
               )}

@@ -17,6 +17,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '../../../../convex/_generated/api'
 import type { Doc, Id } from '../../../../convex/_generated/dataModel'
+import { ConfirmDialog } from '@/components/app/confirm-dialog'
 import { Field } from '@/components/app/field'
 import { Crumb, PageHeader, SectionTitle } from '@/components/app/page-header'
 import { SongSheet } from '@/components/sheet/song-sheet'
@@ -262,6 +263,10 @@ function ReadyReview({ draft, output }: { draft: Draft; output: Output }) {
   const [artist, setArtist] = useState(output.artist)
   const [mapping, setMapping] = useState<Array<string | null>>(draft.mapping)
   const [busy, setBusy] = useState(false)
+  const [duplicate, setDuplicate] = useState<{
+    existing: Id<'songs'>
+    title: string
+  } | null>(null)
   const target = useQuery({
     ...convexQuery(
       api.versions.getBundle,
@@ -276,7 +281,7 @@ function ReadyReview({ draft, output }: { draft: Draft; output: Output }) {
     ).values(),
   ]
 
-  const commit = async () => {
+  const commit = async (intoSongId?: Id<'songs'>) => {
     setBusy(true)
     try {
       await updateOutput({
@@ -284,8 +289,18 @@ function ReadyReview({ draft, output }: { draft: Draft; output: Output }) {
         output: { ...output, title, artist },
         mapping,
       })
-      const saved = await save({ draftId: draft._id })
-      toast.success(m.importSaved())
+      const saved = await save({ draftId: draft._id, intoSongId })
+      if (!saved.versionId) {
+        if (saved.existing)
+          setDuplicate({ existing: saved.existing, title: saved.title })
+        setBusy(false)
+        return
+      }
+      toast.success(
+        intoSongId && duplicate
+          ? m.addedAsVersion({ title: duplicate.title })
+          : m.importSaved(),
+      )
       await navigate({
         to: '/versions/$versionId/edit',
         params: { versionId: saved.versionId },
@@ -375,6 +390,17 @@ function ReadyReview({ draft, output }: { draft: Draft; output: Output }) {
             {m.discardImport()}
           </Button>
         </div>
+        <ConfirmDialog
+          isOpen={duplicate !== null}
+          onOpenChange={(open) => {
+            if (!open) setDuplicate(null)
+          }}
+          title={m.duplicateSong({ title: duplicate?.title ?? '' })}
+          description={m.importDuplicateHint()}
+          confirmLabel={m.addAsVersion()}
+          destructive={false}
+          onConfirm={() => commit(duplicate?.existing)}
+        />
       </aside>
 
       <section className="min-w-0 rounded-3xl border bg-card p-5 sm:p-8 [--sheet-bg:var(--card)]">

@@ -8,12 +8,14 @@ import {
   query,
 } from './_generated/server'
 import { internal } from './_generated/api'
-import type { Id } from './_generated/dataModel'
+import type { Doc, Id } from './_generated/dataModel'
 import type { MutationCtx } from './_generated/server'
 import { aiProvider, importOutput } from './schema'
 import { aiErrorCode, languageModel } from './lib/ai'
 import { canEditSong, requireIdentity, songOfVersion } from './lib/access'
 import { fail } from './lib/errors'
+import { findSongByKey, insertSong, uniqueVersionName } from './lib/songs'
+import { songKey } from '../src/lib/song-key'
 import { readAiKey } from './users'
 
 const HOUR = 60 * 60 * 1000
@@ -28,6 +30,12 @@ async function editableTarget(
   if (!version) fail('NOT_FOUND')
   await canEditSong(ctx, await songOfVersion(ctx, version))
   return version
+}
+
+function coverArtist(performer: string, songArtist: string) {
+  const name = performer.trim()
+  const ignored = ['', 'unknown', songArtist.trim().toLowerCase()]
+  return ignored.includes(name.toLowerCase()) ? undefined : name
 }
 
 async function checkAiQuota(ctx: MutationCtx, ownerId: string) {
@@ -198,7 +206,10 @@ export const discard = mutation({
 })
 
 export const save = mutation({
-  args: { draftId: v.id('importDrafts') },
+  args: {
+    draftId: v.id('importDrafts'),
+    intoSongId: v.optional(v.id('songs')),
+  },
   handler: async (ctx, args) => {
     const identity = await requireIdentity(ctx)
     const draft = await ctx.db.get(args.draftId)
@@ -242,20 +253,40 @@ export const save = mutation({
           order += 1
         }
       }
-      await ctx.db.patch(version._id, { timeline })
+      const song = await songOfVersion(ctx, version)
+      const artist = version.artist ?? coverArtist(output.artist, song.artist)
+      await ctx.db.patch(version._id, { timeline, artist })
       if (draft.storageId) await ctx.storage.delete(draft.storageId)
       await ctx.db.delete(draft._id)
       return { songId: version.songId, versionId: version._id }
     }
 
-    const songId = await ctx.db.insert('songs', {
-      title: output.title,
-      artist: output.artist,
-      createdBy: identity.subject,
-    })
+    let song: Doc<'songs'> | null
+    if (args.intoSongId) {
+      song = await ctx.db.get(args.intoSongId)
+      if (!song) fail('NOT_FOUND')
+      await canEditSong(ctx, song)
+    } else {
+      const existing = await findSongByKey(
+        ctx,
+        { userId: identity.subject },
+        songKey(output.title, output.artist),
+      )
+      if (existing) return { existing: existing._id, title: existing.title }
+      const songId = await insertSong(ctx, {
+        title: output.title,
+        artist: output.artist,
+        createdBy: identity.subject,
+      })
+      song = await ctx.db.get(songId)
+      if (!song) fail('NOT_FOUND')
+    }
+    const songId = song._id
     const versionId = await ctx.db.insert('versions', {
       songId,
-      name: 'Imported',
+      name: await uniqueVersionName(ctx, songId, 'Imported'),
+      artist: coverArtist(output.artist, song.artist),
+      bandId: song.bandId,
       concertKey: output.concertKey,
       timeSignature: output.timeSignature,
       bpm: output.bpm,

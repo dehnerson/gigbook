@@ -18,6 +18,7 @@ export type SheetEntry = {
 
 export type SheetVersion = {
   name: string
+  artist?: string
   concertKey: string
   timeSignature: string
   bpm?: number

@@ -208,7 +208,8 @@ function SetlistPage() {
                     {entry.song.title}
                   </Link>
                   <p className="truncate text-sm text-muted-foreground">
-                    {entry.song.artist} · {entry.version.name}
+                    {entry.version.artist ?? entry.song.artist} ·{' '}
+                    {entry.version.name}
                   </p>
                 </div>
                 <span className="hidden font-mono text-base font-semibold text-chord sm:inline">

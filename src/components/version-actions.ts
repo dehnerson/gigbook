@@ -32,6 +32,8 @@ export function useVersionActions() {
       try {
         const forked = await fork({ versionId })
         if (forked.existing) toast.info(m.alreadyInLibrary())
+        else if (forked.joinedSong)
+          toast.success(m.addedAsVersion({ title: forked.joinedSong }))
         else toast.success(m.copiedToLibrary())
         await navigate({
           to: '/songs/$songId',

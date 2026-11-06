@@ -20,6 +20,7 @@ import type * as lib_ai from "../lib/ai.js";
 import type * as lib_cascade from "../lib/cascade.js";
 import type * as lib_crypto from "../lib/crypto.js";
 import type * as lib_errors from "../lib/errors.js";
+import type * as lib_songs from "../lib/songs.js";
 import type * as lib_users from "../lib/users.js";
 import type * as setlists from "../setlists.js";
 import type * as songs from "../songs.js";
@@ -45,6 +46,7 @@ declare const fullApi: ApiFromModules<{
   "lib/cascade": typeof lib_cascade;
   "lib/crypto": typeof lib_crypto;
   "lib/errors": typeof lib_errors;
+  "lib/songs": typeof lib_songs;
   "lib/users": typeof lib_users;
   setlists: typeof setlists;
   songs: typeof songs;

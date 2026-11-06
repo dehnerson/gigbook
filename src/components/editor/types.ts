@@ -22,6 +22,7 @@ export type EditorVersion = {
   _id: Id<'versions'>
   songId: Id<'songs'>
   name: string
+  artist?: string
   concertKey: string
   timeSignature: string
   bpm?: number

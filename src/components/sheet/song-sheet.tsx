@@ -86,7 +86,7 @@ export function SheetHeader({
           {song.title}
         </h1>
         <p className="text-[1.05em] text-muted-foreground">
-          {song.artist}
+          {version.artist ?? song.artist}
           <span className="mx-2 text-muted-foreground/50">·</span>
           {version.name}
         </p>

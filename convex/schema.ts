@@ -90,15 +90,23 @@ export default defineSchema({
   songs: defineTable({
     title: v.string(),
     artist: v.string(),
+    key: v.optional(v.string()),
     createdBy: v.string(),
     bandId: v.optional(v.id('bands')),
   })
     .index('by_creator', ['createdBy'])
-    .index('by_band', ['bandId']),
+    .index('by_band', ['bandId'])
+    .index('by_creator_key', ['createdBy', 'bandId', 'key'])
+    .index('by_band_key', ['bandId', 'key'])
+    .searchIndex('search_title', {
+      searchField: 'title',
+      filterFields: ['createdBy', 'bandId'],
+    }),
 
   versions: defineTable({
     songId: v.id('songs'),
     name: v.string(),
+    artist: v.optional(v.string()),
     concertKey: v.string(),
     timeSignature: v.string(),
     bpm: v.optional(v.number()),

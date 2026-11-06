@@ -13,17 +13,20 @@ export type SongSummary = {
 
 export function SongRow({
   song,
+  performers,
   keys,
   versionCount,
   bandName,
   trailing,
 }: {
   song: SongSummary
+  performers?: Array<string>
   keys?: Array<string>
   versionCount?: number
   bandName?: string
   trailing?: React.ReactNode
 }) {
+  const covers = [...new Set(performers)]
   return (
     <li className="group relative flex items-center gap-4 rounded-xl px-3 py-2.5 transition-colors hover:bg-card">
       <Monogram text={song.title} />
@@ -35,7 +38,12 @@ export function SongRow({
         >
           {song.title}
         </Link>
-        <p className="truncate text-sm text-muted-foreground">{song.artist}</p>
+        <p className="truncate text-sm text-muted-foreground">
+          {song.artist}
+          {covers.length > 0
+            ? ` · ${m.performedByArtist({ artist: covers.join(', ') })}`
+            : null}
+        </p>
       </div>
       <div className="hidden items-center gap-1.5 sm:flex">
         {song.bandId ? (

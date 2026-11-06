@@ -194,6 +194,11 @@ function VersionCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="truncate text-lg font-semibold">{version.name}</h3>
+          {version.artist ? (
+            <p className="truncate text-sm">
+              {m.performedByArtist({ artist: version.artist })}
+            </p>
+          ) : null}
           <p className="text-sm text-muted-foreground">
             {sections === 0
               ? m.noSectionsYet()

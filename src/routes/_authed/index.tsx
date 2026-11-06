@@ -39,6 +39,10 @@ function normalize(text: string) {
     .toLowerCase()
 }
 
+function performersOf(versions: Array<{ artist?: string }>) {
+  return versions.flatMap((version) => (version.artist ? [version.artist] : []))
+}
+
 function LibraryPage() {
   const catalog = useLiveQuery(convexQuery(api.songs.catalog, {}))
   const notation = useNotation()
@@ -53,7 +57,11 @@ function LibraryPage() {
     if (scope === 'personal' && row.song.bandId) return false
     if (scope === 'band' && !row.song.bandId) return false
     if (!needle) return true
-    return normalize(`${row.song.title} ${row.song.artist}`).includes(needle)
+    return normalize(
+      [row.song.title, row.song.artist, ...performersOf(row.versions)].join(
+        ' ',
+      ),
+    ).includes(needle)
   })
 
   return (
@@ -163,6 +171,7 @@ function LibraryPage() {
                   key={row.song._id}
                   song={row.song}
                   bandName={row.bandName}
+                  performers={performersOf(row.versions)}
                   versionCount={row.versions.length}
                   keys={row.versions.map((version) =>
                     displayChord(version.concertKey, 0, 0, notation),

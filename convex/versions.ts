@@ -11,6 +11,8 @@ import {
 } from './lib/access'
 import { fail } from './lib/errors'
 import { cloneVersionTree, deleteVersionTree } from './lib/cascade'
+import { findSongByKey, insertSong, uniqueVersionName } from './lib/songs'
+import { songKey } from '../src/lib/song-key'
 import { transposeSymbol } from '../src/lib/music/chords'
 import { transposeChordPro } from '../src/lib/music/chordpro'
 import { previewTabShift } from '../src/lib/music/tab'
@@ -123,6 +125,7 @@ export const updateMeta = mutation({
   args: {
     versionId: v.id('versions'),
     name: v.optional(v.string()),
+    artist: v.optional(v.string()),
     concertKey: v.optional(v.string()),
     timeSignature: v.optional(v.string()),
     bpm: v.optional(v.number()),
@@ -132,8 +135,17 @@ export const updateMeta = mutation({
   handler: async (ctx, args) => {
     const { version, song } = await loadVersion(ctx, args.versionId)
     await canEditSong(ctx, song)
-    const { versionId, ...rest } = args
-    await ctx.db.patch(versionId, rest)
+    const { versionId, artist, ...rest } = args
+    const performer = artist?.trim()
+    await ctx.db.patch(versionId, {
+      ...rest,
+      ...(artist !== undefined
+        ? {
+            artist:
+              performer && performer !== song.artist ? performer : undefined,
+          }
+        : {}),
+    })
     return version._id
   },
 })
@@ -201,18 +213,32 @@ export const duplicate = mutation({
       if (!version.shareToken) fail('FORBIDDEN')
     }
     const existing = await libraryCopyOf(ctx, version, identity.subject)
-    if (existing) return { ...existing, existing: true }
-    const copySongId = await ctx.db.insert('songs', {
-      title: song.title,
-      artist: song.artist,
-      createdBy: identity.subject,
-    })
+    if (existing) return { ...existing, existing: true, joinedSong: undefined }
+    const sameSong = await findSongByKey(
+      ctx,
+      { userId: identity.subject },
+      songKey(song.title, song.artist),
+    )
+    const copySongId =
+      sameSong?._id ??
+      (await insertSong(ctx, {
+        title: song.title,
+        artist: song.artist,
+        createdBy: identity.subject,
+      }))
     const copyVersionId = await cloneVersionTree(ctx, version, {
       songId: copySongId,
-      name: version.name,
+      name: sameSong
+        ? await uniqueVersionName(ctx, copySongId, version.name)
+        : version.name,
       createdBy: identity.subject,
     })
-    return { songId: copySongId, versionId: copyVersionId, existing: false }
+    return {
+      songId: copySongId,
+      versionId: copyVersionId,
+      existing: false,
+      joinedSong: sameSong?.title,
+    }
   },
 })
 
