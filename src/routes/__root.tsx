@@ -1,6 +1,5 @@
 import { deDE, enUS } from '@clerk/localizations'
 import { ClerkProvider, useAuth } from '@clerk/tanstack-react-start'
-import { convexQuery } from '@convex-dev/react-query'
 import {
   HeadContent,
   Outlet,
@@ -13,17 +12,22 @@ import type { ConvexQueryClient } from '@convex-dev/react-query'
 import type { QueryClient } from '@tanstack/react-query'
 import type { ConvexReactClient } from 'convex/react'
 import { ConvexProviderWithClerk } from 'convex/react-clerk'
-import { ThemeProvider, useTheme } from 'next-themes'
-import { api } from '../../convex/_generated/api'
+import { ThemeProvider } from 'next-themes'
 import { Toaster } from '@/components/ui/sonner'
-import { EnsureUser } from '@/components/ensure-user'
-import { fetchClerkAuth } from '@/lib/auth'
-import { clerkAppearance } from '@/lib/clerk-appearance'
+import { auth } from '@clerk/tanstack-react-start/server'
+import { createServerFn } from '@tanstack/react-start'
 import { RouteError, RouteNotFound } from '@/components/app/route-states'
-import { loadQuery } from '@/lib/load'
 import { getLocale } from '@/paraglide/runtime'
 import { m } from '@/paraglide/messages'
 import appCss from '../styles.css?url'
+
+export const fetchClerkAuth = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const { userId, getToken } = await auth()
+    const token = (await getToken()) ?? null
+    return { userId, token }
+  },
+)
 
 export interface RouterContext {
   queryClient: QueryClient
@@ -37,9 +41,6 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     // serverHttpClient only exists during SSR, which is when loaders make HTTP queries.
     if (token) context.convexQueryClient.serverHttpClient?.setAuth(token)
     return { userId, token }
-  },
-  loader: async ({ context }) => {
-    await loadQuery(context.queryClient, convexQuery(api.users.me, {}))
   },
   head: () => ({
     meta: [
@@ -69,7 +70,6 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 
 function RootComponent() {
   const { convexClient } = Route.useRouteContext()
-  const { resolvedTheme } = useTheme()
   const key = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
   const tree = (
     <>
@@ -88,11 +88,29 @@ function RootComponent() {
     <ClerkProvider
       publishableKey={key}
       localization={getLocale() === 'de' ? deDE : enUS}
-      appearance={clerkAppearance(resolvedTheme !== 'light')}
+      appearance={{
+        variables: {
+          colorPrimary: 'var(--primary)',
+          colorPrimaryForeground: 'var(--primary-foreground)',
+          colorBackground: 'var(--card)',
+          colorForeground: 'var(--foreground)',
+          colorMutedForeground: 'var(--muted-foreground)',
+          colorInput: 'var(--raised)',
+          colorInputForeground: 'var(--foreground)',
+          colorNeutral: 'var(--foreground)',
+          colorDanger: 'var(--destructive)',
+          colorSuccess: 'var(--success)',
+          borderRadius: 'var(--radius)',
+          fontFamily: 'inherit',
+        },
+        elements: {
+          cardBox: 'shadow-none border border-border',
+          footer: 'bg-none',
+        },
+      }}
     >
       <ConvexProviderWithClerk client={convexClient} useAuth={useAuth}>
         {tree}
-        <EnsureUser />
       </ConvexProviderWithClerk>
     </ClerkProvider>
   )

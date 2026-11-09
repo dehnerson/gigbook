@@ -9,7 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AuthedRouteImport } from './routes/_authed'
+import { Route as AuthedRouteRouteImport } from './routes/_authed/route'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
 import { Route as LabTabsRouteImport } from './routes/lab/tabs'
@@ -29,19 +29,19 @@ import { Route as AuthedVersionsVersionIdIndexRouteImport } from './routes/_auth
 import { Route as AuthedVersionsVersionIdEditRouteImport } from './routes/_authed/versions/$versionId/edit'
 import { Route as AuthedVersionsVersionIdPlayRouteImport } from './routes/_authed/versions/$versionId/play'
 
-const AuthedRoute = AuthedRouteImport.update({
+const AuthedRouteRoute = AuthedRouteRouteImport.update({
   id: '/_authed',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthedIndexRoute = AuthedIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => AuthedRoute,
+  getParentRoute: () => AuthedRouteRoute,
 } as any)
 const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => AuthedRoute,
+  getParentRoute: () => AuthedRouteRoute,
 } as any)
 const LabTabsRoute = LabTabsRouteImport.update({
   id: '/lab/tabs',
@@ -61,70 +61,70 @@ const SignInSplatRoute = SignInSplatRouteImport.update({
 const AuthedBandsIndexRoute = AuthedBandsIndexRouteImport.update({
   id: '/bands/',
   path: '/bands/',
-  getParentRoute: () => AuthedRoute,
+  getParentRoute: () => AuthedRouteRoute,
 } as any)
 const AuthedBandsBandIdRoute = AuthedBandsBandIdRouteImport.update({
   id: '/bands/$bandId',
   path: '/bands/$bandId',
-  getParentRoute: () => AuthedRoute,
+  getParentRoute: () => AuthedRouteRoute,
 } as any)
 const AuthedImportIndexRoute = AuthedImportIndexRouteImport.update({
   id: '/import/',
   path: '/import/',
-  getParentRoute: () => AuthedRoute,
+  getParentRoute: () => AuthedRouteRoute,
 } as any)
 const AuthedImportDraftIdRoute = AuthedImportDraftIdRouteImport.update({
   id: '/import/$draftId',
   path: '/import/$draftId',
-  getParentRoute: () => AuthedRoute,
+  getParentRoute: () => AuthedRouteRoute,
 } as any)
 const AuthedJamIndexRoute = AuthedJamIndexRouteImport.update({
   id: '/jam/',
   path: '/jam/',
-  getParentRoute: () => AuthedRoute,
+  getParentRoute: () => AuthedRouteRoute,
 } as any)
 const AuthedJamCodeRoute = AuthedJamCodeRouteImport.update({
   id: '/jam/$code',
   path: '/jam/$code',
-  getParentRoute: () => AuthedRoute,
+  getParentRoute: () => AuthedRouteRoute,
 } as any)
 const AuthedSetlistsIndexRoute = AuthedSetlistsIndexRouteImport.update({
   id: '/setlists/',
   path: '/setlists/',
-  getParentRoute: () => AuthedRoute,
+  getParentRoute: () => AuthedRouteRoute,
 } as any)
 const AuthedSetlistsSetlistIdRoute = AuthedSetlistsSetlistIdRouteImport.update({
   id: '/setlists/$setlistId',
   path: '/setlists/$setlistId',
-  getParentRoute: () => AuthedRoute,
+  getParentRoute: () => AuthedRouteRoute,
 } as any)
 const AuthedShareTokenRoute = AuthedShareTokenRouteImport.update({
   id: '/share/$token',
   path: '/share/$token',
-  getParentRoute: () => AuthedRoute,
+  getParentRoute: () => AuthedRouteRoute,
 } as any)
 const AuthedSongsSongIdRoute = AuthedSongsSongIdRouteImport.update({
   id: '/songs/$songId',
   path: '/songs/$songId',
-  getParentRoute: () => AuthedRoute,
+  getParentRoute: () => AuthedRouteRoute,
 } as any)
 const AuthedVersionsVersionIdIndexRoute =
   AuthedVersionsVersionIdIndexRouteImport.update({
     id: '/versions/$versionId/',
     path: '/versions/$versionId/',
-    getParentRoute: () => AuthedRoute,
+    getParentRoute: () => AuthedRouteRoute,
   } as any)
 const AuthedVersionsVersionIdEditRoute =
   AuthedVersionsVersionIdEditRouteImport.update({
     id: '/versions/$versionId/edit',
     path: '/versions/$versionId/edit',
-    getParentRoute: () => AuthedRoute,
+    getParentRoute: () => AuthedRouteRoute,
   } as any)
 const AuthedVersionsVersionIdPlayRoute =
   AuthedVersionsVersionIdPlayRouteImport.update({
     id: '/versions/$versionId/play',
     path: '/versions/$versionId/play',
-    getParentRoute: () => AuthedRoute,
+    getParentRoute: () => AuthedRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -169,7 +169,7 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/_authed': typeof AuthedRouteWithChildren
+  '/_authed': typeof AuthedRouteRouteWithChildren
   '/_authed/settings': typeof AuthedSettingsRoute
   '/lab/tabs': typeof LabTabsRoute
   '/sign-in/$': typeof SignInSplatRoute
@@ -254,7 +254,7 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  AuthedRoute: typeof AuthedRouteWithChildren
+  AuthedRouteRoute: typeof AuthedRouteRouteWithChildren
   LabTabsRoute: typeof LabTabsRoute
   SignInSplatRoute: typeof SignInSplatRoute
   SignInIndexRoute: typeof SignInIndexRoute
@@ -266,7 +266,7 @@ declare module '@tanstack/react-router' {
       id: '/_authed'
       path: ''
       fullPath: '/'
-      preLoaderRoute: typeof AuthedRouteImport
+      preLoaderRoute: typeof AuthedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authed/': {
@@ -274,14 +274,14 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AuthedIndexRouteImport
-      parentRoute: typeof AuthedRoute
+      parentRoute: typeof AuthedRouteRoute
     }
     '/_authed/settings': {
       id: '/_authed/settings'
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AuthedSettingsRouteImport
-      parentRoute: typeof AuthedRoute
+      parentRoute: typeof AuthedRouteRoute
     }
     '/lab/tabs': {
       id: '/lab/tabs'
@@ -309,96 +309,96 @@ declare module '@tanstack/react-router' {
       path: '/bands'
       fullPath: '/bands/'
       preLoaderRoute: typeof AuthedBandsIndexRouteImport
-      parentRoute: typeof AuthedRoute
+      parentRoute: typeof AuthedRouteRoute
     }
     '/_authed/bands/$bandId': {
       id: '/_authed/bands/$bandId'
       path: '/bands/$bandId'
       fullPath: '/bands/$bandId'
       preLoaderRoute: typeof AuthedBandsBandIdRouteImport
-      parentRoute: typeof AuthedRoute
+      parentRoute: typeof AuthedRouteRoute
     }
     '/_authed/import/': {
       id: '/_authed/import/'
       path: '/import'
       fullPath: '/import/'
       preLoaderRoute: typeof AuthedImportIndexRouteImport
-      parentRoute: typeof AuthedRoute
+      parentRoute: typeof AuthedRouteRoute
     }
     '/_authed/import/$draftId': {
       id: '/_authed/import/$draftId'
       path: '/import/$draftId'
       fullPath: '/import/$draftId'
       preLoaderRoute: typeof AuthedImportDraftIdRouteImport
-      parentRoute: typeof AuthedRoute
+      parentRoute: typeof AuthedRouteRoute
     }
     '/_authed/jam/': {
       id: '/_authed/jam/'
       path: '/jam'
       fullPath: '/jam/'
       preLoaderRoute: typeof AuthedJamIndexRouteImport
-      parentRoute: typeof AuthedRoute
+      parentRoute: typeof AuthedRouteRoute
     }
     '/_authed/jam/$code': {
       id: '/_authed/jam/$code'
       path: '/jam/$code'
       fullPath: '/jam/$code'
       preLoaderRoute: typeof AuthedJamCodeRouteImport
-      parentRoute: typeof AuthedRoute
+      parentRoute: typeof AuthedRouteRoute
     }
     '/_authed/setlists/': {
       id: '/_authed/setlists/'
       path: '/setlists'
       fullPath: '/setlists/'
       preLoaderRoute: typeof AuthedSetlistsIndexRouteImport
-      parentRoute: typeof AuthedRoute
+      parentRoute: typeof AuthedRouteRoute
     }
     '/_authed/setlists/$setlistId': {
       id: '/_authed/setlists/$setlistId'
       path: '/setlists/$setlistId'
       fullPath: '/setlists/$setlistId'
       preLoaderRoute: typeof AuthedSetlistsSetlistIdRouteImport
-      parentRoute: typeof AuthedRoute
+      parentRoute: typeof AuthedRouteRoute
     }
     '/_authed/share/$token': {
       id: '/_authed/share/$token'
       path: '/share/$token'
       fullPath: '/share/$token'
       preLoaderRoute: typeof AuthedShareTokenRouteImport
-      parentRoute: typeof AuthedRoute
+      parentRoute: typeof AuthedRouteRoute
     }
     '/_authed/songs/$songId': {
       id: '/_authed/songs/$songId'
       path: '/songs/$songId'
       fullPath: '/songs/$songId'
       preLoaderRoute: typeof AuthedSongsSongIdRouteImport
-      parentRoute: typeof AuthedRoute
+      parentRoute: typeof AuthedRouteRoute
     }
     '/_authed/versions/$versionId/': {
       id: '/_authed/versions/$versionId/'
       path: '/versions/$versionId'
       fullPath: '/versions/$versionId/'
       preLoaderRoute: typeof AuthedVersionsVersionIdIndexRouteImport
-      parentRoute: typeof AuthedRoute
+      parentRoute: typeof AuthedRouteRoute
     }
     '/_authed/versions/$versionId/edit': {
       id: '/_authed/versions/$versionId/edit'
       path: '/versions/$versionId/edit'
       fullPath: '/versions/$versionId/edit'
       preLoaderRoute: typeof AuthedVersionsVersionIdEditRouteImport
-      parentRoute: typeof AuthedRoute
+      parentRoute: typeof AuthedRouteRoute
     }
     '/_authed/versions/$versionId/play': {
       id: '/_authed/versions/$versionId/play'
       path: '/versions/$versionId/play'
       fullPath: '/versions/$versionId/play'
       preLoaderRoute: typeof AuthedVersionsVersionIdPlayRouteImport
-      parentRoute: typeof AuthedRoute
+      parentRoute: typeof AuthedRouteRoute
     }
   }
 }
 
-interface AuthedRouteChildren {
+interface AuthedRouteRouteChildren {
   AuthedSettingsRoute: typeof AuthedSettingsRoute
   AuthedIndexRoute: typeof AuthedIndexRoute
   AuthedBandsBandIdRoute: typeof AuthedBandsBandIdRoute
@@ -416,7 +416,7 @@ interface AuthedRouteChildren {
   AuthedVersionsVersionIdIndexRoute: typeof AuthedVersionsVersionIdIndexRoute
 }
 
-const AuthedRouteChildren: AuthedRouteChildren = {
+const AuthedRouteRouteChildren: AuthedRouteRouteChildren = {
   AuthedSettingsRoute: AuthedSettingsRoute,
   AuthedIndexRoute: AuthedIndexRoute,
   AuthedBandsBandIdRoute: AuthedBandsBandIdRoute,
@@ -434,11 +434,12 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedVersionsVersionIdIndexRoute: AuthedVersionsVersionIdIndexRoute,
 }
 
-const AuthedRouteWithChildren =
-  AuthedRoute._addFileChildren(AuthedRouteChildren)
+const AuthedRouteRouteWithChildren = AuthedRouteRoute._addFileChildren(
+  AuthedRouteRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
-  AuthedRoute: AuthedRouteWithChildren,
+  AuthedRouteRoute: AuthedRouteRouteWithChildren,
   LabTabsRoute: LabTabsRoute,
   SignInSplatRoute: SignInSplatRoute,
   SignInIndexRoute: SignInIndexRoute,

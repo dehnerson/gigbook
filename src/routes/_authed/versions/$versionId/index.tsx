@@ -187,7 +187,7 @@ function ReadPage() {
         </div>
       </div>
 
-      <div className="sticky top-[61px] z-20 -mx-4 space-y-3 border-b bg-background/85 px-4 py-3 backdrop-blur-lg sm:-mx-8 sm:px-8 lg:top-0">
+      <div className="sticky top-15.25 z-20 -mx-4 space-y-3 border-b bg-background/85 px-4 py-3 backdrop-blur-lg sm:-mx-8 sm:px-8 lg:top-0">
         <ControlBar>
           <KeyControls
             capo={capo}

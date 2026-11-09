@@ -32,10 +32,7 @@ import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/import/')({
   loader: async ({ context }) => {
-    await Promise.all([
-      loadQuery(context.queryClient, convexQuery(api.users.me, {})),
-      loadQuery(context.queryClient, convexQuery(api.songs.catalog, {})),
-    ])
+    await loadQuery(context.queryClient, convexQuery(api.songs.catalog, {}))
   },
   component: ImportPage,
 })

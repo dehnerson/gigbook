@@ -28,16 +28,12 @@ import { messageFor } from '@/lib/errors'
 import { AI_MODELS, AI_PROVIDERS, PROVIDER_LABELS } from '@/lib/import/models'
 import type { AiProvider } from '@/lib/import/models'
 import { useLiveQuery } from '@/lib/live'
-import { loadQuery } from '@/lib/load'
 import { displayChord } from '@/lib/music/chords'
 import { m } from '@/paraglide/messages'
 import { changeLocale, currentLocale } from '@/lib/locale'
 import type { Lang } from '@/lib/locale'
 
 export const Route = createFileRoute('/_authed/settings')({
-  loader: async ({ context }) => {
-    await loadQuery(context.queryClient, convexQuery(api.users.me, {}))
-  },
   component: SettingsPage,
 })
 

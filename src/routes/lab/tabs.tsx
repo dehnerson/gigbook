@@ -100,7 +100,7 @@ function TabLab() {
     <div
       className={
         width === 'phone'
-          ? 'mx-auto w-[390px] max-w-full rounded-xl border border-dashed p-2'
+          ? 'mx-auto w-97.5 max-w-full rounded-xl border border-dashed p-2'
           : undefined
       }
     >

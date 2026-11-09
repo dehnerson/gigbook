@@ -31,7 +31,7 @@ export function ChordDiagram({
   return (
     <figure
       className={cn(
-        'flex w-[4.75rem] shrink-0 flex-col items-center gap-1',
+        'flex w-19 shrink-0 flex-col items-center gap-1',
         className,
       )}
     >

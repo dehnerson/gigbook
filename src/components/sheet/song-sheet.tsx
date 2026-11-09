@@ -162,7 +162,7 @@ function SectionBlock({
       data-entry={elementId}
       className={cn(
         '-mx-3 scroll-mt-52 rounded-2xl px-3 py-3 transition-colors duration-300 sm:-mx-5 sm:px-5',
-        highlighted && 'bg-primary/[0.06] ring-1 ring-primary/30',
+        highlighted && 'bg-primary/6 ring-1 ring-primary/30',
       )}
     >
       <div className="mb-3 flex items-center gap-3">

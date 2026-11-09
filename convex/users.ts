@@ -22,30 +22,6 @@ function userByClerk(ctx: QueryCtx, clerkUserId: string) {
     .unique()
 }
 
-export const ensure = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await requireIdentity(ctx)
-    const existing = await userByClerk(ctx, identity.subject)
-    const email = identity.email?.toLowerCase()
-    const name = identity.name ?? identity.email ?? 'Player'
-    if (existing) {
-      await ctx.db.patch(existing._id, {
-        name,
-        email,
-        imageUrl: identity.pictureUrl ?? existing.imageUrl,
-      })
-      return existing._id
-    }
-    return ctx.db.insert('users', {
-      clerkUserId: identity.subject,
-      name,
-      email,
-      imageUrl: identity.pictureUrl,
-    })
-  },
-})
-
 export const upsertFromClerk = internalMutation({
   args: {
     clerkUserId: v.string(),
