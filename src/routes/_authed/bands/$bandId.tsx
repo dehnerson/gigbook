@@ -18,18 +18,15 @@ import { Select } from '@/components/ui/select'
 import { useNotation } from '@/components/use-notation'
 import { messageFor } from '@/lib/errors'
 import { useLiveQuery } from '@/lib/live'
-import { loadQuery } from '@/lib/load'
 import { displayChord } from '@/lib/music/chords'
 import { m } from '@/paraglide/messages'
 import { roleName } from './-roles'
 
 export const Route = createFileRoute('/_authed/bands/$bandId')({
-  loader: async ({ context, params }) => {
-    await loadQuery(
-      context.queryClient,
+  loader: ({ context, params }) =>
+    context.load(
       convexQuery(api.bands.get, { bandId: params.bandId as Id<'bands'> }),
-    )
-  },
+    ),
   component: BandPage,
 })
 

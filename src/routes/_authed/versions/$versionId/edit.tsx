@@ -8,18 +8,15 @@ import type { EditorEntry } from '@/components/editor/types'
 import { ButtonLink } from '@/components/ui/button'
 import { VersionEditor } from '@/components/version-editor'
 import { useLiveQuery } from '@/lib/live'
-import { loadQuery } from '@/lib/load'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/versions/$versionId/edit')({
-  loader: async ({ context, params }) => {
-    await loadQuery(
-      context.queryClient,
+  loader: ({ context, params }) =>
+    context.load(
       convexQuery(api.versions.getBundle, {
         versionId: params.versionId as Id<'versions'>,
       }),
-    )
-  },
+    ),
   component: EditPage,
 })
 

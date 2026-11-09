@@ -20,14 +20,11 @@ import {
 import { Input } from '@/components/ui/input'
 import { messageFor } from '@/lib/errors'
 import { useLiveQuery } from '@/lib/live'
-import { loadQuery } from '@/lib/load'
 import { m } from '@/paraglide/messages'
 import { roleName } from './-roles'
 
 export const Route = createFileRoute('/_authed/bands/')({
-  loader: async ({ context }) => {
-    await loadQuery(context.queryClient, convexQuery(api.bands.list, {}))
-  },
+  loader: ({ context }) => context.load(convexQuery(api.bands.list, {})),
   component: BandsPage,
 })
 

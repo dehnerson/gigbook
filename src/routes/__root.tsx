@@ -17,6 +17,7 @@ import { Toaster } from '@/components/ui/sonner'
 import { auth } from '@clerk/tanstack-react-start/server'
 import { createServerFn } from '@tanstack/react-start'
 import { RouteError, RouteNotFound } from '@/components/app/route-states'
+import type { Load } from '@/lib/load'
 import { getLocale } from '@/paraglide/runtime'
 import { m } from '@/paraglide/messages'
 import appCss from '../styles.css?url'
@@ -33,6 +34,7 @@ export interface RouterContext {
   queryClient: QueryClient
   convexClient: ConvexReactClient
   convexQueryClient: ConvexQueryClient
+  load: Load
 }
 
 export const Route = createRootRouteWithContext<RouterContext>()({

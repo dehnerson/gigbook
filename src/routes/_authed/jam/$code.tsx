@@ -13,7 +13,7 @@ import {
   MusicIcon,
   SkipForwardIcon,
 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '../../../../convex/_generated/api'
 import type { Id } from '../../../../convex/_generated/dataModel'
@@ -58,21 +58,13 @@ import { useNotation } from '@/components/use-notation'
 import { useWakeLock } from '@/components/use-wake-lock'
 import { messageFor } from '@/lib/errors'
 import { useLiveQuery } from '@/lib/live'
-import { loadQuery } from '@/lib/load'
 import { displayChord } from '@/lib/music/chords'
+import type { Notation } from '@/lib/music/pitch'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/jam/$code')({
-  loader: async ({ context, params }) => {
-    await Promise.all([
-      loadQuery(
-        context.queryClient,
-        convexQuery(api.jam.get, { code: params.code }),
-      ),
-      loadQuery(context.queryClient, convexQuery(api.songs.catalog, {})),
-      loadQuery(context.queryClient, convexQuery(api.setlists.list, {})),
-    ])
-  },
+  loader: ({ context, params }) =>
+    context.load(convexQuery(api.jam.get, { code: params.code })),
   component: JamRoomPage,
 })
 
@@ -92,13 +84,10 @@ function JamRoomPage() {
   const { room, members, me } = useLiveQuery(
     convexQuery(api.jam.get, { code }),
   ).data
-  const catalog = useLiveQuery(convexQuery(api.songs.catalog, {})).data
-  const setlists = useLiveQuery(convexQuery(api.setlists.list, {})).data
-  const setVersion = useMutation(api.jam.setVersion)
   const setTransport = useMutation(api.jam.setTransport)
   const advance = useMutation(api.jam.advanceSetlist)
-  const attach = useMutation(api.jam.attachSetlist)
   const setMemberView = useMutation(api.jam.setMemberView)
+  const [personalId, setPersonalId] = useState<Id<'versions'> | undefined>()
   const notation = useNotation()
   const prefs = useSheetPrefs('jam', 1.15)
   useForceDark()
@@ -121,16 +110,7 @@ function JamRoomPage() {
       ...patch,
     }).catch(fail)
 
-  const roomSong = room.versionId
-    ? catalog.find((row) =>
-        row.versions.some((version) => version._id === room.versionId),
-      )
-    : undefined
-  const personal = roomSong?.versions.find(
-    (version) =>
-      version._id === me?.personalVersionId && version._id !== room.versionId,
-  )
-  const versionId = personal?._id ?? room.versionId
+  const versionId = personalId ?? room.versionId
 
   const bundle = useQuery({
     ...convexQuery(api.versions.getBundle, versionId ? { versionId } : 'skip'),
@@ -179,15 +159,6 @@ function JamRoomPage() {
     return () => window.clearTimeout(timer)
   }, [isHost, active, entryKey, room.timelineIndex, code, setTransport])
 
-  const others = members.filter(
-    (member) =>
-      member.userId !== me?.userId &&
-      member.personalVersionId &&
-      member.personalVersionId !== room.versionId &&
-      roomSong?.versions.some(
-        (version) => version._id === member.personalVersionId,
-      ),
-  )
   const setlistEntries = setlist.data?.entries ?? []
   const upNext = room.setlistId
     ? setlistEntries.at(room.setlistIndex + 1)
@@ -199,14 +170,6 @@ function JamRoomPage() {
     )
     if (target) move(target)
   }
-
-  const songOptions = catalog.flatMap((row) =>
-    row.versions.map((version) => ({
-      id: version._id,
-      label: row.song.title,
-      description: `${row.versions.length > 1 ? `${version.name} · ` : ''}${displayChord(version.concertKey, 0, 0, notation)}`,
-    })),
-  )
 
   const sheet = bundle.data ? (
     <SongSheet
@@ -231,6 +194,13 @@ function JamRoomPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <Suspense fallback={null}>
+        <JamPersonalSync
+          roomVersionId={room.versionId}
+          personalVersionId={me?.personalVersionId}
+          onPersonal={setPersonalId}
+        />
+      </Suspense>
       <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-5xl items-center gap-2 px-3 py-2 sm:gap-3">
           <ButtonLink
@@ -252,11 +222,12 @@ function JamRoomPage() {
                     {bundle.data.version.artist ?? bundle.data.song.artist} ·{' '}
                     {bundle.data.version.name}
                   </span>
-                  {personal ? (
-                    <span className="shrink-0 text-primary">
-                      · {m.yourVersion()}
-                    </span>
-                  ) : null}
+                  <Suspense fallback={null}>
+                    <JamYourVersion
+                      roomVersionId={room.versionId}
+                      personalVersionId={me?.personalVersionId}
+                    />
+                  </Suspense>
                 </>
               ) : isHost ? (
                 m.jamPickSong()
@@ -329,16 +300,13 @@ function JamRoomPage() {
         ) : null}
       </header>
 
-      {others.length > 0 ? (
-        <div className="mx-auto max-w-5xl px-5 pt-4 sm:px-8">
-          <p className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-foreground/80">
-            <InfoIcon className="size-4 shrink-0 text-primary" />
-            {m.personalVersionWarning({
-              name: others.map((member) => member.name).join(', '),
-            })}
-          </p>
-        </div>
-      ) : null}
+      <Suspense fallback={null}>
+        <JamOthersNotice
+          versionId={room.versionId}
+          meId={me?.userId}
+          members={members}
+        />
+      </Suspense>
 
       <main className="mx-auto max-w-5xl px-5 pt-6 pb-[70vh] sm:px-8">
         {!room.versionId ? (
@@ -348,21 +316,15 @@ function JamRoomPage() {
             description={isHost ? m.jamPickSongHint() : m.jamWaitingHint()}
             action={
               isHost ? (
-                <ComboBox
-                  aria-label={m.chooseSong()}
-                  placeholder={m.searchSongs()}
-                  emptyText={m.noMatches()}
-                  value={null}
-                  options={songOptions}
-                  className="w-72"
-                  onChange={(next) => {
-                    if (next)
-                      void setVersion({
-                        code,
-                        versionId: next as Id<'versions'>,
-                      }).catch(fail)
-                  }}
-                />
+                <Suspense fallback={<Skeleton className="h-9 w-72" />}>
+                  <JamSongCombo
+                    code={code}
+                    value={null}
+                    notation={notation}
+                    placeholder={m.searchSongs()}
+                    className="w-72"
+                  />
+                </Suspense>
               ) : undefined
             }
           />
@@ -403,21 +365,17 @@ function JamRoomPage() {
       <StageDock>
         {isHost ? (
           <>
-            <ComboBox
-              aria-label={m.chooseSong()}
-              placeholder={m.chooseSong()}
-              emptyText={m.noMatches()}
-              value={room.versionId ?? null}
-              options={songOptions}
-              className="w-44 shrink-0 sm:w-56"
-              onChange={(next) => {
-                if (next && next !== room.versionId)
-                  void setVersion({
-                    code,
-                    versionId: next as Id<'versions'>,
-                  }).catch(fail)
-              }}
-            />
+            <Suspense
+              fallback={<Skeleton className="h-9 w-44 shrink-0 sm:w-56" />}
+            >
+              <JamSongCombo
+                code={code}
+                value={room.versionId ?? null}
+                notation={notation}
+                placeholder={m.chooseSong()}
+                className="w-44 shrink-0 sm:w-56"
+              />
+            </Suspense>
             <div className="flex shrink-0 items-center">
               <Button
                 variant="ghost"
@@ -465,46 +423,21 @@ function JamRoomPage() {
             {room.concertTranspose}
           </Chip>
         ) : null}
-        {!isHost && roomSong && roomSong.versions.length > 1 ? (
-          <Select
-            aria-label={m.yourVersion()}
-            value={personal?._id ?? 'room'}
-            className="w-40 shrink-0"
-            options={[
-              { id: 'room', label: m.roomVersion() },
-              ...roomSong.versions
-                .filter((version) => version._id !== room.versionId)
-                .map((version) => ({ id: version._id, label: version.name })),
-            ]}
-            onChange={(next) =>
-              updateMe({
-                personalVersionId:
-                  next === 'room' ? undefined : (next as Id<'versions'>),
-              })
-            }
-          />
+        {!isHost && room.versionId ? (
+          <Suspense fallback={null}>
+            <JamVersionSelect
+              roomVersionId={room.versionId}
+              personalId={personalId}
+              onChange={(next) => updateMe({ personalVersionId: next })}
+            />
+          </Suspense>
         ) : null}
         {isHost ? (
           <>
             <DockDivider />
-            <Select
-              aria-label={m.setlists()}
-              value={room.setlistId ?? ''}
-              placeholder={m.attachSetlist()}
-              className="w-40 shrink-0"
-              options={setlists.map((item) => ({
-                id: item._id,
-                label: item.name,
-                description: m.songCount({ count: String(item.count) }),
-              }))}
-              onChange={(next) => {
-                if (next && next !== room.setlistId)
-                  void attach({
-                    code,
-                    setlistId: next as Id<'setlists'>,
-                  }).catch(fail)
-              }}
-            />
+            <Suspense fallback={<Skeleton className="h-9 w-40 shrink-0" />}>
+              <JamSetlistSelect code={code} value={room.setlistId ?? ''} />
+            </Suspense>
             {upNext ? (
               <Button
                 variant="secondary"
@@ -539,5 +472,192 @@ function JamRoomPage() {
         />
       </StageDock>
     </div>
+  )
+}
+
+function useCatalog() {
+  return useLiveQuery(convexQuery(api.songs.catalog, {})).data
+}
+
+type Catalog = ReturnType<typeof useCatalog>
+
+function findSong(catalog: Catalog, versionId: string | undefined) {
+  if (!versionId) return
+  return catalog.find((row) =>
+    row.versions.some((version) => version._id === versionId),
+  )
+}
+
+function personalVersion(
+  catalog: Catalog,
+  roomVersionId: string | undefined,
+  personalVersionId: string | undefined,
+) {
+  return findSong(catalog, roomVersionId)?.versions.find(
+    (version) =>
+      version._id === personalVersionId && version._id !== roomVersionId,
+  )
+}
+
+function JamPersonalSync({
+  roomVersionId,
+  personalVersionId,
+  onPersonal,
+}: {
+  roomVersionId?: Id<'versions'>
+  personalVersionId?: Id<'versions'>
+  onPersonal: (id: Id<'versions'> | undefined) => void
+}) {
+  const personal = personalVersion(
+    useCatalog(),
+    roomVersionId,
+    personalVersionId,
+  )
+  useEffect(() => {
+    onPersonal(personal?._id)
+  }, [onPersonal, personal?._id])
+  return null
+}
+
+function JamYourVersion({
+  roomVersionId,
+  personalVersionId,
+}: {
+  roomVersionId?: Id<'versions'>
+  personalVersionId?: Id<'versions'>
+}) {
+  const personal = personalVersion(
+    useCatalog(),
+    roomVersionId,
+    personalVersionId,
+  )
+  if (!personal) return null
+  return <span className="shrink-0 text-primary">· {m.yourVersion()}</span>
+}
+
+function JamOthersNotice({
+  versionId,
+  meId,
+  members,
+}: {
+  versionId?: Id<'versions'>
+  meId?: string
+  members: Array<{
+    userId: string
+    name: string
+    personalVersionId?: Id<'versions'>
+  }>
+}) {
+  const song = findSong(useCatalog(), versionId)
+  const names = members
+    .filter(
+      (member) =>
+        member.userId !== meId &&
+        member.personalVersionId &&
+        member.personalVersionId !== versionId &&
+        song?.versions.some(
+          (version) => version._id === member.personalVersionId,
+        ),
+    )
+    .map((member) => member.name)
+  if (names.length === 0) return null
+  return (
+    <div className="mx-auto max-w-5xl px-5 pt-4 sm:px-8">
+      <p className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-foreground/80">
+        <InfoIcon className="size-4 shrink-0 text-primary" />
+        {m.personalVersionWarning({ name: names.join(', ') })}
+      </p>
+    </div>
+  )
+}
+
+function JamSongCombo({
+  code,
+  value,
+  notation,
+  placeholder,
+  className,
+}: {
+  code: string
+  value: string | null
+  notation: Notation
+  placeholder: string
+  className?: string
+}) {
+  const catalog = useCatalog()
+  const setVersion = useMutation(api.jam.setVersion)
+  return (
+    <ComboBox
+      aria-label={m.chooseSong()}
+      placeholder={placeholder}
+      emptyText={m.noMatches()}
+      value={value}
+      options={catalog.flatMap((row) =>
+        row.versions.map((version) => ({
+          id: version._id,
+          label: row.song.title,
+          description: `${row.versions.length > 1 ? `${version.name} · ` : ''}${displayChord(version.concertKey, 0, 0, notation)}`,
+        })),
+      )}
+      className={className}
+      onChange={(next) => {
+        if (next && next !== value)
+          void setVersion({
+            code,
+            versionId: next as Id<'versions'>,
+          }).catch(fail)
+      }}
+    />
+  )
+}
+
+function JamVersionSelect({
+  roomVersionId,
+  personalId,
+  onChange,
+}: {
+  roomVersionId: Id<'versions'>
+  personalId?: Id<'versions'>
+  onChange: (id: Id<'versions'> | undefined) => void
+}) {
+  const song = findSong(useCatalog(), roomVersionId)
+  if (!song || song.versions.length < 2) return null
+  return (
+    <Select
+      aria-label={m.yourVersion()}
+      value={personalId ?? 'room'}
+      className="w-40 shrink-0"
+      options={[
+        { id: 'room', label: m.roomVersion() },
+        ...song.versions
+          .filter((version) => version._id !== roomVersionId)
+          .map((version) => ({ id: version._id, label: version.name })),
+      ]}
+      onChange={(next) =>
+        onChange(next === 'room' ? undefined : (next as Id<'versions'>))
+      }
+    />
+  )
+}
+
+function JamSetlistSelect({ code, value }: { code: string; value: string }) {
+  const setlists = useLiveQuery(convexQuery(api.setlists.list, {})).data
+  const attach = useMutation(api.jam.attachSetlist)
+  return (
+    <Select
+      aria-label={m.setlists()}
+      value={value}
+      placeholder={m.attachSetlist()}
+      className="w-40 shrink-0"
+      options={setlists.map((item) => ({
+        id: item._id,
+        label: item.name,
+        description: m.songCount({ count: String(item.count) }),
+      }))}
+      onChange={(next) => {
+        if (next && next !== value)
+          void attach({ code, setlistId: next as Id<'setlists'> }).catch(fail)
+      }}
+    />
   )
 }

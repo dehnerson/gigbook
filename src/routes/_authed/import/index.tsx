@@ -27,13 +27,10 @@ import { Textarea } from '@/components/ui/textarea'
 import { PROVIDER_LABELS } from '@/lib/import/models'
 import { messageFor } from '@/lib/errors'
 import { useLiveQuery } from '@/lib/live'
-import { loadQuery } from '@/lib/load'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/import/')({
-  loader: async ({ context }) => {
-    await loadQuery(context.queryClient, convexQuery(api.songs.catalog, {}))
-  },
+  loader: ({ context }) => context.load(convexQuery(api.songs.catalog, {})),
   component: ImportPage,
 })
 

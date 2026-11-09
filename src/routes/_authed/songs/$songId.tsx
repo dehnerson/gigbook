@@ -32,19 +32,16 @@ import { useNotation } from '@/components/use-notation'
 import { useVersionActions } from '@/components/version-actions'
 import { messageFor } from '@/lib/errors'
 import { useLiveQuery } from '@/lib/live'
-import { loadQuery } from '@/lib/load'
 import { displayChord } from '@/lib/music/chords'
 import { TUNING_PRESETS } from '@/lib/music/diagrams'
 import type { Notation } from '@/lib/music/pitch'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/songs/$songId')({
-  loader: async ({ context, params }) => {
-    await loadQuery(
-      context.queryClient,
+  loader: ({ context, params }) =>
+    context.load(
       convexQuery(api.songs.get, { songId: params.songId as Id<'songs'> }),
-    )
-  },
+    ),
   component: SongPage,
 })
 

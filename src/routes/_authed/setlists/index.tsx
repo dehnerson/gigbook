@@ -22,16 +22,14 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { messageFor } from '@/lib/errors'
 import { useLiveQuery } from '@/lib/live'
-import { loadQuery } from '@/lib/load'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/setlists/')({
-  loader: async ({ context }) => {
-    await Promise.all([
-      loadQuery(context.queryClient, convexQuery(api.setlists.list, {})),
-      loadQuery(context.queryClient, convexQuery(api.bands.list, {})),
-    ])
-  },
+  loader: ({ context }) =>
+    Promise.all([
+      context.load(convexQuery(api.setlists.list, {})),
+      context.load(convexQuery(api.bands.list, {})),
+    ]),
   component: SetlistsPage,
 })
 

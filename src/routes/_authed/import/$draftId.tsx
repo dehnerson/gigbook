@@ -29,19 +29,16 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useNotation } from '@/components/use-notation'
 import { messageFor } from '@/lib/errors'
 import { useLiveQuery } from '@/lib/live'
-import { loadQuery } from '@/lib/load'
 import { DEFAULT_LAYERS } from '@/lib/sheet-layers'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/import/$draftId')({
-  loader: async ({ context, params }) => {
-    await loadQuery(
-      context.queryClient,
+  loader: ({ context, params }) =>
+    context.load(
       convexQuery(api.importDrafts.get, {
         draftId: params.draftId as Id<'importDrafts'>,
       }),
-    )
-  },
+    ),
   component: ReviewPage,
 })
 

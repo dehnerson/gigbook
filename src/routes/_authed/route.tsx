@@ -5,15 +5,12 @@ import { api } from '../../../convex/_generated/api'
 import { RoutePending } from '@/components/app/route-states'
 import { Shell } from '@/components/shell'
 import { useLiveQuery } from '@/lib/live'
-import { loadQuery } from '@/lib/load'
 
 export const Route = createFileRoute('/_authed')({
   beforeLoad: ({ context }) => {
     if (!context.userId) throw redirect({ to: '/sign-in' })
   },
-  loader: async ({ context }) => {
-    await loadQuery(context.queryClient, convexQuery(api.users.me, {}))
-  },
+  loader: ({ context }) => context.load(convexQuery(api.users.me, {})),
   component: Authed,
 })
 

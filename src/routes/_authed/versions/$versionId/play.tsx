@@ -43,7 +43,6 @@ import { useNotation } from '@/components/use-notation'
 import { useVersionActions } from '@/components/version-actions'
 import { useWakeLock } from '@/components/use-wake-lock'
 import { useLiveQuery } from '@/lib/live'
-import { loadQuery } from '@/lib/load'
 import { previewTabShift } from '@/lib/music/tab'
 import { m } from '@/paraglide/messages'
 
@@ -57,14 +56,12 @@ export const Route = createFileRoute('/_authed/versions/$versionId/play')({
         ? Number(search.index)
         : undefined,
   }),
-  loader: async ({ context, params }) => {
-    await loadQuery(
-      context.queryClient,
+  loader: ({ context, params }) =>
+    context.load(
       convexQuery(api.versions.getBundle, {
         versionId: params.versionId as Id<'versions'>,
       }),
-    )
-  },
+    ),
   component: PlayPage,
 })
 

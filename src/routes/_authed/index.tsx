@@ -19,14 +19,11 @@ import { Button, ButtonLink } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useNotation } from '@/components/use-notation'
 import { useLiveQuery } from '@/lib/live'
-import { loadQuery } from '@/lib/load'
 import { displayChord } from '@/lib/music/chords'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/')({
-  loader: async ({ context }) => {
-    await loadQuery(context.queryClient, convexQuery(api.songs.catalog, {}))
-  },
+  loader: ({ context }) => context.load(convexQuery(api.songs.catalog, {})),
   component: LibraryPage,
 })
 

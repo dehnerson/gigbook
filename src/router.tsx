@@ -8,6 +8,7 @@ import {
   RouteNotFound,
   RoutePending,
 } from '@/components/app/route-states'
+import { createLoad } from '@/lib/load'
 import { routeTree } from './routeTree.gen'
 
 const convexUrl = import.meta.env.VITE_CONVEX_URL
@@ -28,6 +29,7 @@ export function getRouter() {
     },
   })
   convexQueryClient.connect(queryClient)
+  const load = createLoad(queryClient)
 
   const router = createTanStackRouter({
     routeTree,
@@ -38,7 +40,7 @@ export function getRouter() {
     defaultErrorComponent: ({ error }) => <RouteError error={error} />,
     defaultPendingComponent: RoutePending,
     defaultPendingMs: 300,
-    context: { queryClient, convexClient, convexQueryClient },
+    context: { queryClient, convexClient, convexQueryClient, load },
     Wrap: ({ children }) => (
       <QueryClientProvider client={queryClient}>
         <ConvexProvider client={convexQueryClient.convexClient}>

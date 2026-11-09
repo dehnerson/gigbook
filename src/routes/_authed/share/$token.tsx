@@ -19,16 +19,11 @@ import { Button, ButtonLink } from '@/components/ui/button'
 import { useNotation } from '@/components/use-notation'
 import { useVersionActions } from '@/components/version-actions'
 import { useLiveQuery } from '@/lib/live'
-import { loadQuery } from '@/lib/load'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/share/$token')({
-  loader: async ({ context, params }) => {
-    await loadQuery(
-      context.queryClient,
-      convexQuery(api.versions.getByShare, { token: params.token }),
-    )
-  },
+  loader: ({ context, params }) =>
+    context.load(convexQuery(api.versions.getByShare, { token: params.token })),
   component: SharePage,
 })
 

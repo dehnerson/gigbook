@@ -16,7 +16,7 @@ import {
   UsersIcon,
   XIcon,
 } from 'lucide-react'
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '../../../../convex/_generated/api'
 import type { Id } from '../../../../convex/_generated/dataModel'
@@ -39,25 +39,20 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useNotation } from '@/components/use-notation'
 import { messageFor } from '@/lib/errors'
 import { useLiveQuery } from '@/lib/live'
-import { loadQuery } from '@/lib/load'
 import { displayChord } from '@/lib/music/chords'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/setlists/$setlistId')({
-  loader: async ({ context, params }) => {
-    await Promise.all([
-      loadQuery(
-        context.queryClient,
-        convexQuery(api.setlists.get, {
-          setlistId: params.setlistId as Id<'setlists'>,
-        }),
-      ),
-      loadQuery(context.queryClient, convexQuery(api.songs.catalog, {})),
-    ])
-  },
+  loader: ({ context, params }) =>
+    context.load(
+      convexQuery(api.setlists.get, {
+        setlistId: params.setlistId as Id<'setlists'>,
+      }),
+    ),
   component: SetlistPage,
 })
 
@@ -271,12 +266,27 @@ function SetlistPage() {
       )}
 
       {canEdit ? (
-        <SongPicker
-          isOpen={picker}
-          onOpenChange={setPicker}
-          setlistId={setlistId}
-          included={new Set(entries.map((entry) => entry.version._id))}
-        />
+        <Suspense
+          fallback={
+            picker ? (
+              <Dialog isOpen onOpenChange={setPicker} className="sm:max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>{m.addSong()}</DialogTitle>
+                  <DialogDescription>{m.songPickerHint()}</DialogDescription>
+                </DialogHeader>
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-48 w-full" />
+              </Dialog>
+            ) : null
+          }
+        >
+          <SongPicker
+            isOpen={picker}
+            onOpenChange={setPicker}
+            setlistId={setlistId}
+            included={new Set(entries.map((entry) => entry.version._id))}
+          />
+        </Suspense>
       ) : null}
       <ConfirmDialog
         isOpen={confirmDelete}
