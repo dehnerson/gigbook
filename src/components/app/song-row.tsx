@@ -7,23 +7,20 @@ import { Chip, Monogram } from './chip'
 export type SongSummary = {
   _id: string
   title: string
-  artist: string
+  subTitle?: string
   bandId?: string
+  bandName?: string
 }
 
 export function SongRow({
   song,
   performers,
-  keys,
   versionCount,
-  bandName,
   trailing,
 }: {
   song: SongSummary
   performers?: Array<string>
-  keys?: Array<string>
   versionCount?: number
-  bandName?: string
   trailing?: React.ReactNode
 }) {
   const covers = [...new Set(performers)]
@@ -39,7 +36,7 @@ export function SongRow({
           {song.title}
         </Link>
         <p className="truncate text-sm text-muted-foreground">
-          {song.artist}
+          {song.subTitle}
           {covers.length > 0
             ? ` · ${m.performedByArtist({ artist: covers.join(', ') })}`
             : null}
@@ -49,15 +46,10 @@ export function SongRow({
         {song.bandId ? (
           <Chip tone="primary" className="max-w-40">
             <UsersIcon className="size-3 shrink-0" />
-            <span className="truncate">{bandName ?? m.band()}</span>
+            <span className="truncate">{song.bandName ?? m.band()}</span>
           </Chip>
         ) : null}
-        {keys && keys.length > 0 ? (
-          <Chip label={m.keyShort()}>
-            <span className="font-mono">{[...new Set(keys)].join(' · ')}</span>
-          </Chip>
-        ) : null}
-        {versionCount !== undefined && versionCount > 1 ? (
+        {versionCount !== undefined ? (
           <Chip>{m.versionCount({ count: String(versionCount) })}</Chip>
         ) : null}
       </div>

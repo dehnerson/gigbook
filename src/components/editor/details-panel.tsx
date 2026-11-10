@@ -154,12 +154,10 @@ function TracksCard({
 export function DetailsPanel({
   version,
   timeline,
-  songArtist,
   notation,
 }: {
   version: EditorVersion
   timeline: Array<EditorEntry>
-  songArtist: string
   notation: Notation
 }) {
   const { mutations, save } = useEditor()
@@ -214,13 +212,12 @@ export function DetailsPanel({
           />
         </Field>
         <Field
-          label={m.performedBy()}
-          hint={m.performedByHint({ artist: songArtist })}
+          label={m.artist()}
           className="sm:col-span-2"
         >
           <Input
             value={artist}
-            placeholder={songArtist}
+            placeholder={m.artistPlaceholder()}
             onChange={(event) => {
               setArtist(event.target.value)
               saveArtist.call(event.target.value)

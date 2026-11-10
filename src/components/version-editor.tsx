@@ -26,7 +26,7 @@ export function VersionEditor({
   shapes,
 }: {
   version: EditorVersion
-  song: { _id: string; title: string; artist: string }
+  song: { _id: string; title: string; }
   timeline: Array<EditorEntry>
   shapes: Array<ChordShapeOverride>
 }) {
@@ -174,7 +174,6 @@ export function VersionEditor({
                   key={version._id}
                   version={version}
                   timeline={timeline}
-                  songArtist={song.artist}
                   notation={notation}
                 />
               )}

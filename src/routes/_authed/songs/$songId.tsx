@@ -91,8 +91,8 @@ function SongPage() {
         subtitle={
           <div className="flex flex-wrap items-center gap-2">
             <InlineEdit
-              label={m.editArtist()}
-              value={song.artist}
+              label={m.editSubTitle()}
+              value={song.subTitle}
               isDisabled={!canEdit}
               onSave={(artist) => save({ artist })}
             />

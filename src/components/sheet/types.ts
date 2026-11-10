@@ -32,7 +32,7 @@ export type SheetVersion = {
   tracks?: Array<StoredTrack>
 }
 
-export type SheetSong = { title: string; artist: string }
+export type SheetSong = { title: string; subTitle?: string }
 
 export type ChordShapeOverride = {
   symbol: string

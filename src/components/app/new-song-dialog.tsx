@@ -14,10 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
-import { useNotation } from '@/components/use-notation'
 import { messageFor } from '@/lib/errors'
-import { keyOptions } from '@/lib/music/keys'
 import { m } from '@/paraglide/messages'
 
 export function NewSongDialog({
@@ -32,21 +29,20 @@ export function NewSongDialog({
   const create = useMutation(api.songs.create)
   const addVersion = useMutation(api.songs.addVersion)
   const navigate = useNavigate()
-  const notation = useNotation()
   const [title, setTitle] = useState('')
-  const [artist, setArtist] = useState('')
-  const [concertKey, setConcertKey] = useState('C')
+  const [subTitle, setSubTitle] = useState('')
   const [busy, setBusy] = useState(false)
-  const [search, setSearch] = useState({ title: '', artist: '' })
+  const [search, setSearch] = useState({ title: '' })
   const [duplicate, setDuplicate] = useState<{
     existing: Id<'songs'>
     title: string
+    subTitle?: string
   } | null>(null)
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setSearch({ title, artist }), 300)
+    const timer = window.setTimeout(() => setSearch({ title }), 300)
     return () => window.clearTimeout(timer)
-  }, [title, artist])
+  }, [title])
 
   const similar =
     useQuery(
@@ -58,20 +54,19 @@ export function NewSongDialog({
   const matches =
     similar.length === 0 && duplicate
       ? [
-          {
-            _id: duplicate.existing,
-            title: duplicate.title,
-            artist: '',
-            exact: true,
-          },
-        ]
+        {
+          _id: duplicate.existing,
+          title: duplicate.title,
+          subTitle: duplicate.subTitle,
+          exact: true,
+        },
+      ]
       : similar
   const exact = matches.find((song) => song.exact)
 
   const reset = () => {
     setTitle('')
-    setArtist('')
-    setConcertKey('C')
+    setSubTitle('')
     setDuplicate(null)
   }
 
@@ -112,14 +107,13 @@ export function NewSongDialog({
           run(async () => {
             const created = await create({
               title,
-              artist,
+              subTitle,
               bandId,
               versionName: m.defaultVersionName(),
-              concertKey,
             })
             if (created.versionId) await finish(created.versionId)
             else if (created.existing)
-              setDuplicate({ existing: created.existing, title: created.title })
+              setDuplicate({ existing: created.existing, title: created.title, subTitle: created.subTitle })
           })
         }}
       >
@@ -135,13 +129,12 @@ export function NewSongDialog({
             }}
           />
         </Field>
-        <Field label={m.artist()}>
+        <Field label={m.subTitle()}>
           <Input
-            value={artist}
-            placeholder={m.artistPlaceholder()}
+            value={subTitle}
+            placeholder={m.subTitlePlaceholder()}
             onChange={(event) => {
-              setArtist(event.target.value)
-              setDuplicate(null)
+              setSubTitle(event.target.value)
             }}
           />
         </Field>
@@ -162,10 +155,10 @@ export function NewSongDialog({
                 <li key={song._id} className="flex items-center gap-2">
                   <p className="min-w-0 flex-1 truncate text-sm">
                     <span className="font-medium">{song.title}</span>
-                    {song.artist ? (
+                    {song.subTitle ? (
                       <span className="text-muted-foreground">
                         {' '}
-                        · {song.artist}
+                        · {song.subTitle}
                       </span>
                     ) : null}
                   </p>
@@ -193,7 +186,6 @@ export function NewSongDialog({
                         const added = await addVersion({
                           songId: song._id,
                           versionName: m.newVersionName(),
-                          concertKey,
                         })
                         await finish(added.versionId)
                       })
@@ -206,12 +198,6 @@ export function NewSongDialog({
             </ul>
           </div>
         ) : null}
-        <Select
-          label={m.concertKey()}
-          value={concertKey}
-          options={keyOptions(notation)}
-          onChange={setConcertKey}
-        />
         <DialogFooter>
           <Button variant="outline" onPress={() => onOpenChange(false)}>
             {m.cancel()}

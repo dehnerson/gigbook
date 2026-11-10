@@ -114,15 +114,14 @@ export default defineSchema({
 
   songs: defineTable({
     title: v.string(),
-    artist: v.string(),
-    key: v.string(),
+    subTitle: v.optional(v.string()),
     createdBy: v.string(),
     bandId: v.optional(v.id('bands')),
   })
     .index('by_creator', ['createdBy'])
     .index('by_band', ['bandId'])
-    .index('by_creator_key', ['createdBy', 'bandId', 'key'])
-    .index('by_band_key', ['bandId', 'key'])
+    .index('by_creator_title', ['createdBy', 'bandId', 'title'])
+    .index('by_band_title', ['bandId', 'title'])
     .searchIndex('search_title', {
       searchField: 'title',
       filterFields: ['createdBy', 'bandId'],

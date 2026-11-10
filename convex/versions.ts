@@ -11,8 +11,7 @@ import {
 } from './lib/access'
 import { fail } from './lib/errors'
 import { cloneVersionTree, deleteVersionTree } from './lib/cascade'
-import { findSongByKey, insertSong, uniqueVersionName } from './lib/songs'
-import { songKey } from '../src/lib/song-key'
+import { findSongByTitle, insertSong, uniqueVersionName } from './lib/songs'
 import {
   DEFAULT_TRACK,
   isBuiltInTrack,
@@ -153,9 +152,9 @@ export const updateMeta = mutation({
       ...rest,
       ...(artist !== undefined
         ? {
-            artist:
-              performer && performer !== song.artist ? performer : undefined,
-          }
+          artist:
+            performer && performer !== song.artist ? performer : undefined,
+        }
         : {}),
     })
     return version._id
@@ -208,25 +207,26 @@ export const duplicate = mutation({
   handler: async (ctx, args) => {
     const identity = await requireIdentity(ctx)
     const { version, song } = await loadVersion(ctx, args.versionId)
+
     try {
       await canReadSong(ctx, song)
     } catch {
       if (!version.shareToken) fail('FORBIDDEN')
     }
+
     const existing = await libraryCopyOf(ctx, version, identity.subject)
     if (existing) return { ...existing, existing: true, joinedSong: undefined }
-    const sameSong = await findSongByKey(
-      ctx,
-      { userId: identity.subject },
-      songKey(song.title, song.artist),
-    )
+
+    const sameSong = await findSongByTitle(ctx, { userId: identity.subject }, song.title)
+
     const copySongId =
       sameSong?._id ??
       (await insertSong(ctx, {
         title: song.title,
-        artist: song.artist,
+        subTitle: song.subTitle,
         createdBy: identity.subject,
       }))
+
     const copyVersionId = await cloneVersionTree(ctx, version, {
       songId: copySongId,
       name: sameSong
@@ -234,6 +234,7 @@ export const duplicate = mutation({
         : version.name,
       createdBy: identity.subject,
     })
+
     return {
       songId: copySongId,
       versionId: copyVersionId,

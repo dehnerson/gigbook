@@ -10,9 +10,8 @@ import {
 } from './lib/access'
 import { fail } from './lib/errors'
 import { deleteVersionTree } from './lib/cascade'
-import { findSongByKey, insertSong, uniqueVersionName } from './lib/songs'
+import { findSongByTitle, insertSong, uniqueVersionName } from './lib/songs'
 import { STANDARD_TUNING } from '../src/lib/music/diagrams'
-import { songKey } from '../src/lib/song-key'
 
 export const catalog = query({
   args: {},
@@ -91,10 +90,9 @@ export const get = query({
 export const create = mutation({
   args: {
     title: v.string(),
-    artist: v.string(),
+    subTitle: v.optional(v.string()),
     bandId: v.optional(v.id('bands')),
     versionName: v.string(),
-    concertKey: v.string(),
   },
   handler: async (ctx, args) => {
     const identity = await requireIdentity(ctx)
@@ -103,23 +101,20 @@ export const create = mutation({
       if (!row || row.role === 'viewer') fail('FORBIDDEN')
     }
     const title = args.title.trim() || 'Untitled'
-    const artist = args.artist.trim() || 'Unknown'
-    const existing = await findSongByKey(
-      ctx,
-      { userId: identity.subject, bandId: args.bandId },
-      songKey(title, artist),
-    )
-    if (existing) return { existing: existing._id, title: existing.title }
+    const subTitle = args.subTitle?.trim() || undefined
+    const existing = await findSongByTitle(ctx, { userId: identity.subject, bandId: args.bandId }, title)
+
+    if (existing) return { existing: existing._id, title: existing.title, subTitle: existing.subTitle }
+
     const songId = await insertSong(ctx, {
       title,
-      artist,
+      subTitle,
       createdBy: identity.subject,
       bandId: args.bandId,
     })
     const versionId = await insertBlankVersion(ctx, {
       songId,
       name: args.versionName.trim() || 'Standard',
-      concertKey: args.concertKey,
       bandId: args.bandId,
       createdBy: identity.subject,
     })
@@ -131,7 +126,6 @@ export const addVersion = mutation({
   args: {
     songId: v.id('songs'),
     versionName: v.string(),
-    concertKey: v.string(),
   },
   handler: async (ctx, args) => {
     const song = await ctx.db.get(args.songId)
@@ -144,7 +138,6 @@ export const addVersion = mutation({
         song._id,
         args.versionName.trim() || 'Standard',
       ),
-      concertKey: args.concertKey,
       bandId: song.bandId,
       createdBy: identity.subject,
     })
@@ -155,35 +148,29 @@ export const addVersion = mutation({
 export const similar = query({
   args: {
     title: v.string(),
-    artist: v.string(),
     bandId: v.optional(v.id('bands')),
   },
   handler: async (ctx, args) => {
     const identity = await requireIdentity(ctx)
     const title = args.title.trim()
+
     if (title.length < 2) return []
-    if (
-      args.bandId &&
-      !(await membership(ctx.db, args.bandId, identity.subject))
-    )
-      return []
+    if (args.bandId && !(await membership(ctx.db, args.bandId, identity.subject))) return []
+
     const bandId = args.bandId
     const matches = await ctx.db
       .query('songs')
       .withSearchIndex('search_title', (q) =>
-        bandId
-          ? q.search('title', title).eq('bandId', bandId)
-          : q.search('title', title).eq('createdBy', identity.subject),
-      )
-      .take(20)
-    const key = songKey(title, args.artist)
+        bandId ? q.search('title', title).eq('bandId', bandId) : q.search('title', title).eq('createdBy', identity.subject)
+      ).take(20)
+
     return matches
       .filter((song) => (bandId ? true : !song.bandId))
       .map((song) => ({
         _id: song._id,
         title: song.title,
-        artist: song.artist,
-        exact: song.key === key,
+        subTitle: song.subTitle,
+        exact: song.title === title,
       }))
       .sort((a, b) => Number(b.exact) - Number(a.exact))
       .slice(0, 5)
@@ -195,14 +182,13 @@ async function insertBlankVersion(
   fields: {
     songId: Id<'songs'>
     name: string
-    concertKey: string
     bandId?: Id<'bands'>
     createdBy: string
   },
 ) {
   return ctx.db.insert('versions', {
     ...fields,
-    concertKey: fields.concertKey.trim() || 'C',
+    concertKey: 'C',
     timeSignature: '4/4',
     tuning: [...STANDARD_TUNING],
     suggestedCapo: 0,
@@ -214,18 +200,20 @@ export const update = mutation({
   args: {
     songId: v.id('songs'),
     title: v.optional(v.string()),
-    artist: v.optional(v.string()),
+    subTitle: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const song = await ctx.db.get(args.songId)
+
     if (!song) fail('NOT_FOUND')
     await canEditSong(ctx, song)
+
     const title = args.title?.trim() || song.title
-    const artist = args.artist?.trim() || song.artist
+    const subTitle = args.subTitle?.trim() || song.subTitle
+
     await ctx.db.patch(song._id, {
       title,
-      artist,
-      key: songKey(title, artist),
+      subTitle,
     })
   },
 })
@@ -234,13 +222,16 @@ export const remove = mutation({
   args: { songId: v.id('songs') },
   handler: async (ctx, args) => {
     const song = await ctx.db.get(args.songId)
+
     if (!song) return
     await canEditSong(ctx, song)
+
     const versions = await ctx.db
       .query('versions')
       .withIndex('by_song', (q) => q.eq('songId', song._id))
       .collect()
     for (const version of versions) await deleteVersionTree(ctx, version._id)
+
     await ctx.db.delete(song._id)
   },
 })

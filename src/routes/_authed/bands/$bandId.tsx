@@ -15,10 +15,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import { useNotation } from '@/components/use-notation'
 import { messageFor } from '@/lib/errors'
 import { useLiveQuery } from '@/lib/live'
-import { displayChord } from '@/lib/music/chords'
 import { m } from '@/paraglide/messages'
 import { roleName } from './-roles'
 
@@ -36,7 +34,6 @@ function BandPage() {
   const { band, members, songs, role, me } = query.data
   const addMember = useMutation(api.bands.addMember)
   const removeMember = useMutation(api.bands.removeMember)
-  const notation = useNotation()
   const [newSong, setNewSong] = useState(false)
   const [email, setEmail] = useState('')
   const [inviteRole, setInviteRole] = useState<'editor' | 'viewer'>('editor')
@@ -102,9 +99,6 @@ function BandPage() {
                   key={row.song._id}
                   song={{ ...row.song, bandId: undefined }}
                   versionCount={row.versions.length}
-                  keys={row.versions.map((version) =>
-                    displayChord(version.concertKey, 0, 0, notation),
-                  )}
                 />
               ))}
             </ul>

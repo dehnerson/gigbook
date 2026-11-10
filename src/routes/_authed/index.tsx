@@ -17,9 +17,7 @@ import { Segmented } from '@/components/app/segmented'
 import { SongRow } from '@/components/app/song-row'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useNotation } from '@/components/use-notation'
 import { useLiveQuery } from '@/lib/live'
-import { displayChord } from '@/lib/music/chords'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/')({
@@ -42,7 +40,6 @@ function performersOf(versions: Array<{ artist?: string }>) {
 
 function LibraryPage() {
   const catalog = useLiveQuery(convexQuery(api.songs.catalog, {}))
-  const notation = useNotation()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [scope, setScope] = useState<Scope>('all')
@@ -55,7 +52,7 @@ function LibraryPage() {
     if (scope === 'band' && !row.song.bandId) return false
     if (!needle) return true
     return normalize(
-      [row.song.title, row.song.artist, ...performersOf(row.versions)].join(
+      [row.song.title, ...performersOf(row.versions)].join(
         ' ',
       ),
     ).includes(needle)
@@ -167,12 +164,8 @@ function LibraryPage() {
                 <SongRow
                   key={row.song._id}
                   song={row.song}
-                  bandName={row.bandName}
                   performers={performersOf(row.versions)}
                   versionCount={row.versions.length}
-                  keys={row.versions.map((version) =>
-                    displayChord(version.concertKey, 0, 0, notation),
-                  )}
                 />
               ))}
             </ul>

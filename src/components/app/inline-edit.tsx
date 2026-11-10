@@ -10,7 +10,7 @@ export function InlineEdit({
   className,
   inputClassName,
 }: {
-  value: string
+  value: string | undefined
   onSave: (value: string) => Promise<unknown> | void
   label: string
   isDisabled?: boolean
@@ -44,7 +44,7 @@ export function InlineEdit({
 
   const commit = () => {
     setEditing(false)
-    const next = draft.trim()
+    const next = draft?.trim()
     if (next && next !== value) void onSave(next)
   }
 

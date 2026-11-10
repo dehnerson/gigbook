@@ -1,25 +1,24 @@
 import type { Id } from '../_generated/dataModel'
 import type { MutationCtx, QueryCtx } from '../_generated/server'
-import { songKey } from '../../src/lib/song-key'
 
 export type SongScope = { userId: string; bandId?: Id<'bands'> }
 
-export async function findSongByKey(
+export async function findSongByTitle(
   ctx: QueryCtx,
   scope: SongScope,
-  key: string,
+  title: string,
 ) {
   if (scope.bandId) {
     const bandId = scope.bandId
     return ctx.db
       .query('songs')
-      .withIndex('by_band_key', (q) => q.eq('bandId', bandId).eq('key', key))
+      .withIndex('by_band_title', (q) => q.eq('bandId', bandId).eq('title', title))
       .first()
   }
   return ctx.db
     .query('songs')
-    .withIndex('by_creator_key', (q) =>
-      q.eq('createdBy', scope.userId).eq('bandId', undefined).eq('key', key),
+    .withIndex('by_creator_title', (q) =>
+      q.eq('createdBy', scope.userId).eq('bandId', undefined).eq('title', title),
     )
     .first()
 }
@@ -28,14 +27,13 @@ export async function insertSong(
   ctx: MutationCtx,
   fields: {
     title: string
-    artist: string
+    subTitle?: string
     createdBy: string
     bandId?: Id<'bands'>
   },
 ) {
   return ctx.db.insert('songs', {
     ...fields,
-    key: songKey(fields.title, fields.artist),
   })
 }
 

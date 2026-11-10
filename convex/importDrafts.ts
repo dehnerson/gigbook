@@ -14,8 +14,7 @@ import { aiProvider, importOutput } from './schema'
 import { aiErrorCode, languageModel } from './lib/ai'
 import { canEditSong, requireIdentity, songOfVersion } from './lib/access'
 import { fail } from './lib/errors'
-import { findSongByKey, insertSong, uniqueVersionName } from './lib/songs'
-import { songKey } from '../src/lib/song-key'
+import { findSongByTitle, insertSong, uniqueVersionName } from './lib/songs'
 import { meaningfulLabel } from '../src/lib/tracks'
 import { readAiKey } from './users'
 
@@ -33,9 +32,9 @@ async function editableTarget(
   return version
 }
 
-function coverArtist(performer: string, songArtist: string) {
+function versionArtist(performer: string) {
   const name = performer.trim()
-  const ignored = ['', 'unknown', songArtist.trim().toLowerCase()]
+  const ignored = ['', 'unknown']
   return ignored.includes(name.toLowerCase()) ? undefined : name
 }
 
@@ -188,8 +187,8 @@ export const save = mutation({
           order += 1
         }
       }
-      const song = await songOfVersion(ctx, version)
-      const artist = version.artist ?? coverArtist(output.artist, song.artist)
+      await songOfVersion(ctx, version)
+      const artist = version.artist ?? versionArtist(output.artist)
       await ctx.db.patch(version._id, { timeline, artist })
       if (draft.storageId) await ctx.storage.delete(draft.storageId)
       await ctx.db.delete(draft._id)
@@ -202,17 +201,15 @@ export const save = mutation({
       if (!song) fail('NOT_FOUND')
       await canEditSong(ctx, song)
     } else {
-      const existing = await findSongByKey(
-        ctx,
-        { userId: identity.subject },
-        songKey(output.title, output.artist),
-      )
+      const existing = await findSongByTitle(ctx, { userId: identity.subject }, output.title)
+
       if (existing) return { existing: existing._id, title: existing.title }
+
       const songId = await insertSong(ctx, {
         title: output.title,
-        artist: output.artist,
         createdBy: identity.subject,
       })
+
       song = await ctx.db.get(songId)
       if (!song) fail('NOT_FOUND')
     }
@@ -220,7 +217,7 @@ export const save = mutation({
     const versionId = await ctx.db.insert('versions', {
       songId,
       name: await uniqueVersionName(ctx, songId, 'Imported'),
-      artist: coverArtist(output.artist, song.artist),
+      artist: versionArtist(output.artist),
       bandId: song.bandId,
       concertKey: output.concertKey,
       timeSignature: output.timeSignature,
