@@ -93,14 +93,14 @@ export function NewSongDialog({
         onOpenChange(open)
         if (!open) reset()
       }}
-      className="sm:max-w-md"
+      className="min-w-0 overflow-hidden sm:max-w-md"
     >
       <DialogHeader>
         <DialogTitle>{m.newSong()}</DialogTitle>
         <DialogDescription>{m.newSongHint()}</DialogDescription>
       </DialogHeader>
       <form
-        className="grid gap-4"
+        className="grid min-w-0 gap-4"
         onSubmit={(event) => {
           event.preventDefault()
           if (!title.trim()) return
@@ -139,7 +139,7 @@ export function NewSongDialog({
           />
         </Field>
         {matches.length > 0 ? (
-          <div className="rounded-xl border bg-muted/40 p-3">
+          <div className="min-w-0 rounded-xl border bg-muted/40 p-3">
             <p className="text-sm font-medium">
               {exact
                 ? m.duplicateSong({ title: exact.title })
@@ -150,9 +150,12 @@ export function NewSongDialog({
                 {m.duplicateSongHint()}
               </p>
             ) : null}
-            <ul className="mt-2 space-y-1">
+            <ul className="mt-2 space-y-2">
               {matches.map((song) => (
-                <li key={song._id} className="flex items-center gap-2">
+                <li
+                  key={song._id}
+                  className="flex min-w-0 flex-wrap items-center gap-2"
+                >
                   <p className="min-w-0 flex-1 truncate text-sm">
                     <span className="font-medium">{song.title}</span>
                     {song.subTitle ? (
@@ -162,37 +165,39 @@ export function NewSongDialog({
                       </span>
                     ) : null}
                   </p>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    isDisabled={busy}
-                    onPress={() => {
-                      onOpenChange(false)
-                      reset()
-                      void navigate({
-                        to: '/songs/$songId',
-                        params: { songId: song._id },
-                      })
-                    }}
-                  >
-                    {m.open()}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    isDisabled={busy}
-                    onPress={() =>
-                      run(async () => {
-                        const added = await addVersion({
-                          songId: song._id,
-                          versionName: m.newVersionName(),
+                  <div className="flex min-w-0 max-w-full flex-wrap justify-end gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      isDisabled={busy}
+                      onPress={() => {
+                        onOpenChange(false)
+                        reset()
+                        void navigate({
+                          to: '/songs/$songId',
+                          params: { songId: song._id },
                         })
-                        await finish(added.versionId)
-                      })
-                    }
-                  >
-                    {m.addVersion()}
-                  </Button>
+                      }}
+                    >
+                      {m.open()}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      isDisabled={busy}
+                      onPress={() =>
+                        run(async () => {
+                          const added = await addVersion({
+                            songId: song._id,
+                            versionName: m.newVersionName(),
+                          })
+                          await finish(added.versionId)
+                        })
+                      }
+                    >
+                      {m.addVersion()}
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>

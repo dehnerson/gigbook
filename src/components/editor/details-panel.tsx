@@ -1,7 +1,9 @@
-import { useNavigate } from '@tanstack/react-router'
 import { MinusIcon, PlusIcon, Trash2Icon } from 'lucide-react'
 import { useState } from 'react'
-import { ConfirmDialog } from '@/components/app/confirm-dialog'
+import {
+  DeleteVersionDialog,
+  versionDeleteCopy,
+} from '@/components/app/delete-version-dialog'
 import { Field } from '@/components/app/field'
 import { useDebounced } from '@/components/app/save'
 import { Stepper } from '@/components/app/stepper'
@@ -155,13 +157,16 @@ export function DetailsPanel({
   version,
   timeline,
   notation,
+  songTitle,
+  isOnlyVersion,
 }: {
   version: EditorVersion
   timeline: Array<EditorEntry>
   notation: Notation
+  songTitle: string
+  isOnlyVersion: boolean
 }) {
   const { mutations, save } = useEditor()
-  const navigate = useNavigate()
   const [name, setName] = useState(version.name)
   const [artist, setArtist] = useState(version.artist ?? '')
   const [bpm, setBpm] = useState(version.bpm ? String(version.bpm) : '')
@@ -329,7 +334,10 @@ export function DetailsPanel({
         <div>
           <div className="font-medium">{m.deleteVersion()}</div>
           <p className="text-sm text-muted-foreground">
-            {m.deleteVersionHint()}
+            {
+              versionDeleteCopy(version.name, songTitle, isOnlyVersion)
+                .description
+            }
           </p>
         </div>
         <Button variant="destructive" onPress={() => setConfirmDelete(true)}>
@@ -337,18 +345,14 @@ export function DetailsPanel({
           {m.deleteVersion()}
         </Button>
       </div>
-      <ConfirmDialog
+      <DeleteVersionDialog
         isOpen={confirmDelete}
         onOpenChange={setConfirmDelete}
-        title={m.deleteVersionConfirm({ name: version.name })}
-        description={m.deleteVersionHint()}
-        onConfirm={async () => {
-          await mutations.removeVersion({ versionId: version._id })
-          await navigate({
-            to: '/songs/$songId',
-            params: { songId: version.songId },
-          })
-        }}
+        versionId={version._id}
+        versionName={version.name}
+        songTitle={songTitle}
+        isOnlyVersion={isOnlyVersion}
+        redirectToSong
       />
     </div>
   )

@@ -112,7 +112,7 @@
   "deleteVersion": "Version löschen",
   "deleteVersionConfirm": "„{name}“ löschen?",
   "deleteVersionHint": "Version wird gelöscht und aus Setlists entfernt. Das kann nicht rückgängig gemacht werden.",
-  "errorLastVersion": "Ein Song braucht mindestens eine Version. Lösche stattdessen den Song.",
+  "deleteOnlyVersionHint": "„{name}“ ist die einzige Version von „{title}“. Beim Löschen wird auch der Song gelöscht und aus Setlists entfernt. Das kann nicht rückgängig gemacht werden.",
   "share": "Link teilen",
   "linkCopied": "Link kopiert",
   "forkToLibrary": "In meine Bibliothek kopieren",

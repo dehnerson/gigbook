@@ -8,6 +8,7 @@ import {
   FileMusicIcon,
   PencilIcon,
   PlayIcon,
+  PlusIcon,
   Share2Icon,
   Trash2Icon,
   UsersIcon,
@@ -18,6 +19,7 @@ import { api } from '../../../../convex/_generated/api'
 import type { Doc, Id } from '../../../../convex/_generated/dataModel'
 import { Chip } from '@/components/app/chip'
 import { ConfirmDialog } from '@/components/app/confirm-dialog'
+import { DeleteVersionDialog } from '@/components/app/delete-version-dialog'
 import { EmptyState } from '@/components/app/empty-state'
 import { InlineEdit } from '@/components/app/inline-edit'
 import { Crumb, PageHeader, SectionTitle } from '@/components/app/page-header'
@@ -59,9 +61,11 @@ function SongPage() {
   const { song, versions, canEdit, bandName } = query.data
   const update = useMutation(api.songs.update)
   const remove = useMutation(api.songs.remove)
+  const addVersion = useMutation(api.songs.addVersion)
   const navigate = useNavigate()
   const notation = useNotation()
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [addingVersion, setAddingVersion] = useState(false)
 
   const save = (values: { title?: string; artist?: string }) =>
     update({ songId, ...values }).catch((error: unknown) =>
@@ -137,7 +141,34 @@ function SongPage() {
         }
       />
 
-      <SectionTitle>{m.versions()}</SectionTitle>
+      <SectionTitle
+        action={
+          canEdit ? (
+            <Button
+              size="sm"
+              variant="outline"
+              isDisabled={addingVersion}
+              onPress={() => {
+                setAddingVersion(true)
+                addVersion({ songId, versionName: m.newVersionName() })
+                  .then((added) =>
+                    navigate({
+                      to: '/versions/$versionId/edit',
+                      params: { versionId: added.versionId },
+                    }),
+                  )
+                  .catch((error: unknown) => toast.error(messageFor(error)))
+                  .finally(() => setAddingVersion(false))
+              }}
+            >
+              <PlusIcon />
+              {m.addVersion()}
+            </Button>
+          ) : null
+        }
+      >
+        {m.versions()}
+      </SectionTitle>
       {versions.length === 0 ? (
         <EmptyState icon={FileMusicIcon} title={m.noVersions()} />
       ) : (
@@ -146,8 +177,9 @@ function SongPage() {
             <VersionCard
               key={version._id}
               version={version}
+              songTitle={song.title}
               canEdit={canEdit}
-              isLast={versions.length === 1}
+              isOnlyVersion={versions.length === 1}
               notation={notation}
             />
           ))}
@@ -170,16 +202,17 @@ function SongPage() {
 
 function VersionCard({
   version,
+  songTitle,
   canEdit,
-  isLast,
+  isOnlyVersion,
   notation,
 }: {
   version: Doc<'versions'>
+  songTitle: string
   canEdit: boolean
-  isLast: boolean
+  isOnlyVersion: boolean
   notation: Notation
 }) {
-  const removeVersion = useMutation(api.versions.remove)
   const actions = useVersionActions()
   const navigate = useNavigate()
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -275,29 +308,22 @@ function VersionCard({
               <DropdownMenuItem
                 variant="destructive"
                 textValue={m.deleteVersion()}
-                isDisabled={isLast}
                 onAction={() => setConfirmDelete(true)}
               >
                 <Trash2Icon />
-                <span className="flex flex-col">
-                  {m.deleteVersion()}
-                  {isLast ? (
-                    <span className="text-xs text-muted-foreground">
-                      {m.errorLastVersion()}
-                    </span>
-                  ) : null}
-                </span>
+                {m.deleteVersion()}
               </DropdownMenuItem>
             </DropdownMenu>
           </DropdownMenuTrigger>
         ) : null}
       </div>
-      <ConfirmDialog
+      <DeleteVersionDialog
         isOpen={confirmDelete}
         onOpenChange={setConfirmDelete}
-        title={m.deleteVersionConfirm({ name: version.name })}
-        description={m.deleteVersionHint()}
-        onConfirm={() => removeVersion({ versionId: version._id })}
+        versionId={version._id}
+        versionName={version.name}
+        songTitle={songTitle}
+        isOnlyVersion={isOnlyVersion}
       />
     </li>
   )

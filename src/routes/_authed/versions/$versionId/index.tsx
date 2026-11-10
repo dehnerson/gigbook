@@ -8,11 +8,13 @@ import {
   PlayIcon,
   SaveIcon,
   Share2Icon,
+  Trash2Icon,
   TriangleAlertIcon,
 } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '../../../../../convex/_generated/api'
 import type { Id } from '../../../../../convex/_generated/dataModel'
+import { DeleteVersionDialog } from '@/components/app/delete-version-dialog'
 import { Crumb } from '@/components/app/page-header'
 import {
   ControlBar,
@@ -38,6 +40,7 @@ import { Button, ButtonLink } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { usePersonalCapo } from '@/components/use-capo'
@@ -62,13 +65,14 @@ function ReadPage() {
   const bundle = useLiveQuery(
     convexQuery(api.versions.getBundle, { versionId }),
   )
-  const { version, song, shapes, canEdit } = bundle.data
+  const { version, song, shapes, canEdit, versionCount } = bundle.data
   const timeline = bundle.data.timeline as Array<SheetEntry>
   const notation = useNotation()
   const actions = useVersionActions()
   const navigate = useNavigate()
   const [capo, setCapo] = usePersonalCapo(versionId, version.suggestedCapo)
   const [transpose, setTranspose] = useState(0)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [trackIds, setTrackIds] = useState<Array<string>>([])
   const prefs = useSheetPrefs('read')
   const { layers, available } = useSheetLayers(
@@ -179,6 +183,17 @@ function ReadPage() {
                 <LibraryBigIcon />
                 {m.forkToLibrary()}
               </DropdownMenuItem>
+              {canEdit ? <DropdownMenuSeparator /> : null}
+              {canEdit ? (
+                <DropdownMenuItem
+                  variant="destructive"
+                  textValue={m.deleteVersion()}
+                  onAction={() => setConfirmDelete(true)}
+                >
+                  <Trash2Icon />
+                  {m.deleteVersion()}
+                </DropdownMenuItem>
+              ) : null}
             </DropdownMenu>
           </DropdownMenuTrigger>
         </div>
@@ -246,6 +261,15 @@ function ReadPage() {
         versionId={version._id}
         canEdit={canEdit}
         className="pb-[60vh]"
+      />
+      <DeleteVersionDialog
+        isOpen={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        versionId={version._id}
+        versionName={version.name}
+        songTitle={song.title}
+        isOnlyVersion={versionCount <= 1}
+        redirectToSong
       />
     </div>
   )

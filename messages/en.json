@@ -112,7 +112,7 @@
   "deleteVersion": "Delete version",
   "deleteVersionConfirm": "Delete “{name}”?",
   "deleteVersionHint": "Its sections and parts are deleted and it is removed from setlists. This cannot be undone.",
-  "errorLastVersion": "A song needs at least one version. Delete the song instead.",
+  "deleteOnlyVersionHint": "“{name}” is the only version of “{title}”. Deleting it also deletes the song and removes it from setlists. This cannot be undone.",
   "share": "Share link",
   "linkCopied": "Link copied",
   "forkToLibrary": "Copy to my library",

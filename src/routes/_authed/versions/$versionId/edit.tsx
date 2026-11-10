@@ -45,6 +45,7 @@ function EditPage() {
       song={bundle.data.song}
       timeline={bundle.data.timeline as Array<EditorEntry>}
       shapes={bundle.data.shapes}
+      versionCount={bundle.data.versionCount}
     />
   )
 }

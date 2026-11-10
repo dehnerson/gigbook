@@ -24,11 +24,13 @@ export function VersionEditor({
   song,
   timeline,
   shapes,
+  versionCount,
 }: {
   version: EditorVersion
-  song: { _id: string; title: string; }
+  song: { _id: string; title: string }
   timeline: Array<EditorEntry>
   shapes: Array<ChordShapeOverride>
+  versionCount: number
 }) {
   const notation = useNotation()
   const mutations = useEditorMutations()
@@ -175,6 +177,8 @@ export function VersionEditor({
                   version={version}
                   timeline={timeline}
                   notation={notation}
+                  songTitle={song.title}
+                  isOnlyVersion={versionCount <= 1}
                 />
               )}
             </section>

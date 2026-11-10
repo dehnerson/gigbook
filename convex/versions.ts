@@ -86,7 +86,13 @@ async function bundle(ctx: any, version: any, song: any, canEdit: boolean) {
       }
     })
     .filter(Boolean)
-  return { version, song, timeline, shapes, canEdit }
+  const versionCount = (
+    await ctx.db
+      .query('versions')
+      .withIndex('by_song', (q: any) => q.eq('songId', song._id))
+      .collect()
+  ).length
+  return { version, song, timeline, shapes, canEdit, versionCount }
 }
 
 export const sectionIndex = internalQuery({
@@ -267,9 +273,10 @@ export const remove = mutation({
       .query('versions')
       .withIndex('by_song', (q) => q.eq('songId', song._id))
       .collect()
-    if (siblings.length <= 1) fail('LAST_VERSION')
     await deleteVersionTree(ctx, version._id)
-    return song._id
+    const deletedSong = siblings.length <= 1
+    if (deletedSong) await ctx.db.delete(song._id)
+    return { songId: song._id, deletedSong }
   },
 })
 
