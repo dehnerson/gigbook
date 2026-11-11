@@ -7,7 +7,6 @@ import {
   ListMusicIcon,
   RadioTowerIcon,
   SettingsIcon,
-  SparklesIcon,
   UsersIcon,
 } from 'lucide-react'
 import { m } from '@/paraglide/messages'
@@ -17,7 +16,6 @@ const links = [
   { to: '/setlists', label: () => m.setlists(), icon: ListMusicIcon },
   { to: '/bands', label: () => m.bands(), icon: UsersIcon },
   { to: '/jam', label: () => m.jam(), icon: RadioTowerIcon },
-  { to: '/import', label: () => m.importLabel(), icon: SparklesIcon },
 ] as const
 
 const hasClerk = Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY)
@@ -83,7 +81,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b bg-background/80 px-4 py-3 backdrop-blur-lg lg:hidden">
+      <header className="sticky top-0 z-9000 flex items-center justify-between border-b bg-background/80 px-4 py-3 backdrop-blur-lg lg:hidden">
         <Logo />
         <div className="flex items-center gap-2">
           <Link
@@ -103,7 +101,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-9000 flex justify-around border-t bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg lg:hidden">
         {links.map((link) => (
           <Link
             key={link.to}

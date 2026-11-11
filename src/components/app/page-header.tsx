@@ -52,7 +52,7 @@ export function PageHeader({
           ))}
         </nav>
       ) : null}
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="min-w-0 space-y-1">
           {eyebrow ? (
             <div className="text-xs font-semibold tracking-widest text-primary uppercase">

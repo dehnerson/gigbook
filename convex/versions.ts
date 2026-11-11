@@ -158,10 +158,13 @@ export const updateMeta = mutation({
     const { version, song } = await loadVersion(ctx, args.versionId)
     await canEditSong(ctx, song)
     const { versionId, artist, ...rest } = args
-    const performer = artist?.trim()
     await ctx.db.patch(versionId, {
       ...rest,
-      artist: performer,
+      ...(artist !== undefined
+        ? {
+            artist: artist.trim(),
+          }
+        : {}),
     })
     return version._id
   },

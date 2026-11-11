@@ -67,11 +67,10 @@ function SongPage() {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [addingVersion, setAddingVersion] = useState(false)
 
-  const save = (values: { title?: string; artist?: string }) =>
+  const save = (values: { title?: string; subTitle?: string }) =>
     update({ songId, ...values }).catch((error: unknown) =>
       toast.error(messageFor(error)),
     )
-  const first = versions.at(0)
 
   return (
     <div>
@@ -98,7 +97,7 @@ function SongPage() {
               label={m.editSubTitle()}
               value={song.subTitle}
               isDisabled={!canEdit}
-              onSave={(artist) => save({ artist })}
+              onSave={(subTitle) => save({ subTitle })}
             />
             {song.bandId ? (
               <Chip tone="primary">
@@ -110,16 +109,6 @@ function SongPage() {
         }
         actions={
           <>
-            {first ? (
-              <ButtonLink
-                size="lg"
-                to="/versions/$versionId/play"
-                params={{ versionId: first._id }}
-              >
-                <PlayIcon className="fill-current" />
-                {m.play()}
-              </ButtonLink>
-            ) : null}
             {canEdit ? (
               <DropdownMenuTrigger>
                 <Button size="icon-lg" variant="outline" aria-label={m.more()}>
