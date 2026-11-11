@@ -118,14 +118,14 @@ function ReadPage() {
         <span className="truncate text-foreground">{version.name}</span>
       </nav>
 
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <SheetHeader
           song={song}
           version={version}
           settings={settings}
-          className="text-[1.0625rem]"
+          className="min-w-0 md:flex-1"
         />
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <ButtonLink
             size="lg"
             to="/versions/$versionId/play"

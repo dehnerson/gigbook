@@ -31,6 +31,8 @@ import {
   SectionNav,
   SongSheet,
   useSectionCursor,
+  VersionCaption,
+  VersionStats,
 } from '@/components/sheet/song-sheet'
 import type { SheetEntry, SheetSettings } from '@/components/sheet/types'
 import {
@@ -158,10 +160,17 @@ function PlayPage() {
             </ButtonLink>
           )}
           <div className="min-w-0 flex-1">
-            <div className="truncate font-semibold">{song.title}</div>
-            <div className="truncate text-xs text-muted-foreground">
-              {version.artist} · {version.name}
-            </div>
+            <h1 className="truncate text-base font-semibold">{song.title}</h1>
+            {song.subTitle?.trim() ? (
+              <p className="truncate text-xs text-muted-foreground">
+                {song.subTitle}
+              </p>
+            ) : null}
+            <VersionCaption
+              name={version.name}
+              artist={version.artist}
+              className="truncate text-xs"
+            />
           </div>
           {search.setlist && entries.length > 0 ? (
             <div className="flex items-center gap-1">
@@ -189,7 +198,8 @@ function PlayPage() {
             </div>
           ) : null}
         </div>
-        <div className="mx-auto max-w-5xl px-3 pb-2">
+        <div className="mx-auto max-w-5xl space-y-2 px-3 pb-2">
+          <VersionStats version={version} settings={settings} />
           <SectionNav passes={passes} activeEntryId={active} onJump={move} />
         </div>
       </header>
@@ -204,6 +214,7 @@ function PlayPage() {
           visibleTrackIds={trackIds}
           highlightEntryId={active}
           layout={prefs.layout}
+          showHeader={false}
           versionId={version._id}
           canEdit={canEdit}
         />

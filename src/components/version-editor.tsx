@@ -11,7 +11,7 @@ import {
   EditorContext,
   useEditorMutations,
 } from '@/components/editor/use-editor'
-import { SongSheet } from '@/components/sheet/song-sheet'
+import { SheetHeader, SongSheet } from '@/components/sheet/song-sheet'
 import type { ChordShapeOverride } from '@/components/sheet/types'
 import { ButtonLink } from '@/components/ui/button'
 import { chartChords } from '@/lib/music/chordpro'
@@ -27,7 +27,7 @@ export function VersionEditor({
   versionCount,
 }: {
   version: EditorVersion
-  song: { _id: string; title: string }
+  song: { _id: string; title: string; subTitle?: string }
   timeline: Array<EditorEntry>
   shapes: Array<ChordShapeOverride>
   versionCount: number
@@ -86,16 +86,14 @@ export function VersionEditor({
             {version.name}
           </Crumb>
         </nav>
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="min-w-0">
-            <h1 className="truncate text-3xl font-semibold tracking-tight">
-              {song.title}
-            </h1>
-            <p className="text-muted-foreground">
-              {m.editingVersion({ name: version.name })}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <SheetHeader
+            song={song}
+            version={version}
+            showStats={false}
+            className="min-w-0 md:flex-1"
+          />
+          <div className="flex shrink-0 flex-wrap items-center gap-3">
             <SaveIndicator state={saver.state} />
             <Segmented
               aria-label={m.view()}
@@ -132,6 +130,7 @@ export function VersionEditor({
               }}
               versionId={version._id}
               canEdit
+              showHeader={false}
             />
           </div>
         ) : (

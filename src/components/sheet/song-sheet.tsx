@@ -67,68 +67,103 @@ export function versionChords(
   return [...new Set(symbols)]
 }
 
-export function SheetHeader({
-  song,
+export function VersionCaption({
+  name,
+  artist,
+  className,
+}: {
+  name: string
+  artist?: string
+  className?: string
+}) {
+  const performer = artist?.trim()
+  return (
+    <p className={cn('text-sm', className)}>
+      <span className="font-medium text-foreground">{name}</span>
+      {performer ? (
+        <span className="text-muted-foreground"> · {performer}</span>
+      ) : null}
+    </p>
+  )
+}
+
+export function VersionStats({
   version,
   settings,
   className,
 }: {
-  song: SheetSong
   version: SheetVersion
   settings: SheetSettings
   className?: string
 }) {
   const standard =
-    version.tuning.length === 0 ||
+    !version.tuning.length ||
     version.tuning.join(' ') === STANDARD_TUNING.join(' ')
   return (
-    <header className={cn('space-y-4', className)}>
-      <div className="space-y-1">
-        <h1 className="text-[2em] leading-tight font-bold tracking-tight text-balance">
-          {song.title}
-        </h1>
-        <p className="text-[1.05em] text-muted-foreground">{song.subTitle}</p>
-        <h2 className="text-[1.5em] leading-tight font-semibold tracking-tight text-balance">
-          {version.name}
-        </h2>
-        <p className="text-[1.02em] text-muted-foreground">{version.artist}</p>
-      </div>
-      <div className="flex flex-wrap gap-1.5 text-[0.85rem]">
-        <Chip label={m.keyShort()}>
+    <div className={cn('flex flex-wrap gap-1.5', className)}>
+      <Chip label={m.keyShort()}>
+        <span className="font-mono">
+          {soundsAs(version.concertKey, settings.transpose, settings.notation)}
+        </span>
+      </Chip>
+      {settings.capo > 0 || version.suggestedCapo > 0 ? (
+        <Chip label={m.capo()} tone={settings.capo > 0 ? 'primary' : 'default'}>
+          <span className="font-mono">{settings.capo}</span>
+        </Chip>
+      ) : null}
+      {version.bpm ? (
+        <Chip label={m.bpm()}>
+          <span className="font-mono">{version.bpm}</span>
+        </Chip>
+      ) : null}
+      <Chip label={m.timeSignature()}>
+        <span className="font-mono">{version.timeSignature}</span>
+      </Chip>
+      {standard ? null : (
+        <Chip label={m.tuning()}>
           <span className="font-mono">
-            {soundsAs(
-              version.concertKey,
-              settings.transpose,
-              settings.notation,
-            )}
+            {[...stringLabels(version.tuning, version.tuning.length)]
+              .reverse()
+              .join(' ')}
           </span>
         </Chip>
-        {settings.capo > 0 || version.suggestedCapo > 0 ? (
-          <Chip
-            label={m.capo()}
-            tone={settings.capo > 0 ? 'primary' : 'default'}
-          >
-            <span className="font-mono">{settings.capo}</span>
-          </Chip>
+      )}
+    </div>
+  )
+}
+
+export function SheetHeader({
+  song,
+  version,
+  settings,
+  showStats = true,
+  className,
+}: {
+  song: SheetSong
+  version: SheetVersion
+  settings?: SheetSettings
+  showStats?: boolean
+  className?: string
+}) {
+  const subtitle = song.subTitle?.trim()
+  return (
+    <header className={className}>
+      <div className="space-y-0.5">
+        <h1 className="text-3xl leading-tight font-semibold tracking-tight">
+          {song.title}
+        </h1>
+        {subtitle ? (
+          <p className="text-base text-muted-foreground">{subtitle}</p>
         ) : null}
-        {version.bpm ? (
-          <Chip label={m.bpm()}>
-            <span className="font-mono">{version.bpm}</span>
-          </Chip>
-        ) : null}
-        <Chip label={m.timeSignature()}>
-          <span className="font-mono">{version.timeSignature}</span>
-        </Chip>
-        {standard ? null : (
-          <Chip label={m.tuning()}>
-            <span className="font-mono">
-              {[...stringLabels(version.tuning, version.tuning.length)]
-                .reverse()
-                .join(' ')}
-            </span>
-          </Chip>
-        )}
       </div>
+      <VersionCaption
+        name={version.name}
+        artist={version.artist}
+        className="mt-2"
+      />
+      {showStats && settings ? (
+        <VersionStats version={version} settings={settings} className="mt-3" />
+      ) : null}
     </header>
   )
 }

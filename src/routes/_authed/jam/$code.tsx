@@ -37,6 +37,7 @@ import {
   SectionNav,
   SongSheet,
   useSectionCursor,
+  VersionCaption,
 } from '@/components/sheet/song-sheet'
 import type { SheetEntry } from '@/components/sheet/types'
 import {
@@ -218,9 +219,11 @@ function JamRoomPage() {
             <div className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
               {bundle.data ? (
                 <>
-                  <span className="truncate">
-                    {bundle.data.version.artist} · {bundle.data.version.name}
-                  </span>
+                  <VersionCaption
+                    name={bundle.data.version.name}
+                    artist={bundle.data.version.artist}
+                    className="min-w-0 truncate text-xs"
+                  />
                   <Suspense fallback={null}>
                     <JamYourVersion
                       roomVersionId={room.versionId}
