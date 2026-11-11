@@ -12,13 +12,18 @@ export async function findSongByTitle(
     const bandId = scope.bandId
     return ctx.db
       .query('songs')
-      .withIndex('by_band_title', (q) => q.eq('bandId', bandId).eq('title', title))
+      .withIndex('by_band_title', (q) =>
+        q.eq('bandId', bandId).eq('title', title),
+      )
       .first()
   }
   return ctx.db
     .query('songs')
     .withIndex('by_creator_title', (q) =>
-      q.eq('createdBy', scope.userId).eq('bandId', undefined).eq('title', title),
+      q
+        .eq('createdBy', scope.userId)
+        .eq('bandId', undefined)
+        .eq('title', title),
     )
     .first()
 }

@@ -11,6 +11,7 @@ import {
   SquarePlusIcon,
   Undo2Icon,
 } from 'lucide-react'
+import { useQuery } from 'convex/react'
 import { useDeferredValue, useRef, useState } from 'react'
 import type * as React from 'react'
 import { toast } from 'sonner'
@@ -31,7 +32,8 @@ import { Input } from '@/components/ui/input'
 import { Toggle } from '@/components/ui/toggle'
 import { stringLabels } from '@/lib/music/diagrams'
 import type { Notation } from '@/lib/music/pitch'
-import { defaultDiagram } from '@/lib/music/shapes'
+import { resolveChord, tuningKey } from '@/lib/music/shapes'
+import type { VersionShape } from '@/lib/music/shapes'
 import {
   DURATIONS,
   MAX_FRET,
@@ -67,6 +69,7 @@ import {
 import type { TabCursor, TabEdit } from '@/lib/music/tab-edit'
 import { DEFAULT_LAYERS } from '@/lib/sheet-layers'
 import { m } from '@/paraglide/messages'
+import { api } from '../../../convex/_generated/api'
 import { textareaClass } from './chart-editor'
 import { LENGTH_LABELS, TabGrid, noteLabel } from './tab-grid'
 import type { EditorPart } from './types'
@@ -123,13 +126,16 @@ export function TabEditor({
   timeSignature,
   bpm,
   notation,
+  shapes,
 }: {
   part: EditorPart
   tuning: Array<string>
   timeSignature: string
   bpm?: number
   notation: Notation
+  shapes: Array<VersionShape>
 }) {
+  const mine = useQuery(api.chordShapes.mine, { tuning: tuningKey(tuning) })
   const { mutations, save } = useEditor()
   const strings = tuning.length || 6
   const labels = stringLabels(tuning, strings)
@@ -252,7 +258,15 @@ export function TabEditor({
       chordRef.current?.focus()
       return
     }
-    const diagram = defaultDiagram(symbol, tuning)
+    const diagram = resolveChord({
+      symbol,
+      capo: 0,
+      transpose: 0,
+      notation,
+      tuning,
+      versionShapes: shapes,
+      personalShapes: mine ?? [],
+    }).diagram
     if (!diagram) {
       toast.error(m.noVoicings())
       return
@@ -600,6 +614,7 @@ export function TabEditor({
           timeSignature={timeSignature}
           bpm={bpm}
           settings={settings}
+          shapes={shapes}
         />
       </div>
 

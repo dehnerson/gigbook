@@ -1,13 +1,17 @@
 import type { AlphaTabApi } from '@coderline/alphatab'
 import { cn } from 'cn'
+import { useQuery } from 'convex/react'
 import { LoaderCircleIcon, PauseIcon, PlayIcon } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { displayChord } from '@/lib/music/chords'
 import { STANDARD_TUNING } from '@/lib/music/diagrams'
+import { overlayChordShapes } from '@/lib/music/shapes'
+import type { VersionShape } from '@/lib/music/shapes'
 import { previewTabShift, toAlphaTex } from '@/lib/music/tab'
 import type { TabMeasure } from '@/lib/music/tab'
 import { m } from '@/paraglide/messages'
+import { api } from '../../../convex/_generated/api'
 import {
   applyTheme,
   hiddenElements,
@@ -16,6 +20,8 @@ import {
 } from './alphatab-theme'
 import type { AlphaTabModule } from './alphatab-theme'
 import type { SheetSettings } from './types'
+
+const NO_SHAPES: Array<VersionShape> = []
 
 type Flags = { keys: Set<string>; strings: number }
 
@@ -48,21 +54,32 @@ export function TabStaff({
   timeSignature,
   bpm,
   settings,
+  shapes = NO_SHAPES,
 }: {
   measures: Array<TabMeasure>
   tuning: Array<string>
   timeSignature: string
   bpm?: number
   settings: SheetSettings
+  shapes?: Array<VersionShape>
 }) {
   const strings = tuning.length > 0 ? tuning : [...STANDARD_TUNING]
   const tuningKey = strings.join(' ')
   const { capo, transpose, notation } = settings
   const { tab, notes, chords } = settings.layers
-  const shifted = useMemo(
-    () => previewTabShift(measures, transpose).measures,
-    [measures, transpose],
-  )
+  const mine = useQuery(api.chordShapes.mine, { tuning: tuningKey })
+  const played = mine ?? NO_SHAPES
+  const shifted = useMemo(() => {
+    const moved = previewTabShift(measures, transpose).measures
+    return overlayChordShapes(measures, moved, {
+      tuning: strings,
+      capo,
+      transpose,
+      notation,
+      versionShapes: shapes,
+      personalShapes: played,
+    })
+  }, [measures, transpose, tuningKey, capo, notation, shapes, played, strings])
   const tex = useMemo(
     () =>
       toAlphaTex(shifted, {

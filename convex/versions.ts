@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import type { Doc, Id } from './_generated/dataModel'
 import { internalQuery, mutation, query } from './_generated/server'
-import type { QueryCtx } from './_generated/server'
+import type { DatabaseReader, QueryCtx } from './_generated/server'
 import { tabMeasure } from './schema'
 import {
   canEditSong,
@@ -57,7 +57,12 @@ async function libraryCopyOf(
   return personal ? { songId: personal.songId, versionId: personal._id } : null
 }
 
-async function bundle(ctx: any, version: any, song: any, canEdit: boolean) {
+async function bundle(
+  ctx: { db: DatabaseReader },
+  version: Doc<'versions'>,
+  song: Doc<'songs'>,
+  canEdit: boolean,
+) {
   const sections = await ctx.db
     .query('sections')
     .withIndex('by_version', (q: any) => q.eq('versionId', version._id))
@@ -156,12 +161,7 @@ export const updateMeta = mutation({
     const performer = artist?.trim()
     await ctx.db.patch(versionId, {
       ...rest,
-      ...(artist !== undefined
-        ? {
-          artist:
-            performer && performer !== song.artist ? performer : undefined,
-        }
-        : {}),
+      artist: performer,
     })
     return version._id
   },
@@ -223,7 +223,11 @@ export const duplicate = mutation({
     const existing = await libraryCopyOf(ctx, version, identity.subject)
     if (existing) return { ...existing, existing: true, joinedSong: undefined }
 
-    const sameSong = await findSongByTitle(ctx, { userId: identity.subject }, song.title)
+    const sameSong = await findSongByTitle(
+      ctx,
+      { userId: identity.subject },
+      song.title,
+    )
 
     const copySongId =
       sameSong?._id ??

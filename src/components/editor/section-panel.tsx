@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Select } from '@/components/ui/select'
 import type { Notation } from '@/lib/music/pitch'
+import type { VersionShape } from '@/lib/music/shapes'
 import { allTracks, trackOf } from '@/lib/tracks'
 import { m } from '@/paraglide/messages'
 import { ChartEditor, textareaClass } from './chart-editor'
@@ -36,11 +37,13 @@ function PartCard({
   version,
   palette,
   notation,
+  shapes,
 }: {
   part: EditorPart
   version: EditorVersion
   palette: Array<string>
   notation: Notation
+  shapes: Array<VersionShape>
 }) {
   const { mutations, save } = useEditor()
   const [label, setLabel] = useState(part.label)
@@ -173,6 +176,7 @@ function PartCard({
             timeSignature={version.timeSignature}
             bpm={version.bpm}
             notation={notation}
+            shapes={shapes}
           />
         )}
       </div>
@@ -193,6 +197,7 @@ export function SectionPanel({
   version,
   palette,
   notation,
+  shapes,
   onSelect,
 }: {
   entry: EditorEntry
@@ -200,6 +205,7 @@ export function SectionPanel({
   version: EditorVersion
   palette: Array<string>
   notation: Notation
+  shapes: Array<VersionShape>
   onSelect: (id: string) => void
 }) {
   const { mutations, save } = useEditor()
@@ -374,6 +380,7 @@ export function SectionPanel({
             version={version}
             palette={palette}
             notation={notation}
+            shapes={shapes}
           />
         ))}
       </div>

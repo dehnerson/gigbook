@@ -169,6 +169,7 @@ export function VersionEditor({
                   version={version}
                   palette={palette}
                   notation={notation}
+                  shapes={shapes}
                   onSelect={setSelected}
                 />
               ) : (

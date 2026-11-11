@@ -52,9 +52,7 @@ function LibraryPage() {
     if (scope === 'band' && !row.song.bandId) return false
     if (!needle) return true
     return normalize(
-      [row.song.title, ...performersOf(row.versions)].join(
-        ' ',
-      ),
+      [row.song.title, ...performersOf(row.versions)].join(' '),
     ).includes(needle)
   })
 

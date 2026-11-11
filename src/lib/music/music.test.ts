@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, test } from 'vite-plus/test'
 import { displayChord, soundsAs, transposeSymbol } from './chords.ts'
 import {
   chartChords,

@@ -87,15 +87,11 @@ export function SheetHeader({
         <h1 className="text-[2em] leading-tight font-bold tracking-tight text-balance">
           {song.title}
         </h1>
-        <p className="text-[1.05em] text-muted-foreground">
-          {song.subTitle}
-        </p>
+        <p className="text-[1.05em] text-muted-foreground">{song.subTitle}</p>
         <h2 className="text-[1.5em] leading-tight font-semibold tracking-tight text-balance">
           {version.name}
         </h2>
-        <p className="text-[1.02em] text-muted-foreground">
-          {version.artist}
-        </p>
+        <p className="text-[1.02em] text-muted-foreground">{version.artist}</p>
       </div>
       <div className="flex flex-wrap gap-1.5 text-[0.85rem]">
         <Chip label={m.keyShort()}>
@@ -143,6 +139,7 @@ function SectionBlock({
   badge,
   version,
   settings,
+  shapes,
   visibleTrackIds,
   highlighted,
 }: {
@@ -151,6 +148,7 @@ function SectionBlock({
   badge?: string
   version: SheetVersion
   settings: SheetSettings
+  shapes: Array<ChordShapeOverride>
   visibleTrackIds?: Array<string>
   highlighted: boolean
 }) {
@@ -228,8 +226,8 @@ function SectionBlock({
                   />
                 ) : null}
                 {part.kind === 'chart' &&
-                  part.chartBody &&
-                  (layers.lyrics || layers.chords) ? (
+                part.chartBody &&
+                (layers.lyrics || layers.chords) ? (
                   <ChartPart body={part.chartBody} settings={settings} />
                 ) : null}
                 {part.kind === 'tab' && part.measures?.length ? (
@@ -239,6 +237,7 @@ function SectionBlock({
                     timeSignature={version.timeSignature}
                     bpm={version.bpm}
                     settings={settings}
+                    shapes={shapes}
                   />
                 ) : null}
               </div>
@@ -284,26 +283,26 @@ export function SongSheet({
   const blocks =
     layout === 'compact'
       ? timeline.map((entry) => {
-        const total = Math.max(1, entry.repeat ?? 1)
-        const highlighted = highlightBlock === entry.entryId
-        return {
-          id: entry.entryId,
-          entry,
-          highlighted,
-          badge:
-            total === 1
-              ? undefined
-              : highlighted && highlightEntryId
-                ? `${passOf(highlightEntryId)}/${total}`
-                : `×${total}`,
-        }
-      })
+          const total = Math.max(1, entry.repeat ?? 1)
+          const highlighted = highlightBlock === entry.entryId
+          return {
+            id: entry.entryId,
+            entry,
+            highlighted,
+            badge:
+              total === 1
+                ? undefined
+                : highlighted && highlightEntryId
+                  ? `${passOf(highlightEntryId)}/${total}`
+                  : `×${total}`,
+          }
+        })
       : sheetPasses(timeline).map((item) => ({
-        id: item.id,
-        entry: item.entry,
-        highlighted: highlightBlock === item.id,
-        badge: item.total > 1 ? `${item.pass}/${item.total}` : undefined,
-      }))
+          id: item.id,
+          entry: item.entry,
+          highlighted: highlightBlock === item.id,
+          badge: item.total > 1 ? `${item.pass}/${item.total}` : undefined,
+        }))
   return (
     <article
       className={cn('space-y-8', className)}
@@ -336,6 +335,7 @@ export function SongSheet({
               badge={block.badge}
               version={version}
               settings={settings}
+              shapes={shapes}
               visibleTrackIds={visibleTrackIds}
               highlighted={block.highlighted}
             />

@@ -201,7 +201,11 @@ export const save = mutation({
       if (!song) fail('NOT_FOUND')
       await canEditSong(ctx, song)
     } else {
-      const existing = await findSongByTitle(ctx, { userId: identity.subject }, output.title)
+      const existing = await findSongByTitle(
+        ctx,
+        { userId: identity.subject },
+        output.title,
+      )
 
       if (existing) return { existing: existing._id, title: existing.title }
 

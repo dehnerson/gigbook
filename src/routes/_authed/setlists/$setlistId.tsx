@@ -203,8 +203,7 @@ function SetlistPage() {
                     {entry.song.title}
                   </Link>
                   <p className="truncate text-sm text-muted-foreground">
-                    {entry.version.artist ?? entry.song.artist} ·{' '}
-                    {entry.version.name}
+                    {entry.version.artist} · {entry.version.name}
                   </p>
                 </div>
                 <span className="hidden font-mono text-base font-semibold text-chord sm:inline">
@@ -319,9 +318,7 @@ function SongPicker({
   const [query, setQuery] = useState('')
   const needle = query.trim().toLowerCase()
   const rows = catalog.data.filter(
-    (row) =>
-      !needle ||
-      `${row.song.title} ${row.song.artist}`.toLowerCase().includes(needle),
+    (row) => !needle || `${row.song.title}`.toLowerCase().includes(needle),
   )
 
   return (
@@ -379,7 +376,7 @@ function SongPicker({
                       {row.song.title}
                     </span>
                     <span className="block truncate text-xs text-muted-foreground">
-                      {row.song.artist}
+                      {version.artist}
                       {row.versions.length > 1 ? ` · ${version.name}` : ''}
                     </span>
                   </span>

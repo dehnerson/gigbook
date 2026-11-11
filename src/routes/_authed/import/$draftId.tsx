@@ -370,13 +370,14 @@ function ReadyReview({ draft, output }: { draft: Draft; output: Output }) {
         <SongSheet
           version={{
             name: m.importPreview(),
+            artist: artist,
             concertKey: output.concertKey,
             timeSignature: output.timeSignature,
             bpm: output.bpm,
             tuning: output.tuning,
             suggestedCapo: output.suggestedCapo,
           }}
-          song={{ title, artist }}
+          song={{ title }}
           timeline={previewTimeline(output)}
           shapes={[]}
           settings={{

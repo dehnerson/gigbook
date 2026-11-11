@@ -102,9 +102,18 @@ export const create = mutation({
     }
     const title = args.title.trim() || 'Untitled'
     const subTitle = args.subTitle?.trim() || undefined
-    const existing = await findSongByTitle(ctx, { userId: identity.subject, bandId: args.bandId }, title)
+    const existing = await findSongByTitle(
+      ctx,
+      { userId: identity.subject, bandId: args.bandId },
+      title,
+    )
 
-    if (existing) return { existing: existing._id, title: existing.title, subTitle: existing.subTitle }
+    if (existing)
+      return {
+        existing: existing._id,
+        title: existing.title,
+        subTitle: existing.subTitle,
+      }
 
     const songId = await insertSong(ctx, {
       title,
@@ -155,14 +164,21 @@ export const similar = query({
     const title = args.title.trim()
 
     if (title.length < 2) return []
-    if (args.bandId && !(await membership(ctx.db, args.bandId, identity.subject))) return []
+    if (
+      args.bandId &&
+      !(await membership(ctx.db, args.bandId, identity.subject))
+    )
+      return []
 
     const bandId = args.bandId
     const matches = await ctx.db
       .query('songs')
       .withSearchIndex('search_title', (q) =>
-        bandId ? q.search('title', title).eq('bandId', bandId) : q.search('title', title).eq('createdBy', identity.subject)
-      ).take(20)
+        bandId
+          ? q.search('title', title).eq('bandId', bandId)
+          : q.search('title', title).eq('createdBy', identity.subject),
+      )
+      .take(20)
 
     return matches
       .filter((song) => (bandId ? true : !song.bandId))

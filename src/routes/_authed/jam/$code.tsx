@@ -219,8 +219,7 @@ function JamRoomPage() {
               {bundle.data ? (
                 <>
                   <span className="truncate">
-                    {bundle.data.version.artist ?? bundle.data.song.artist} ·{' '}
-                    {bundle.data.version.name}
+                    {bundle.data.version.artist} · {bundle.data.version.name}
                   </span>
                   <Suspense fallback={null}>
                     <JamYourVersion

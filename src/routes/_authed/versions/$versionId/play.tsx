@@ -160,7 +160,7 @@ function PlayPage() {
           <div className="min-w-0 flex-1">
             <div className="truncate font-semibold">{song.title}</div>
             <div className="truncate text-xs text-muted-foreground">
-              {version.artist ?? song.artist} · {version.name}
+              {version.artist} · {version.name}
             </div>
           </div>
           {search.setlist && entries.length > 0 ? (

@@ -216,10 +216,7 @@ export function DetailsPanel({
             }}
           />
         </Field>
-        <Field
-          label={m.artist()}
-          className="sm:col-span-2"
-        >
+        <Field label={m.artist()} className="sm:col-span-2">
           <Input
             value={artist}
             placeholder={m.artistPlaceholder()}

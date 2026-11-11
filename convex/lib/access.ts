@@ -4,6 +4,8 @@ import type {
   UserIdentity,
 } from 'convex/server'
 import { fail } from './errors'
+import type { Id } from '../_generated/dataModel'
+import type { DatabaseReader } from '../_generated/server'
 
 type Db = GenericDatabaseReader<any> | GenericDatabaseWriter<any>
 
@@ -40,7 +42,10 @@ export async function canEditSong(ctx: { db: Db; auth: any }, song: any) {
   return identity
 }
 
-export async function songOfVersion(ctx: { db: Db }, version: any) {
+export async function songOfVersion(
+  ctx: { db: DatabaseReader },
+  version: { songId: Id<'songs'> },
+) {
   const song = await ctx.db.get(version.songId)
   if (!song) fail('NOT_FOUND')
   return song

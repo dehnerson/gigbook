@@ -54,13 +54,13 @@ export function NewSongDialog({
   const matches =
     similar.length === 0 && duplicate
       ? [
-        {
-          _id: duplicate.existing,
-          title: duplicate.title,
-          subTitle: duplicate.subTitle,
-          exact: true,
-        },
-      ]
+          {
+            _id: duplicate.existing,
+            title: duplicate.title,
+            subTitle: duplicate.subTitle,
+            exact: true,
+          },
+        ]
       : similar
   const exact = matches.find((song) => song.exact)
 
@@ -113,7 +113,11 @@ export function NewSongDialog({
             })
             if (created.versionId) await finish(created.versionId)
             else if (created.existing)
-              setDuplicate({ existing: created.existing, title: created.title, subTitle: created.subTitle })
+              setDuplicate({
+                existing: created.existing,
+                title: created.title,
+                subTitle: created.subTitle,
+              })
           })
         }}
       >
