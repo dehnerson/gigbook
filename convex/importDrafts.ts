@@ -12,9 +12,17 @@ import type { Doc, Id } from './_generated/dataModel'
 import type { MutationCtx } from './_generated/server'
 import { aiProvider, importOutput } from './schema'
 import { aiErrorCode, languageModel } from './lib/ai'
-import { canEditSong, requireIdentity, songOfVersion } from './lib/access'
+import {
+  canEditBand,
+  canEditVersion,
+  canReadSong,
+  findVisibleSong,
+  openGate,
+  requireIdentity,
+  songOfVersion,
+} from './lib/access'
 import { fail } from './lib/errors'
-import { findSongByTitle, insertSong, uniqueVersionName } from './lib/songs'
+import { insertSong, uniqueVersionName } from './lib/songs'
 import { meaningfulLabel } from '../src/lib/tracks'
 import { readAiKey } from './users'
 
@@ -28,7 +36,7 @@ async function editableTarget(
   if (!versionId) return null
   const version = await ctx.db.get(versionId)
   if (!version) fail('NOT_FOUND')
-  await canEditSong(ctx, await songOfVersion(ctx, version))
+  await canEditVersion(ctx, version)
   return version
 }
 
@@ -69,6 +77,7 @@ export const create = mutation({
     sourceText: v.optional(v.string()),
     storageId: v.optional(v.id('_storage')),
     targetVersionId: v.optional(v.id('versions')),
+    homeBandId: v.optional(v.id('bands')),
     youtubeId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -80,6 +89,7 @@ export const create = mutation({
     )
       fail('MODEL_UNSUPPORTED')
     await editableTarget(ctx, args.targetVersionId)
+    if (args.homeBandId) await canEditBand(ctx, args.homeBandId)
     await checkAiQuota(ctx, identity.subject)
     const text = args.sourceText?.slice(0, 40_000)
     const draftId = await ctx.db.insert('importDrafts', {
@@ -89,6 +99,7 @@ export const create = mutation({
       sourceText: text,
       storageId: args.storageId,
       targetVersionId: args.targetVersionId,
+      homeBandId: args.homeBandId,
       youtubeId: args.youtubeId,
       mapping: [],
       warnings: [],
@@ -105,7 +116,17 @@ export const get = query({
     const identity = await requireIdentity(ctx)
     const draft = await ctx.db.get(args.draftId)
     if (!draft || draft.ownerId !== identity.subject) fail('NOT_FOUND')
-    return draft
+    const home = draft.homeBandId ? await ctx.db.get(draft.homeBandId) : null
+    const target = draft.targetVersionId
+      ? await ctx.db.get(draft.targetVersionId)
+      : null
+    const targetBand = target?.bandId ? await ctx.db.get(target.bandId) : null
+    return {
+      ...draft,
+      homeBandName: home?.name ?? null,
+      targetBandName: targetBand?.name ?? null,
+      markBandId: target ? (target.bandId ?? null) : (draft.homeBandId ?? null),
+    }
   },
 })
 
@@ -196,33 +217,32 @@ export const save = mutation({
     }
 
     let song: Doc<'songs'> | null
+    const owner = {
+      userId: identity.subject,
+      bandId: draft.homeBandId,
+    }
     if (args.intoSongId) {
       song = await ctx.db.get(args.intoSongId)
       if (!song) fail('NOT_FOUND')
-      await canEditSong(ctx, song)
+      await canReadSong(ctx, song)
     } else {
-      const existing = await findSongByTitle(
-        ctx,
-        { userId: identity.subject },
-        output.title,
-      )
-
+      if (draft.homeBandId) await canEditBand(ctx, draft.homeBandId)
+      const gate = await openGate(ctx, identity.subject)
+      const existing = await findVisibleSong(ctx, gate, output.title)
       if (existing) return { existing: existing._id, title: existing.title }
 
       const songId = await insertSong(ctx, {
         title: output.title,
         createdBy: identity.subject,
       })
-
       song = await ctx.db.get(songId)
       if (!song) fail('NOT_FOUND')
     }
     const songId = song._id
     const versionId = await ctx.db.insert('versions', {
       songId,
-      name: await uniqueVersionName(ctx, songId, 'Imported'),
+      name: await uniqueVersionName(ctx, songId, 'Imported', owner),
       artist: versionArtist(output.artist),
-      bandId: song.bandId,
       concertKey: output.concertKey,
       timeSignature: output.timeSignature,
       bpm: output.bpm,
@@ -230,6 +250,7 @@ export const save = mutation({
       suggestedCapo: output.suggestedCapo,
       timeline: [],
       createdBy: identity.subject,
+      ...(draft.homeBandId ? { bandId: draft.homeBandId } : {}),
     })
     const timeline = []
     for (const section of output.sections) {

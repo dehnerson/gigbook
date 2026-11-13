@@ -159,12 +159,14 @@ export function DetailsPanel({
   notation,
   songTitle,
   isOnlyVersion,
+  bandId = null,
 }: {
   version: EditorVersion
   timeline: Array<EditorEntry>
   notation: Notation
   songTitle: string
   isOnlyVersion: boolean
+  bandId?: string | null
 }) {
   const { mutations, save } = useEditor()
   const [name, setName] = useState(version.name)
@@ -350,6 +352,7 @@ export function DetailsPanel({
         songTitle={songTitle}
         isOnlyVersion={isOnlyVersion}
         redirectToSong
+        bandId={bandId}
       />
     </div>
   )

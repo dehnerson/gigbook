@@ -1,14 +1,15 @@
 import { convexQuery } from '@convex-dev/react-query'
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation } from 'convex/react'
 import { MusicIcon, PlusIcon, UsersIcon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '../../../../convex/_generated/api'
 import { Chip, Monogram } from '@/components/app/chip'
+import { CollectionCard } from '@/components/app/collection-card'
 import { EmptyState } from '@/components/app/empty-state'
 import { Field } from '@/components/app/field'
-import { PageHeader } from '@/components/app/page-header'
+import { HeaderButton, PageHeader } from '@/components/app/page-header'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -38,10 +39,10 @@ function BandsPage() {
         title={m.bands()}
         subtitle={m.bandsHint()}
         actions={
-          <Button onPress={() => setOpen(true)}>
+          <HeaderButton onPress={() => setOpen(true)}>
             <PlusIcon />
             {m.createBand()}
-          </Button>
+          </HeaderButton>
         }
       />
       <NewBandDialog isOpen={open} onOpenChange={setOpen} />
@@ -51,35 +52,32 @@ function BandsPage() {
           title={m.noBands()}
           description={m.noBandsHint()}
           action={
-            <Button onPress={() => setOpen(true)}>
+            <HeaderButton onPress={() => setOpen(true)}>
               <PlusIcon />
               {m.createBand()}
-            </Button>
+            </HeaderButton>
           }
         />
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {bands.data.map((row) => (
-            <li
+            <CollectionCard
               key={row.band._id}
-              className="relative flex flex-col gap-4 rounded-2xl border bg-card p-5 transition-colors hover:border-foreground/15"
-            >
-              <div className="flex items-start justify-between gap-3">
+              to="/bands/$bandId"
+              params={{ bandId: row.band._id }}
+              title={row.band.name}
+              leading={
                 <Monogram text={row.band.name} className="size-12 text-base" />
+              }
+              trailing={
                 <Chip
                   tone={row.membership.role === 'owner' ? 'primary' : 'default'}
                 >
                   {roleName(row.membership.role)}
                 </Chip>
-              </div>
-              <Link
-                to="/bands/$bandId"
-                params={{ bandId: row.band._id }}
-                className="truncate text-lg font-semibold outline-none after:absolute after:inset-0 after:rounded-2xl focus-visible:after:ring-2 focus-visible:after:ring-ring"
-              >
-                {row.band.name}
-              </Link>
-              <div className="flex gap-4 text-sm text-muted-foreground">
+              }
+            >
+              <div className="flex gap-4">
                 <span className="inline-flex items-center gap-1.5">
                   <UsersIcon className="size-4" />
                   {m.memberCount({ count: String(row.memberCount) })}
@@ -89,7 +87,7 @@ function BandsPage() {
                   {m.songCount({ count: String(row.songCount) })}
                 </span>
               </div>
-            </li>
+            </CollectionCard>
           ))}
         </ul>
       )}

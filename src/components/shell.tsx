@@ -96,23 +96,23 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </header>
 
       <div className="stage-glow min-h-screen lg:pl-64">
-        <main className="mx-auto w-full max-w-6xl px-4 pt-6 pb-28 sm:px-8 lg:pt-10 lg:pb-16">
+        <main className="mx-auto w-full min-w-0 max-w-6xl px-4 pt-6 pb-28 sm:px-8 lg:pt-10 lg:pb-16">
           {children}
         </main>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-9000 flex justify-around border-t bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-9000 flex min-w-0 justify-around border-t bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg lg:hidden">
         {links.map((link) => (
           <Link
             key={link.to}
             to={link.to}
             activeOptions={{ exact: 'exact' in link }}
             className={cn(
-              'flex flex-col items-center gap-1 py-2.5 text-[0.7rem] font-medium text-muted-foreground transition-colors data-[status=active]:text-primary',
+              'flex min-w-0 flex-1 flex-col items-center gap-1 px-1 py-2.5 text-center text-[0.7rem] font-medium text-muted-foreground transition-colors data-[status=active]:text-primary',
             )}
           >
-            <link.icon className="size-5" />
-            {link.label()}
+            <link.icon className="size-5 shrink-0" />
+            <span className="max-w-full truncate">{link.label()}</span>
           </Link>
         ))}
       </nav>

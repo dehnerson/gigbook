@@ -2,6 +2,7 @@ import { createLink } from '@tanstack/react-router'
 import { cn } from 'cn'
 import { ChevronRightIcon } from 'lucide-react'
 import * as React from 'react'
+import { Button, ButtonLink } from '@/components/ui/button'
 
 const CrumbAnchor = React.forwardRef<
   HTMLAnchorElement,
@@ -19,6 +20,69 @@ const CrumbAnchor = React.forwardRef<
 
 export const Crumb = createLink(CrumbAnchor)
 
+export function Breadcrumbs({
+  children,
+  className,
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
+  const crumbs = React.Children.toArray(children)
+  if (crumbs.length === 0) return null
+  return (
+    <nav
+      aria-label="Breadcrumb"
+      className={cn(
+        'flex min-w-0 items-center gap-1 text-sm [&>*]:min-w-0',
+        className,
+      )}
+    >
+      {crumbs.map((crumb, index) => (
+        <React.Fragment key={index}>
+          {index > 0 ? (
+            <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground/60" />
+          ) : null}
+          {crumb}
+        </React.Fragment>
+      ))}
+    </nav>
+  )
+}
+
+export function HeaderActions({
+  children,
+  className,
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div
+      className={cn(
+        'flex min-w-0 max-w-full flex-wrap items-center gap-2',
+        className,
+      )}
+    >
+      {children}
+    </div>
+  )
+}
+
+type HeaderSize = 'lg' | 'icon-lg'
+
+export function HeaderButton({
+  size = 'lg',
+  ...props
+}: Omit<React.ComponentProps<typeof Button>, 'size'> & { size?: HeaderSize }) {
+  return <Button size={size} {...props} />
+}
+
+function HeaderButtonLinkImpl(props: React.ComponentProps<typeof ButtonLink>) {
+  return <ButtonLink {...props} size={props.size ?? 'lg'} />
+}
+
+export const HeaderButtonLink = HeaderButtonLinkImpl as typeof ButtonLink
+
 export function PageHeader({
   title,
   subtitle,
@@ -34,25 +98,10 @@ export function PageHeader({
   actions?: React.ReactNode
   className?: string
 }) {
-  const crumbs = React.Children.toArray(breadcrumbs)
   return (
-    <header className={cn('mb-8 space-y-3', className)}>
-      {crumbs.length > 0 ? (
-        <nav
-          aria-label="Breadcrumb"
-          className="flex min-w-0 items-center gap-1 text-sm"
-        >
-          {crumbs.map((crumb, index) => (
-            <React.Fragment key={index}>
-              {index > 0 ? (
-                <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground/60" />
-              ) : null}
-              {crumb}
-            </React.Fragment>
-          ))}
-        </nav>
-      ) : null}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <header className={cn('mb-8 min-w-0 space-y-3', className)}>
+      <Breadcrumbs>{breadcrumbs}</Breadcrumbs>
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-4">
         <div className="min-w-0 space-y-1">
           {eyebrow ? (
             <div className="text-xs font-semibold tracking-widest text-primary uppercase">
@@ -66,9 +115,7 @@ export function PageHeader({
             <div className="text-base text-muted-foreground">{subtitle}</div>
           ) : null}
         </div>
-        {actions ? (
-          <div className="flex flex-wrap items-center gap-2">{actions}</div>
-        ) : null}
+        {actions ? <HeaderActions>{actions}</HeaderActions> : null}
       </div>
     </header>
   )

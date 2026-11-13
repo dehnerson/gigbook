@@ -5,12 +5,23 @@ import { toast } from 'sonner'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 import { messageFor } from '@/lib/errors'
+import { songSearch } from '@/lib/song-context'
 import { m } from '@/paraglide/messages'
+
+async function copyShareLink(token: string) {
+  await navigator.clipboard.writeText(
+    `${window.location.origin}/share/${encodeURIComponent(token)}`,
+  )
+}
 
 export function useVersionActions() {
   const fork = useMutation(api.versions.duplicate)
+  const copyTo = useMutation(api.versions.copyTo)
+  const moveTo = useMutation(api.versions.moveTo)
   const copy = useMutation(api.versions.copy)
   const ensureShare = useMutation(api.versions.ensureShare)
+  const rotateShare = useMutation(api.versions.rotateShare)
+  const revokeShare = useMutation(api.versions.revokeShare)
   const saveKey = useMutation(api.versions.saveWrittenKey)
   const navigate = useNavigate()
 
@@ -28,9 +39,59 @@ export function useVersionActions() {
         return null
       }
     },
-    fork: async (versionId: Id<'versions'>) => {
+    copyToLibrary: async (versionId: Id<'versions'>) => {
       try {
-        const forked = await fork({ versionId })
+        const copied = await copyTo({ versionId })
+        if (copied.existing) toast.info(m.alreadyInLibrary())
+        else toast.success(m.madeMyCopy())
+        await navigate({
+          to: '/versions/$versionId',
+          params: { versionId: copied.versionId },
+        })
+      } catch (error) {
+        toast.error(messageFor(error))
+      }
+    },
+    copyToBand: async (versionId: Id<'versions'>, bandId: Id<'bands'>) => {
+      try {
+        const copied = await copyTo({ versionId, bandId })
+        if (copied.existing) toast.info(m.alreadyInLibrary())
+        else toast.success(m.copiedToBand())
+        await navigate({
+          to: '/versions/$versionId',
+          params: { versionId: copied.versionId },
+        })
+      } catch (error) {
+        toast.error(messageFor(error))
+      }
+    },
+    moveToLibrary: async (versionId: Id<'versions'>) => {
+      try {
+        const moved = await moveTo({ versionId })
+        toast.success(m.movedChart())
+        await navigate({
+          to: '/versions/$versionId',
+          params: { versionId: moved.versionId },
+        })
+      } catch (error) {
+        toast.error(messageFor(error))
+      }
+    },
+    moveToBand: async (versionId: Id<'versions'>, bandId: Id<'bands'>) => {
+      try {
+        const moved = await moveTo({ versionId, bandId })
+        toast.success(m.movedChart())
+        await navigate({
+          to: '/versions/$versionId',
+          params: { versionId: moved.versionId },
+        })
+      } catch (error) {
+        toast.error(messageFor(error))
+      }
+    },
+    fork: async (versionId: Id<'versions'>, token?: string) => {
+      try {
+        const forked = await fork({ versionId, token })
         if (forked.existing) toast.info(m.alreadyInLibrary())
         else if (forked.joinedSong)
           toast.success(m.addedAsVersion({ title: forked.joinedSong }))
@@ -38,6 +99,7 @@ export function useVersionActions() {
         await navigate({
           to: '/songs/$songId',
           params: { songId: forked.songId },
+          search: songSearch(),
         })
       } catch (error) {
         toast.error(messageFor(error))
@@ -45,11 +107,24 @@ export function useVersionActions() {
     },
     share: async (versionId: Id<'versions'>) => {
       try {
-        const token = await ensureShare({ versionId })
-        await navigator.clipboard.writeText(
-          `${window.location.origin}/share/${token}`,
-        )
+        await copyShareLink(await ensureShare({ versionId }))
         toast.success(m.linkCopied())
+      } catch (error) {
+        toast.error(messageFor(error))
+      }
+    },
+    rotateShare: async (versionId: Id<'versions'>) => {
+      try {
+        await copyShareLink(await rotateShare({ versionId }))
+        toast.success(m.newLinkCopied())
+      } catch (error) {
+        toast.error(messageFor(error))
+      }
+    },
+    revokeShare: async (versionId: Id<'versions'>) => {
+      try {
+        await revokeShare({ versionId })
+        toast.success(m.shareStopped())
       } catch (error) {
         toast.error(messageFor(error))
       }

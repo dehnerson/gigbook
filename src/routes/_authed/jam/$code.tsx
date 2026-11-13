@@ -18,6 +18,8 @@ import { toast } from 'sonner'
 import { api } from '../../../../convex/_generated/api'
 import type { Id } from '../../../../convex/_generated/dataModel'
 import { Chip, initials } from '@/components/app/chip'
+import { ContextMark } from '@/components/app/context-mark'
+import { UpNext } from '@/components/app/up-next'
 import { EmptyState } from '@/components/app/empty-state'
 import {
   DockDivider,
@@ -38,6 +40,7 @@ import {
   SongSheet,
   useSectionCursor,
   VersionCaption,
+  versionLine,
 } from '@/components/sheet/song-sheet'
 import type { SheetEntry } from '@/components/sheet/types'
 import {
@@ -190,6 +193,12 @@ function JamRoomPage() {
       layout={prefs.layout}
       versionId={bundle.data.version._id}
       canEdit={bundle.data.canEdit}
+      mark={
+        <ContextMark
+          bandId={bundle.data.ownerBandId}
+          name={bundle.data.ownerName}
+        />
+      }
     />
   ) : null
 
@@ -203,7 +212,7 @@ function JamRoomPage() {
         />
       </Suspense>
       <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-5xl items-center gap-2 px-3 py-2 sm:gap-3">
+        <div className="mx-auto flex min-w-0 max-w-5xl items-center gap-2 px-3 py-2 sm:gap-3">
           <ButtonLink
             variant="ghost"
             size="icon"
@@ -213,10 +222,18 @@ function JamRoomPage() {
             <ArrowLeftIcon />
           </ButtonLink>
           <div className="min-w-0 flex-1">
-            <div className="truncate font-semibold">
-              {bundle.data?.song.title ?? m.jam()}
+            <div className="flex min-w-0 items-center gap-2 font-semibold">
+              {bundle.data ? (
+                <ContextMark
+                  bandId={bundle.data.ownerBandId}
+                  name={bundle.data.ownerName}
+                />
+              ) : null}
+              <span className="truncate">
+                {bundle.data?.song.title ?? m.jam()}
+              </span>
             </div>
-            <div className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
+            <div className="flex min-w-0 items-center gap-1.5 overflow-hidden text-xs text-muted-foreground">
               {bundle.data ? (
                 <>
                   <VersionCaption
@@ -310,7 +327,7 @@ function JamRoomPage() {
         />
       </Suspense>
 
-      <main className="mx-auto max-w-5xl px-5 pt-6 pb-[70vh] sm:px-8">
+      <main className="mx-auto min-w-0 max-w-5xl px-5 pt-6 pb-[70vh] sm:px-8">
         {!room.versionId ? (
           <EmptyState
             icon={MusicIcon}
@@ -324,7 +341,7 @@ function JamRoomPage() {
                     value={null}
                     notation={notation}
                     placeholder={m.searchSongs()}
-                    className="w-72"
+                    className="w-full max-w-72"
                   />
                 </Suspense>
               ) : undefined
@@ -346,21 +363,18 @@ function JamRoomPage() {
           </div>
         )}
         {isHost && upNext ? (
-          <button
-            type="button"
+          <UpNext
+            title={upNext.song.title}
+            versionName={upNext.version.name}
+            artist={upNext.version.artist}
+            mark={
+              <ContextMark
+                bandId={upNext.ownerBandId}
+                name={upNext.ownerName}
+              />
+            }
             onClick={() => void advance({ code }).catch(fail)}
-            className="mt-12 flex w-full items-center justify-between gap-4 rounded-2xl border bg-card p-5 text-left transition-colors hover:border-primary/50"
-          >
-            <span>
-              <span className="block text-xs font-semibold tracking-widest text-primary uppercase">
-                {m.upNext()}
-              </span>
-              <span className="mt-1 block text-lg font-semibold">
-                {upNext.song.title}
-              </span>
-            </span>
-            <SkipForwardIcon className="size-5 text-muted-foreground" />
-          </button>
+          />
         ) : null}
       </main>
 
@@ -598,7 +612,15 @@ function JamSongCombo({
         row.versions.map((version) => ({
           id: version._id,
           label: row.song.title,
-          description: `${row.versions.length > 1 ? `${version.name} · ` : ''}${displayChord(version.concertKey, 0, 0, notation)}`,
+          description: `${versionLine(version.name, version.artist)} · ${displayChord(version.concertKey, 0, 0, notation)}`,
+          textValue: [
+            row.song.title,
+            row.song.subTitle,
+            version.name,
+            version.artist,
+          ]
+            .filter(Boolean)
+            .join(' '),
         })),
       )}
       className={className}

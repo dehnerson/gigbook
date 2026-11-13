@@ -44,7 +44,7 @@ export function ChordStrip({
   })
   if (items.length === 0) return null
   return (
-    <div className={cn('-mx-1 overflow-x-auto pb-1', className)}>
+    <div className={cn('-mx-1 max-w-full overflow-x-auto pb-1', className)}>
       <div className="flex w-max gap-2 px-1">
         {items.map((item) => {
           if (!item.diagram)

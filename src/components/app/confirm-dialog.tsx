@@ -11,6 +11,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 
+// Confirm when the record itself is deleted. Taking an item off a list
+// belongs in a menu and should not use this dialog.
 export function ConfirmDialog({
   isOpen,
   onOpenChange,

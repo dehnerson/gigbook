@@ -1,10 +1,12 @@
 import { v } from 'convex/values'
 import type { Infer } from 'convex/values'
 import { internal } from './_generated/api'
-import type { Doc, Id } from './_generated/dataModel'
+import type { Doc } from './_generated/dataModel'
 import { internalMutation } from './_generated/server'
 import type { MutationCtx } from './_generated/server'
-import { deleteVersionTree } from './lib/cascade'
+import { deleteSetlist } from './lib/cascade'
+import { handBand, successor } from './lib/membership'
+import { deleteVersion, removeBand } from './lib/ownership'
 
 const BATCH = 25
 
@@ -19,33 +21,6 @@ const phase = v.union(
 
 type Phase = Infer<typeof phase>
 
-async function deleteSong(ctx: MutationCtx, songId: Id<'songs'>) {
-  const versions = await ctx.db
-    .query('versions')
-    .withIndex('by_song', (q) => q.eq('songId', songId))
-    .collect()
-  for (const version of versions) await deleteVersionTree(ctx, version._id)
-  await ctx.db.delete(songId)
-}
-
-async function deleteSetlist(ctx: MutationCtx, setlistId: Id<'setlists'>) {
-  const items = await ctx.db
-    .query('setlistItems')
-    .withIndex('by_setlist', (q) => q.eq('setlistId', setlistId))
-    .collect()
-  for (const item of items) await ctx.db.delete(item._id)
-  await ctx.db.delete(setlistId)
-}
-
-function successor(members: Array<Doc<'bandMemberships'>>) {
-  const byAge = [...members].sort((a, b) => a._creationTime - b._creationTime)
-  return (
-    byAge.find((member) => member.role === 'owner') ??
-    byAge.find((member) => member.role === 'editor') ??
-    byAge.at(0)
-  )
-}
-
 async function leaveBand(
   ctx: MutationCtx,
   row: Doc<'bandMemberships'>,
@@ -57,42 +32,11 @@ async function leaveBand(
       .withIndex('by_band', (q) => q.eq('bandId', row.bandId))
       .collect()
   ).filter((member) => member.userId !== clerkUserId)
-  await ctx.db.delete(row._id)
-
   const heir = successor(others)
-  if (!heir) {
-    await ctx.scheduler.runAfter(0, internal.accountCleanup.deleteBand, {
-      bandId: row.bandId,
-    })
-    return
-  }
-  if (heir.role !== 'owner') await ctx.db.patch(heir._id, { role: 'owner' })
-  const band = await ctx.db.get(row.bandId)
-  if (band?.createdBy === clerkUserId)
-    await ctx.db.patch(band._id, { createdBy: heir.userId })
-
-  const songs = await ctx.db
-    .query('songs')
-    .withIndex('by_band', (q) => q.eq('bandId', row.bandId))
-    .collect()
-  for (const song of songs) {
-    if (song.createdBy === clerkUserId)
-      await ctx.db.patch(song._id, { createdBy: heir.userId })
-    const versions = await ctx.db
-      .query('versions')
-      .withIndex('by_song', (q) => q.eq('songId', song._id))
-      .collect()
-    for (const version of versions)
-      if (version.createdBy === clerkUserId)
-        await ctx.db.patch(version._id, { createdBy: heir.userId })
-  }
-  const setlists = await ctx.db
-    .query('setlists')
-    .withIndex('by_band', (q) => q.eq('bandId', row.bandId))
-    .collect()
-  for (const setlist of setlists)
-    if (setlist.ownerId === clerkUserId)
-      await ctx.db.patch(setlist._id, { ownerId: heir.userId })
+  if (!heir) return false
+  await handBand(ctx, row.bandId, clerkUserId, heir)
+  await ctx.db.delete(row._id)
+  return true
 }
 
 const steps: Record<
@@ -105,22 +49,25 @@ const steps: Record<
       .withIndex('by_user', (q) => q.eq('userId', clerkUserId))
       .first()
     if (!row) return 'songs'
-    await leaveBand(ctx, row, clerkUserId)
+    const handed = await leaveBand(ctx, row, clerkUserId)
+    if (!handed) await removeBand(ctx, row.bandId)
     return 'bands'
   },
   songs: async (ctx, clerkUserId) => {
-    const songs = await ctx.db
-      .query('songs')
-      .withIndex('by_creator', (q) => q.eq('createdBy', clerkUserId))
-      .filter((q) => q.eq(q.field('bandId'), undefined))
-      .take(BATCH)
-    for (const song of songs) await deleteSong(ctx, song._id)
-    return songs.length === BATCH ? 'songs' : 'setlists'
+    const versions = (
+      await ctx.db
+        .query('versions')
+        .withIndex('by_creator', (q) => q.eq('createdBy', clerkUserId))
+        .collect()
+    ).filter((version) => !version.bandId)
+    const batch = versions.slice(0, BATCH)
+    for (const version of batch) await deleteVersion(ctx, version._id)
+    return batch.length === BATCH ? 'songs' : 'setlists'
   },
   setlists: async (ctx, clerkUserId) => {
     const setlists = await ctx.db
       .query('setlists')
-      .withIndex('by_owner', (q) => q.eq('ownerId', clerkUserId))
+      .withIndex('by_creator', (q) => q.eq('createdBy', clerkUserId))
       .filter((q) => q.eq(q.field('bandId'), undefined))
       .take(BATCH)
     for (const setlist of setlists) await deleteSetlist(ctx, setlist._id)
@@ -160,6 +107,12 @@ const steps: Record<
     return drafts.length === BATCH ? 'drafts' : 'user'
   },
   user: async (ctx, clerkUserId) => {
+    const shapes = await ctx.db
+      .query('userChordShapes')
+      .withIndex('by_user', (q) => q.eq('userId', clerkUserId))
+      .take(BATCH)
+    for (const shape of shapes) await ctx.db.delete(shape._id)
+    if (shapes.length === BATCH) return 'user'
     const user = await ctx.db
       .query('users')
       .withIndex('by_clerk', (q) => q.eq('clerkUserId', clerkUserId))
@@ -184,35 +137,5 @@ export const run = internalMutation({
         clerkUserId: args.clerkUserId,
         phase: next,
       })
-  },
-})
-
-export const deleteBand = internalMutation({
-  args: { bandId: v.id('bands') },
-  handler: async (ctx, args) => {
-    const songs = await ctx.db
-      .query('songs')
-      .withIndex('by_band', (q) => q.eq('bandId', args.bandId))
-      .take(BATCH)
-    const setlists =
-      songs.length < BATCH
-        ? await ctx.db
-            .query('setlists')
-            .withIndex('by_band', (q) => q.eq('bandId', args.bandId))
-            .take(BATCH - songs.length)
-        : []
-    for (const song of songs) await deleteSong(ctx, song._id)
-    for (const setlist of setlists) await deleteSetlist(ctx, setlist._id)
-    if (songs.length + setlists.length > 0) {
-      await ctx.scheduler.runAfter(0, internal.accountCleanup.deleteBand, args)
-      return
-    }
-    const members = await ctx.db
-      .query('bandMemberships')
-      .withIndex('by_band', (q) => q.eq('bandId', args.bandId))
-      .collect()
-    for (const member of members) await ctx.db.delete(member._id)
-    const band = await ctx.db.get(args.bandId)
-    if (band) await ctx.db.delete(band._id)
   },
 })

@@ -19,6 +19,7 @@ import { api } from '../../../../convex/_generated/api'
 import type { Id } from '../../../../convex/_generated/dataModel'
 import { ConfirmDialog } from '@/components/app/confirm-dialog'
 import { Field } from '@/components/app/field'
+import { ContextMark } from '@/components/app/context-mark'
 import { Crumb, PageHeader, SectionTitle } from '@/components/app/page-header'
 import { SongSheet } from '@/components/sheet/song-sheet'
 import type { SheetEntry } from '@/components/sheet/types'
@@ -146,7 +147,15 @@ function ReviewPage() {
             {m.review()}
           </span>,
         ]}
-        title={draft.output?.title ?? m.review()}
+        title={
+          <span className="inline-flex items-center gap-3">
+            <ContextMark
+              bandId={draft.markBandId}
+              name={draft.targetBandName ?? draft.homeBandName}
+            />
+            <span>{draft.output?.title ?? m.review()}</span>
+          </span>
+        }
         subtitle={draft.output?.artist}
       />
 
@@ -378,6 +387,12 @@ function ReadyReview({ draft, output }: { draft: Draft; output: Output }) {
             suggestedCapo: output.suggestedCapo,
           }}
           song={{ title }}
+          mark={
+            <ContextMark
+              bandId={draft.markBandId}
+              name={draft.targetBandName ?? draft.homeBandName}
+            />
+          }
           timeline={previewTimeline(output)}
           shapes={[]}
           settings={{

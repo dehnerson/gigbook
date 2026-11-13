@@ -16,6 +16,7 @@ export type SelectOption = {
   id: string
   label: string
   description?: string
+  textValue?: string
   isDisabled?: boolean
 }
 
@@ -50,7 +51,7 @@ function Select({
       placeholder={placeholder}
       isDisabled={isDisabled}
       aria-label={ariaLabel}
-      className={cn('group/select flex flex-col gap-1.5', className)}
+      className={cn('group/select flex min-w-0 flex-col gap-1.5', className)}
     >
       {label ? (
         <Label className="text-sm font-medium text-foreground">{label}</Label>
@@ -61,7 +62,7 @@ function Select({
           triggerClassName,
         )}
       >
-        <SelectValue className="truncate data-placeholder:text-muted-foreground" />
+        <SelectValue className="min-w-0 flex-1 truncate data-placeholder:text-muted-foreground [&_[data-slot=select-description]]:hidden" />
         <ChevronsUpDownIcon className="size-4 shrink-0 text-muted-foreground" />
       </Button>
       <SelectPopover>
@@ -88,7 +89,10 @@ function SelectItem({ option }: { option: SelectOption }) {
   return (
     <ListBoxItem
       id={option.id}
-      textValue={option.label}
+      textValue={
+        option.textValue ??
+        [option.label, option.description].filter(Boolean).join(' ')
+      }
       isDisabled={option.isDisabled}
       className="group/item relative flex cursor-default flex-col rounded-md py-1.5 pr-8 pl-2 text-sm outline-none select-none data-disabled:opacity-50 data-focused:bg-accent data-focused:text-accent-foreground"
     >
@@ -96,7 +100,10 @@ function SelectItem({ option }: { option: SelectOption }) {
         <>
           <span className="truncate">{option.label}</span>
           {option.description ? (
-            <span className="truncate text-xs text-muted-foreground">
+            <span
+              data-slot="select-description"
+              className="truncate text-xs text-muted-foreground"
+            >
               {option.description}
             </span>
           ) : null}

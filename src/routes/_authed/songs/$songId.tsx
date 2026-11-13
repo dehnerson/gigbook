@@ -1,37 +1,23 @@
 import { convexQuery } from '@convex-dev/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation } from 'convex/react'
-import {
-  BookOpenIcon,
-  CopyIcon,
-  EllipsisIcon,
-  FileMusicIcon,
-  PencilIcon,
-  PlayIcon,
-  PlusIcon,
-  Share2Icon,
-  Trash2Icon,
-  UsersIcon,
-} from 'lucide-react'
+import { EllipsisIcon, FileMusicIcon, PlayIcon, PlusIcon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '../../../../convex/_generated/api'
 import type { Doc, Id } from '../../../../convex/_generated/dataModel'
 import { Chip } from '@/components/app/chip'
-import { ConfirmDialog } from '@/components/app/confirm-dialog'
-import { DeleteVersionDialog } from '@/components/app/delete-version-dialog'
+import { CollectionCard } from '@/components/app/collection-card'
+import { ContextMark } from '@/components/app/context-mark'
 import { EmptyState } from '@/components/app/empty-state'
 import { InlineEdit } from '@/components/app/inline-edit'
-import { Crumb, PageHeader, SectionTitle } from '@/components/app/page-header'
+import { PerformerLine } from '@/components/app/performer-line'
+import { PageHeader, SectionTitle } from '@/components/app/page-header'
+import { songCrumbs } from '@/components/app/song-crumbs'
 import { Button, ButtonLink } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { useNotation } from '@/components/use-notation'
-import { useVersionActions } from '@/components/version-actions'
+import { VersionMenu } from '@/components/version-menu'
+import { songSearch } from '@/lib/song-context'
 import { messageFor } from '@/lib/errors'
 import { useLiveQuery } from '@/lib/live'
 import { displayChord } from '@/lib/music/chords'
@@ -40,9 +26,15 @@ import type { Notation } from '@/lib/music/pitch'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/songs/$songId')({
-  loader: ({ context, params }) =>
+  validateSearch: (search: Record<string, unknown>) =>
+    songSearch(typeof search.band === 'string' ? search.band : undefined),
+  loaderDeps: ({ search }) => ({ band: search.band }),
+  loader: ({ context, params, deps }) =>
     context.load(
-      convexQuery(api.songs.get, { songId: params.songId as Id<'songs'> }),
+      convexQuery(api.songs.get, {
+        songId: params.songId as Id<'songs'>,
+        ...(deps.band ? { bandId: deps.band as Id<'bands'> } : {}),
+      }),
     ),
   component: SongPage,
 })
@@ -57,14 +49,19 @@ function tuningLabel(tuning: Array<string>) {
 
 function SongPage() {
   const songId = Route.useParams().songId as Id<'songs'>
-  const query = useLiveQuery(convexQuery(api.songs.get, { songId }))
-  const { song, versions, canEdit, bandName } = query.data
+  const { band: bandParam } = Route.useSearch()
+  const bandId = bandParam as Id<'bands'> | undefined
+  const query = useLiveQuery(
+    convexQuery(api.songs.get, {
+      songId,
+      ...(bandId ? { bandId } : {}),
+    }),
+  )
+  const { song, versions, versionCount, canRename, canAdd, band } = query.data
   const update = useMutation(api.songs.update)
-  const remove = useMutation(api.songs.remove)
   const addVersion = useMutation(api.songs.addVersion)
   const navigate = useNavigate()
   const notation = useNotation()
-  const [confirmDelete, setConfirmDelete] = useState(false)
   const [addingVersion, setAddingVersion] = useState(false)
 
   const save = (values: { title?: string; subTitle?: string }) =>
@@ -75,71 +72,44 @@ function SongPage() {
   return (
     <div>
       <PageHeader
-        breadcrumbs={[
-          <Crumb key="library" to="/">
-            {m.library()}
-          </Crumb>,
-          <span key="song" className="truncate text-foreground">
-            {song.title}
-          </span>,
-        ]}
+        breadcrumbs={songCrumbs({
+          songId,
+          title: song.title,
+          band: band ? { id: band._id, name: band.name } : null,
+          linked: false,
+        })}
         title={
           <InlineEdit
             label={m.renameSong()}
             value={song.title}
-            isDisabled={!canEdit}
+            isDisabled={!canRename}
             onSave={(title) => save({ title })}
           />
         }
         subtitle={
-          <div className="flex flex-wrap items-center gap-2">
-            <InlineEdit
-              label={m.editSubTitle()}
-              value={song.subTitle}
-              isDisabled={!canEdit}
-              onSave={(subTitle) => save({ subTitle })}
-            />
-            {song.bandId ? (
-              <Chip tone="primary">
-                <UsersIcon className="size-3" />
-                {bandName ?? m.band()}
-              </Chip>
-            ) : null}
-          </div>
-        }
-        actions={
-          <>
-            {canEdit ? (
-              <DropdownMenuTrigger>
-                <Button size="icon-lg" variant="outline" aria-label={m.more()}>
-                  <EllipsisIcon />
-                </Button>
-                <DropdownMenu placement="bottom end" className="w-52">
-                  <DropdownMenuItem
-                    variant="destructive"
-                    textValue={m.deleteSong()}
-                    onAction={() => setConfirmDelete(true)}
-                  >
-                    <Trash2Icon />
-                    {m.deleteSong()}
-                  </DropdownMenuItem>
-                </DropdownMenu>
-              </DropdownMenuTrigger>
-            ) : null}
-          </>
+          <InlineEdit
+            label={m.editSubTitle()}
+            value={song.subTitle}
+            isDisabled={!canRename}
+            onSave={(subTitle) => save({ subTitle })}
+          />
         }
       />
 
       <SectionTitle
         action={
-          canEdit ? (
+          canAdd ? (
             <Button
               size="sm"
               variant="outline"
               isDisabled={addingVersion}
               onPress={() => {
                 setAddingVersion(true)
-                addVersion({ songId, versionName: m.newVersionName() })
+                addVersion({
+                  songId,
+                  versionName: m.newVersionName(),
+                  bandId,
+                })
                   .then((added) =>
                     navigate({
                       to: '/versions/$versionId/edit',
@@ -167,24 +137,12 @@ function SongPage() {
               key={version._id}
               version={version}
               songTitle={song.title}
-              canEdit={canEdit}
-              isOnlyVersion={versions.length === 1}
+              isOnlyVersion={versionCount === 1}
               notation={notation}
             />
           ))}
         </ul>
       )}
-
-      <ConfirmDialog
-        isOpen={confirmDelete}
-        onOpenChange={setConfirmDelete}
-        title={m.deleteSongConfirm({ title: song.title })}
-        description={m.deleteSongHint()}
-        onConfirm={async () => {
-          await remove({ songId })
-          await navigate({ to: '/' })
-        }}
-      />
     </div>
   )
 }
@@ -192,128 +150,84 @@ function SongPage() {
 function VersionCard({
   version,
   songTitle,
-  canEdit,
   isOnlyVersion,
   notation,
 }: {
-  version: Doc<'versions'>
+  version: Omit<
+    Doc<'versions'>,
+    'createdBy' | 'shareToken' | 'parentVersionId'
+  > & {
+    ownerBandId: string | null
+    ownerName: string | null
+    canEdit: boolean
+    shared: boolean
+  }
   songTitle: string
-  canEdit: boolean
   isOnlyVersion: boolean
   notation: Notation
 }) {
-  const actions = useVersionActions()
-  const navigate = useNavigate()
-  const [confirmDelete, setConfirmDelete] = useState(false)
   const tuning = tuningLabel(version.tuning)
   const sections = version.timeline.length
 
   return (
-    <li className="group flex flex-col gap-4 rounded-2xl border bg-card p-5 transition-colors hover:border-foreground/15">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="truncate text-lg font-semibold">{version.name}</h3>
-          {version.artist ? (
-            <p className="truncate text-sm">
-              {m.performedByArtist({ artist: version.artist })}
-            </p>
+    <CollectionCard
+      to="/versions/$versionId"
+      params={{ versionId: version._id }}
+      title={version.name}
+      trailing={<ContextMark {...version} />}
+      footer={
+        <div className="flex flex-wrap gap-1.5">
+          <Chip label={m.timeSignature()}>{version.timeSignature}</Chip>
+          {version.bpm ? <Chip label={m.bpm()}>{version.bpm}</Chip> : null}
+          {version.suggestedCapo > 0 ? (
+            <Chip label={m.capo()}>{version.suggestedCapo}</Chip>
           ) : null}
-          <p className="text-sm text-muted-foreground">
-            {sections === 0
-              ? m.noSectionsYet()
-              : m.sectionCount({ count: String(sections) })}
-          </p>
-        </div>
-        <span className="font-mono text-2xl font-semibold text-chord">
-          {displayChord(version.concertKey, 0, 0, notation)}
-        </span>
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        <Chip label={m.timeSignature()}>{version.timeSignature}</Chip>
-        {version.bpm ? <Chip label={m.bpm()}>{version.bpm}</Chip> : null}
-        {version.suggestedCapo > 0 ? (
-          <Chip label={m.capo()}>{version.suggestedCapo}</Chip>
-        ) : null}
-        {tuning ? (
-          <Chip label={m.tuning()}>
-            <span className="font-mono">{tuning}</span>
+          {tuning ? (
+            <Chip label={m.tuning()}>
+              <span className="font-mono">{tuning}</span>
+            </Chip>
+          ) : null}
+          <Chip label={m.keyShort()}>
+            <span className="font-mono text-chord">
+              {displayChord(version.concertKey, 0, 0, notation)}
+            </span>
           </Chip>
-        ) : null}
-      </div>
-      <div className="mt-auto flex items-center gap-2">
-        <ButtonLink
-          to="/versions/$versionId/play"
-          params={{ versionId: version._id }}
-        >
-          <PlayIcon className="fill-current" />
-          {m.play()}
-        </ButtonLink>
-        <ButtonLink
-          variant="outline"
-          to="/versions/$versionId"
-          params={{ versionId: version._id }}
-        >
-          <BookOpenIcon />
-          {m.open()}
-        </ButtonLink>
-        {canEdit ? (
-          <DropdownMenuTrigger>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={m.more()}
-              className="ml-auto"
-            >
-              <EllipsisIcon />
-            </Button>
-            <DropdownMenu placement="bottom end" className="w-56">
-              <DropdownMenuItem
-                textValue={m.edit()}
-                onAction={() =>
-                  void navigate({
-                    to: '/versions/$versionId/edit',
-                    params: { versionId: version._id },
-                  })
-                }
+        </div>
+      }
+      actions={
+        <>
+          <ButtonLink
+            to="/versions/$versionId/play"
+            params={{ versionId: version._id }}
+          >
+            <PlayIcon className="fill-current" />
+            {m.play()}
+          </ButtonLink>
+          <VersionMenu
+            version={version}
+            songTitle={songTitle}
+            isOnlyVersion={isOnlyVersion}
+            includeEdit
+            trigger={
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={m.more()}
+                className="ml-auto"
               >
-                <PencilIcon />
-                {m.edit()}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                textValue={m.duplicate()}
-                onAction={() => void actions.copy(version)}
-              >
-                <CopyIcon />
-                {m.duplicate()}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                textValue={m.share()}
-                onAction={() => void actions.share(version._id)}
-              >
-                <Share2Icon />
-                {m.share()}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                textValue={m.deleteVersion()}
-                onAction={() => setConfirmDelete(true)}
-              >
-                <Trash2Icon />
-                {m.deleteVersion()}
-              </DropdownMenuItem>
-            </DropdownMenu>
-          </DropdownMenuTrigger>
-        ) : null}
-      </div>
-      <DeleteVersionDialog
-        isOpen={confirmDelete}
-        onOpenChange={setConfirmDelete}
-        versionId={version._id}
-        versionName={version.name}
-        songTitle={songTitle}
-        isOnlyVersion={isOnlyVersion}
-      />
-    </li>
+                <EllipsisIcon />
+              </Button>
+            }
+          />
+        </>
+      }
+    >
+      <PerformerLine artists={[version.artist]} className="block truncate" />
+      <p>
+        {sections === 0
+          ? m.noSectionsYet()
+          : m.sectionCount({ count: String(sections) })}
+      </p>
+    </CollectionCard>
   )
 }

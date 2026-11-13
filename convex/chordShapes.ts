@@ -2,7 +2,7 @@ import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
 import type { MutationCtx } from './_generated/server'
 import type { Id } from './_generated/dataModel'
-import { canEditSong, requireIdentity, songOfVersion } from './lib/access'
+import { canEditVersion, requireIdentity } from './lib/access'
 import { fail } from './lib/errors'
 
 const MAX_STRINGS = 12
@@ -29,7 +29,7 @@ function validShape(frets: Array<number>, fingers?: Array<number>) {
 async function editableVersion(ctx: MutationCtx, versionId: Id<'versions'>) {
   const version = await ctx.db.get(versionId)
   if (!version) fail('NOT_FOUND')
-  await canEditSong(ctx, await songOfVersion(ctx, version))
+  await canEditVersion(ctx, version)
   return version
 }
 

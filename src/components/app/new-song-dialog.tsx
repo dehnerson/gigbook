@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { messageFor } from '@/lib/errors'
+import { songSearch } from '@/lib/song-context'
 import { m } from '@/paraglide/messages'
 
 export function NewSongDialog({
@@ -180,6 +181,7 @@ export function NewSongDialog({
                         void navigate({
                           to: '/songs/$songId',
                           params: { songId: song._id },
+                          search: songSearch(bandId),
                         })
                       }}
                     >
@@ -194,6 +196,7 @@ export function NewSongDialog({
                           const added = await addVersion({
                             songId: song._id,
                             versionName: m.newVersionName(),
+                            bandId,
                           })
                           await finish(added.versionId)
                         })

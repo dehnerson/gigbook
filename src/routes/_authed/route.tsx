@@ -7,8 +7,14 @@ import { Shell } from '@/components/shell'
 import { useLiveQuery } from '@/lib/live'
 
 export const Route = createFileRoute('/_authed')({
-  beforeLoad: ({ context }) => {
-    if (!context.userId) throw redirect({ to: '/sign-in' })
+  beforeLoad: ({ context, location }) => {
+    if (!context.userId)
+      throw redirect({
+        to: '/sign-in',
+        search: {
+          redirect: `${location.pathname}${location.searchStr}${location.hash}`,
+        },
+      })
   },
   loader: ({ context }) => context.load(convexQuery(api.users.me, {})),
   component: Authed,

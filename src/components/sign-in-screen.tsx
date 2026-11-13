@@ -1,10 +1,13 @@
 import { SignIn } from '@clerk/tanstack-react-start'
+import { useRouterState } from '@tanstack/react-router'
 import {
   GuitarIcon,
   ListMusicIcon,
   RadioIcon,
   SparklesIcon,
 } from 'lucide-react'
+import { useLayoutEffect, useState } from 'react'
+import { RETURN_KEY, safeNext } from '@/lib/return-path'
 import { ChordStrip } from '@/components/sheet/chord-strip'
 import { DEFAULT_LAYERS } from '@/lib/sheet-layers'
 import { m } from '@/paraglide/messages'
@@ -15,8 +18,37 @@ const FEATURES = [
   { icon: SparklesIcon, text: () => m.signInFeatureImport() },
 ]
 
+function useReturnTo() {
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
+  const redirect = useRouterState({
+    select: (state) =>
+      safeNext(
+        (state.location.search as { redirect?: unknown } | undefined)?.redirect,
+      ),
+  })
+  const [continued, setContinued] = useState('/')
+  useLayoutEffect(() => {
+    if (redirect !== '/') {
+      sessionStorage.setItem(RETURN_KEY, redirect)
+      setContinued(redirect)
+      return
+    }
+    const continuing = /^\/sign-in\/.+/.test(pathname)
+    if (!continuing) {
+      sessionStorage.removeItem(RETURN_KEY)
+      setContinued('/')
+      return
+    }
+    setContinued(safeNext(sessionStorage.getItem(RETURN_KEY)))
+  }, [pathname, redirect])
+  return redirect === '/' ? continued : redirect
+}
+
 export function SignInScreen() {
   const key = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
+  const returnTo = useReturnTo()
   return (
     <main className="grid min-h-screen bg-background text-foreground lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
       <section className="stage-glow relative hidden flex-col justify-between overflow-hidden border-r bg-card px-12 py-10 lg:flex">
@@ -69,7 +101,12 @@ export function SignInScreen() {
           </h1>
         </div>
         {key ? (
-          <SignIn />
+          <SignIn
+            forceRedirectUrl={returnTo}
+            fallbackRedirectUrl={returnTo}
+            signUpForceRedirectUrl={returnTo}
+            signUpFallbackRedirectUrl={returnTo}
+          />
         ) : (
           <p className="max-w-sm text-center text-muted-foreground">
             {m.missingKeys()}

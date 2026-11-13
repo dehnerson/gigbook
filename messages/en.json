@@ -60,7 +60,9 @@
   "noSongs": "Your library is empty",
   "noSongsHint": "Write a song by hand or import a sheet you already have.",
   "searchSongs": "Search songs",
+  "searchSetlists": "Search setlists",
   "filterSongs": "Filter songs",
+  "filterSetlists": "Filter setlists",
   "clearSearch": "Clear search",
   "clearFilters": "Clear filters",
   "noMatches": "No matches",
@@ -72,6 +74,16 @@
       "match": {
         "countPlural=one": "{count} song",
         "countPlural=other": "{count} songs"
+      }
+    }
+  ],
+  "setlistCount": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} setlist",
+        "countPlural=other": "{count} setlists"
       }
     }
   ],
@@ -113,13 +125,37 @@
   "deleteVersionConfirm": "Delete “{name}”?",
   "deleteVersionHint": "Its sections and parts are deleted and it is removed from setlists. This cannot be undone.",
   "deleteOnlyVersionHint": "“{name}” is the only version of “{title}”. Deleting it also deletes the song and removes it from setlists. This cannot be undone.",
+  "shareMenu": "Share",
   "share": "Share link",
   "linkCopied": "Link copied",
   "forkToLibrary": "Copy to my library",
+  "makeMyCopy": "Make my copy",
+  "copyToLibrary": "Copy to my library",
+  "moveToLibrary": "Move to my library",
+  "copyToBand": "Copy to {band}",
+  "moveToBand": "Move to {band}",
+  "copyVerb": "Copy",
+  "moveVerb": "Move",
+  "myLibrary": "My library",
+  "copyWhere": "Where should the copy go?",
+  "moveWhere": "Where should this chart move? Setlists that use it will drop it.",
+  "copiedToBand": "The band has its own chart",
+  "movedChart": "The chart has a new owner. Setlists that used it no longer include it.",
+  "madeMyCopy": "Your copy is ready",
+  "bringChart": "Bring a chart",
   "copiedToLibrary": "Copied to your library",
   "alreadyInLibrary": "Already in your library",
   "openInLibrary": "Open in my library",
   "sharedWithYou": "Shared with you",
+  "sharedStaysCurrent": "Edits show up here until the owner turns the link off.",
+  "stopSharing": "Stop sharing",
+  "stopSharingTitle": "Turn off the share link?",
+  "stopSharingHint": "Anyone with the current link loses access. You can share a new one later.",
+  "shareStopped": "Share link turned off",
+  "newShareLink": "New share link",
+  "newShareLinkTitle": "Replace the share link?",
+  "newShareLinkHint": "The current link stops working. The new one is copied.",
+  "newLinkCopied": "New link copied. The previous link no longer works.",
 
   "concertKey": "Concert key",
   "timeSignature": "Time",
@@ -349,6 +385,12 @@
   "emailPlaceholder": "name@example.com",
   "memberAdded": "Member added",
   "removeMember": "Remove {name}",
+  "leaveBand": "Leave band",
+  "leaveBandConfirm": "Leave {name}?",
+  "leaveBandHint": "You lose access to this band's songs and setlists.",
+  "deleteBand": "Delete band",
+  "deleteBandConfirm": "Delete {name}?",
+  "deleteBandHint": "The band's charts and setlists are deleted. Charts you own stay yours.",
 
   "jamHint": "Play together. Everyone sees the same song and section as the host.",
   "startJam": "Start a jam",
@@ -453,5 +495,6 @@
   "providerAnthropicHint": "Paid per use. Create a key in the Anthropic Console.",
   "errorImportFailed": "The model could not read that source.",
   "errorUserNotFound": "No account with that email has opened the app yet.",
+  "errorLastMember": "You are the last member. Delete the band to keep its songs.",
   "errorInvalid": "That value is not valid."
 }

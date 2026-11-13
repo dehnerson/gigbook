@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
-import { canReadSong, requireIdentity, songOfVersion } from './lib/access'
+import { canReadVersion, requireIdentity } from './lib/access'
 import { fail } from './lib/errors'
 import { withNames } from './lib/users'
 
@@ -102,8 +102,7 @@ export const setVersion = mutation({
     if (!room || room.hostUserId !== identity.subject) fail('FORBIDDEN')
     const version = await ctx.db.get(args.versionId)
     if (!version) fail('NOT_FOUND')
-    const song = await songOfVersion(ctx, version)
-    await canReadSong(ctx, song)
+    await canReadVersion(ctx, version)
     await ctx.db.patch(room._id, { versionId: version._id, timelineIndex: 0 })
   },
 })

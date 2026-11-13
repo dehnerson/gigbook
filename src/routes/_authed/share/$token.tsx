@@ -15,6 +15,7 @@ import {
   useSheetLayers,
   useSheetPrefs,
 } from '@/components/sheet/use-sheet-prefs'
+import { ContextMark } from '@/components/app/context-mark'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { useNotation } from '@/components/use-notation'
 import { useVersionActions } from '@/components/version-actions'
@@ -22,6 +23,9 @@ import { useLiveQuery } from '@/lib/live'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/share/$token')({
+  head: () => ({
+    meta: [{ name: 'referrer', content: 'no-referrer' }],
+  }),
   loader: ({ context, params }) =>
     context.load(convexQuery(api.versions.getByShare, { token: params.token })),
   component: SharePage,
@@ -76,8 +80,11 @@ function SharePage() {
               isDisabled={busy}
               onPress={async () => {
                 setBusy(true)
-                await actions.fork(version._id)
-                setBusy(false)
+                try {
+                  await actions.fork(version._id, token)
+                } finally {
+                  setBusy(false)
+                }
               }}
             >
               <LibraryBigIcon />
@@ -87,9 +94,14 @@ function SharePage() {
         </div>
       </header>
       <main className="mx-auto max-w-4xl space-y-6 px-4 pt-6 pb-24 sm:px-8">
-        <div className="flex items-center gap-3 rounded-2xl border border-primary/25 bg-primary/8 px-4 py-3 text-sm">
-          <Share2Icon className="size-4 shrink-0 text-primary" />
-          <span>{m.sharedWithYou()}</span>
+        <div className="flex items-start gap-3 rounded-2xl border border-primary/25 bg-primary/8 px-4 py-3 text-sm">
+          <Share2Icon className="mt-0.5 size-4 shrink-0 text-primary" />
+          <span>
+            <span className="font-medium">{m.sharedWithYou()}</span>
+            <span className="block text-muted-foreground">
+              {m.sharedStaysCurrent()}
+            </span>
+          </span>
         </div>
         <ControlBar>
           <KeyControls
@@ -115,6 +127,12 @@ function SharePage() {
           timeline={timeline}
           shapes={shapes}
           settings={settings}
+          mark={
+            <ContextMark
+              bandId={bundle.data.ownerBandId}
+              name={bundle.data.ownerName}
+            />
+          }
         />
       </main>
     </div>

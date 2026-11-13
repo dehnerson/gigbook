@@ -1,21 +1,23 @@
 import { convexQuery } from '@convex-dev/react-query'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import {
-  CopyIcon,
   EllipsisIcon,
-  LibraryBigIcon,
   PencilIcon,
   PlayIcon,
   SaveIcon,
-  Share2Icon,
-  Trash2Icon,
   TriangleAlertIcon,
 } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '../../../../../convex/_generated/api'
 import type { Id } from '../../../../../convex/_generated/dataModel'
-import { DeleteVersionDialog } from '@/components/app/delete-version-dialog'
-import { Crumb } from '@/components/app/page-header'
+import { ContextMark } from '@/components/app/context-mark'
+import {
+  Breadcrumbs,
+  HeaderActions,
+  HeaderButton,
+  HeaderButtonLink,
+} from '@/components/app/page-header'
+import { songCrumbs } from '@/components/app/song-crumbs'
 import {
   ControlBar,
   KeyControls,
@@ -36,16 +38,11 @@ import {
   useSheetLayers,
   useSheetPrefs,
 } from '@/components/sheet/use-sheet-prefs'
-import { Button, ButtonLink } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { Button } from '@/components/ui/button'
 import { usePersonalCapo } from '@/components/use-capo'
 import { useNotation } from '@/components/use-notation'
 import { useVersionActions } from '@/components/version-actions'
+import { VersionMenu } from '@/components/version-menu'
 import { useLiveQuery } from '@/lib/live'
 import { previewTabShift } from '@/lib/music/tab'
 import { m } from '@/paraglide/messages'
@@ -65,14 +62,21 @@ function ReadPage() {
   const bundle = useLiveQuery(
     convexQuery(api.versions.getBundle, { versionId }),
   )
-  const { version, song, shapes, canEdit, versionCount } = bundle.data
+  const {
+    version,
+    song,
+    shapes,
+    canEdit,
+    versionCount,
+    ownerBandId,
+    ownerName,
+    shared,
+  } = bundle.data
   const timeline = bundle.data.timeline as Array<SheetEntry>
   const notation = useNotation()
   const actions = useVersionActions()
-  const navigate = useNavigate()
   const [capo, setCapo] = usePersonalCapo(versionId, version.suggestedCapo)
   const [transpose, setTranspose] = useState(0)
-  const [confirmDelete, setConfirmDelete] = useState(false)
   const [trackIds, setTrackIds] = useState<Array<string>>([])
   const prefs = useSheetPrefs('read')
   const { layers, available } = useSheetLayers(
@@ -108,94 +112,60 @@ function ReadPage() {
 
   return (
     <div className="space-y-6">
-      <nav className="flex min-w-0 items-center gap-1.5 text-sm">
-        <Crumb to="/">{m.library()}</Crumb>
-        <span className="text-muted-foreground/50">/</span>
-        <Crumb to="/songs/$songId" params={{ songId: song._id }}>
-          {song.title}
-        </Crumb>
-        <span className="text-muted-foreground/50">/</span>
-        <span className="truncate text-foreground">{version.name}</span>
-      </nav>
+      <div className="space-y-3">
+        <Breadcrumbs>
+          {songCrumbs({
+            songId: song._id,
+            title: song.title,
+            band: ownerBandId
+              ? { id: ownerBandId, name: ownerName ?? '' }
+              : null,
+          })}
+          <span className="truncate text-foreground">{version.name}</span>
+        </Breadcrumbs>
 
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <SheetHeader
-          song={song}
-          version={version}
-          settings={settings}
-          className="min-w-0 md:flex-1"
-        />
-        <div className="flex shrink-0 items-center gap-2">
-          <ButtonLink
-            size="lg"
-            to="/versions/$versionId/play"
-            params={{ versionId }}
-          >
-            <PlayIcon className="fill-current" />
-            {m.play()}
-          </ButtonLink>
-          {canEdit ? (
-            <ButtonLink
-              size="lg"
-              variant="outline"
-              to="/versions/$versionId/edit"
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <SheetHeader
+            song={song}
+            version={version}
+            settings={settings}
+            className="min-w-0 md:flex-1"
+            mark={<ContextMark bandId={ownerBandId} name={ownerName} />}
+          />
+          <HeaderActions>
+            <HeaderButtonLink
+              to="/versions/$versionId/play"
               params={{ versionId }}
             >
-              <PencilIcon />
-              <span className="hidden sm:inline">{m.edit()}</span>
-            </ButtonLink>
-          ) : null}
-          <DropdownMenuTrigger>
-            <Button size="icon-lg" variant="outline" aria-label={m.more()}>
-              <EllipsisIcon />
-            </Button>
-            <DropdownMenu placement="bottom end" className="w-56">
-              {canEdit ? (
-                <DropdownMenuItem
-                  textValue={m.share()}
-                  onAction={() => void actions.share(version._id)}
-                >
-                  <Share2Icon />
-                  {m.share()}
-                </DropdownMenuItem>
-              ) : null}
-              {canEdit ? (
-                <DropdownMenuItem
-                  textValue={m.duplicate()}
-                  onAction={async () => {
-                    const copyId = await actions.copy(version)
-                    if (copyId) {
-                      await navigate({
-                        to: '/versions/$versionId/edit',
-                        params: { versionId: copyId },
-                      })
-                    }
-                  }}
-                >
-                  <CopyIcon />
-                  {m.duplicate()}
-                </DropdownMenuItem>
-              ) : null}
-              <DropdownMenuItem
-                textValue={m.forkToLibrary()}
-                onAction={() => void actions.fork(version._id)}
+              <PlayIcon className="fill-current" />
+              {m.play()}
+            </HeaderButtonLink>
+            {canEdit ? (
+              <HeaderButtonLink
+                variant="outline"
+                to="/versions/$versionId/edit"
+                params={{ versionId }}
               >
-                <LibraryBigIcon />
-                {m.forkToLibrary()}
-              </DropdownMenuItem>
-              {canEdit ? <DropdownMenuSeparator /> : null}
-              {canEdit ? (
-                <DropdownMenuItem
-                  variant="destructive"
-                  textValue={m.deleteVersion()}
-                  onAction={() => setConfirmDelete(true)}
+                <PencilIcon />
+                <span className="hidden sm:inline">{m.edit()}</span>
+              </HeaderButtonLink>
+            ) : null}
+            <VersionMenu
+              version={{ ...version, canEdit, ownerBandId, shared }}
+              songTitle={song.title}
+              isOnlyVersion={versionCount <= 1}
+              redirectToSong
+              trigger={
+                <HeaderButton
+                  size="icon-lg"
+                  variant="outline"
+                  aria-label={m.more()}
                 >
-                  <Trash2Icon />
-                  {m.deleteVersion()}
-                </DropdownMenuItem>
-              ) : null}
-            </DropdownMenu>
-          </DropdownMenuTrigger>
+                  <EllipsisIcon />
+                </HeaderButton>
+              }
+            />
+          </HeaderActions>
         </div>
       </div>
 
@@ -261,15 +231,6 @@ function ReadPage() {
         versionId={version._id}
         canEdit={canEdit}
         className="pb-[60vh]"
-      />
-      <DeleteVersionDialog
-        isOpen={confirmDelete}
-        onOpenChange={setConfirmDelete}
-        versionId={version._id}
-        versionName={version.name}
-        songTitle={song.title}
-        isOnlyVersion={versionCount <= 1}
-        redirectToSong
       />
     </div>
   )

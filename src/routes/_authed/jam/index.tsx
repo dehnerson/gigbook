@@ -29,8 +29,8 @@ function JamLobby() {
   return (
     <div>
       <PageHeader title={m.jam()} subtitle={m.jamHint()} />
-      <div className="grid gap-5 md:grid-cols-2">
-        <section className="stage-glow relative flex flex-col gap-6 overflow-hidden rounded-3xl border bg-card p-7 sm:p-9">
+      <div className="grid min-w-0 gap-5 md:grid-cols-2">
+        <section className="stage-glow relative flex min-w-0 flex-col gap-6 overflow-hidden rounded-3xl border bg-card p-7 sm:p-9">
           <div className="grid size-14 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/30">
             <RadioIcon className="size-7" />
           </div>
@@ -57,7 +57,7 @@ function JamLobby() {
           </Button>
         </section>
 
-        <section className="flex flex-col gap-6 rounded-3xl border bg-card p-7 sm:p-9">
+        <section className="flex min-w-0 flex-col gap-6 rounded-3xl border bg-card p-7 sm:p-9">
           <div className="grid size-14 place-items-center rounded-2xl bg-muted text-foreground ring-1 ring-border">
             <LogInIcon className="size-7" />
           </div>
@@ -83,6 +83,7 @@ function JamLobby() {
               aria-label={m.code()}
               value={code}
               placeholder="ABC123"
+              size={CODE_LENGTH}
               maxLength={CODE_LENGTH}
               autoComplete="off"
               autoCapitalize="characters"
@@ -95,7 +96,7 @@ function JamLobby() {
                     .slice(0, CODE_LENGTH),
                 )
               }
-              className="h-14 min-w-0 flex-1 rounded-xl border border-input bg-input/30 px-4 text-center font-mono text-2xl font-semibold tracking-[0.4em] uppercase outline-none placeholder:text-muted-foreground/40 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="h-14 w-full min-w-0 flex-1 rounded-xl border border-input bg-input/30 px-4 text-center font-mono text-2xl font-semibold tracking-[0.3em] uppercase outline-none placeholder:text-muted-foreground/40 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:tracking-[0.4em]"
             />
             <Button
               type="submit"

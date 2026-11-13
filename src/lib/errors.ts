@@ -13,6 +13,7 @@ export function messageFor(error: unknown) {
   if (code === 'MODEL_UNSUPPORTED') return m.errorModelUnsupported()
   if (code === 'IMPORT_FAILED') return m.errorImportFailed()
   if (code === 'USER_NOT_FOUND') return m.errorUserNotFound()
+  if (code === 'LAST_MEMBER') return m.errorLastMember()
   if (code === 'PASTE_REQUIRED') return m.pasteRequired()
   if (code === 'INVALID') return m.errorInvalid()
   return m.errorInvalid()

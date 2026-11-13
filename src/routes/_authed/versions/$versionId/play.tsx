@@ -27,6 +27,8 @@ import {
   TracksFilter,
 } from '@/components/sheet/sheet-controls'
 import { sheetPasses } from '@/components/sheet/passes'
+import { ContextMark } from '@/components/app/context-mark'
+import { UpNext } from '@/components/app/up-next'
 import {
   SectionNav,
   SongSheet,
@@ -74,7 +76,7 @@ function PlayPage() {
   const bundle = useLiveQuery(
     convexQuery(api.versions.getBundle, { versionId }),
   )
-  const { version, song, shapes, canEdit } = bundle.data
+  const { version, song, shapes, canEdit, ownerBandId, ownerName } = bundle.data
   const timeline = bundle.data.timeline as Array<SheetEntry>
   const notation = useNotation()
   const actions = useVersionActions()
@@ -160,7 +162,10 @@ function PlayPage() {
             </ButtonLink>
           )}
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-base font-semibold">{song.title}</h1>
+            <h1 className="flex min-w-0 items-center gap-2 text-base font-semibold">
+              <ContextMark bandId={ownerBandId} name={ownerName} />
+              <span className="truncate">{song.title}</span>
+            </h1>
             {song.subTitle?.trim() ? (
               <p className="truncate text-xs text-muted-foreground">
                 {song.subTitle}
@@ -219,21 +224,18 @@ function PlayPage() {
           canEdit={canEdit}
         />
         {search.setlist && upNext ? (
-          <button
-            type="button"
+          <UpNext
+            title={upNext.song.title}
+            versionName={upNext.version.name}
+            artist={upNext.version.artist}
+            mark={
+              <ContextMark
+                bandId={upNext.ownerBandId}
+                name={upNext.ownerName}
+              />
+            }
             onClick={() => goTo(position + 1)}
-            className="mt-12 flex w-full items-center justify-between gap-4 rounded-2xl border bg-card p-5 text-left transition-colors hover:border-primary/50"
-          >
-            <span>
-              <span className="block text-xs font-semibold tracking-widest text-primary uppercase">
-                {m.upNext()}
-              </span>
-              <span className="mt-1 block text-lg font-semibold">
-                {upNext.song.title}
-              </span>
-            </span>
-            <SkipForwardIcon className="size-5 text-muted-foreground" />
-          </button>
+          />
         ) : null}
       </main>
 

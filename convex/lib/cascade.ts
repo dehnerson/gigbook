@@ -7,8 +7,8 @@ export async function cloneVersionTree(
   target: {
     songId: Id<'songs'>
     name: string
-    bandId?: Id<'bands'>
     createdBy: string
+    bandId?: Id<'bands'>
   },
 ) {
   const copyVersionId = await ctx.db.insert('versions', {
@@ -23,8 +23,8 @@ export async function cloneVersionTree(
     tracks: version.tracks,
     timeline: [],
     parentVersionId: version._id,
-    bandId: target.bandId,
     createdBy: target.createdBy,
+    ...(target.bandId ? { bandId: target.bandId } : {}),
   })
   const sections = await ctx.db
     .query('sections')
@@ -81,6 +81,54 @@ export async function cloneVersionTree(
   return copyVersionId
 }
 
+export async function removeSetlistItem(
+  ctx: MutationCtx,
+  item: Doc<'setlistItems'>,
+) {
+  const items = await ctx.db
+    .query('setlistItems')
+    .withIndex('by_setlist', (q) => q.eq('setlistId', item.setlistId))
+    .collect()
+  const ordered = items.sort((a, b) => a.order - b.order)
+  const index = ordered.findIndex((row) => row._id === item._id)
+  const rest = ordered.filter((row) => row._id !== item._id)
+  await ctx.db.delete(item._id)
+  const rooms = await ctx.db
+    .query('jamRooms')
+    .withIndex('by_setlist', (q) => q.eq('setlistId', item.setlistId))
+    .collect()
+  for (const room of rooms) {
+    let setlistIndex = room.setlistIndex
+    if (index >= 0 && setlistIndex > index) setlistIndex -= 1
+    if (rest.length === 0) setlistIndex = 0
+    else if (setlistIndex >= rest.length) setlistIndex = rest.length - 1
+    const landed = rest.at(setlistIndex)
+    await ctx.db.patch(room._id, {
+      setlistIndex,
+      ...(room.versionId === item.versionId
+        ? { versionId: landed?.versionId }
+        : {}),
+    })
+  }
+}
+
+async function clearJamVersion(ctx: MutationCtx, versionId: Id<'versions'>) {
+  const rooms = await ctx.db
+    .query('jamRooms')
+    .withIndex('by_version', (q) => q.eq('versionId', versionId))
+    .collect()
+  for (const room of rooms)
+    await ctx.db.patch(room._id, { versionId: undefined })
+  const members = await ctx.db
+    .query('jamMembers')
+    .withIndex('by_personal_version', (q) =>
+      q.eq('personalVersionId', versionId),
+    )
+    .collect()
+  for (const member of members)
+    await ctx.db.patch(member._id, { personalVersionId: undefined })
+}
+
 export async function deleteVersionTree(
   ctx: MutationCtx,
   versionId: Id<'versions'>,
@@ -104,6 +152,31 @@ export async function deleteVersionTree(
   for (const part of parts) await ctx.db.delete(part._id)
   for (const section of sections) await ctx.db.delete(section._id)
   for (const shape of shapes) await ctx.db.delete(shape._id)
-  for (const item of items) await ctx.db.delete(item._id)
+  for (const item of items) await removeSetlistItem(ctx, item)
+  await clearJamVersion(ctx, versionId)
+  const drafts = await ctx.db
+    .query('importDrafts')
+    .withIndex('by_target', (q) => q.eq('targetVersionId', versionId))
+    .collect()
+  for (const draft of drafts)
+    await ctx.db.patch(draft._id, { targetVersionId: undefined })
   await ctx.db.delete(versionId)
+}
+
+export async function deleteSetlist(
+  ctx: MutationCtx,
+  setlistId: Id<'setlists'>,
+) {
+  const rooms = await ctx.db
+    .query('jamRooms')
+    .withIndex('by_setlist', (q) => q.eq('setlistId', setlistId))
+    .collect()
+  for (const room of rooms)
+    await ctx.db.patch(room._id, { setlistId: undefined, setlistIndex: 0 })
+  const items = await ctx.db
+    .query('setlistItems')
+    .withIndex('by_setlist', (q) => q.eq('setlistId', setlistId))
+    .collect()
+  for (const item of items) await ctx.db.delete(item._id)
+  await ctx.db.delete(setlistId)
 }

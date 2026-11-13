@@ -1,8 +1,11 @@
 import { Link } from '@tanstack/react-router'
-import { ChevronRightIcon, UsersIcon } from 'lucide-react'
+import { ChevronRightIcon } from 'lucide-react'
 import type * as React from 'react'
+import { songSearch } from '@/lib/song-context'
+import type { SongSearch } from '@/lib/song-context'
 import { m } from '@/paraglide/messages'
 import { Chip, Monogram } from './chip'
+import { PerformerLine, performerNames } from './performer-line'
 
 export type SongSummary = {
   _id: string
@@ -16,39 +19,40 @@ export function SongRow({
   song,
   performers,
   versionCount,
+  search,
   trailing,
 }: {
   song: SongSummary
   performers?: Array<string>
   versionCount?: number
+  search?: SongSearch
   trailing?: React.ReactNode
 }) {
-  const covers = [...new Set(performers)]
+  const subtitle = song.subTitle?.trim()
+  const credited = performerNames(performers ?? []).length > 0
   return (
     <li className="group relative flex items-center gap-4 rounded-xl px-3 py-2.5 transition-colors hover:bg-card">
       <Monogram text={song.title} />
       <div className="min-w-0 flex-1">
-        <Link
-          to="/songs/$songId"
-          params={{ songId: song._id }}
-          className="block truncate font-medium outline-none after:absolute after:inset-0 after:rounded-xl focus-visible:after:ring-2 focus-visible:after:ring-ring"
-        >
-          {song.title}
-        </Link>
-        <p className="truncate text-sm text-muted-foreground">
-          {song.subTitle}
-          {covers.length > 0
-            ? ` · ${m.performedByArtist({ artist: covers.join(', ') })}`
-            : null}
-        </p>
+        <div className="flex min-w-0 items-center gap-2">
+          <Link
+            to="/songs/$songId"
+            params={{ songId: song._id }}
+            search={search ?? songSearch()}
+            className="truncate font-medium outline-none after:absolute after:inset-0 after:rounded-xl focus-visible:after:ring-2 focus-visible:after:ring-ring"
+          >
+            {song.title}
+          </Link>
+        </div>
+        {subtitle || credited ? (
+          <p className="truncate text-sm text-muted-foreground">
+            {subtitle}
+            {subtitle && credited ? ' · ' : null}
+            <PerformerLine artists={performers ?? []} />
+          </p>
+        ) : null}
       </div>
       <div className="hidden items-center gap-1.5 sm:flex">
-        {song.bandId ? (
-          <Chip tone="primary" className="max-w-40">
-            <UsersIcon className="size-3 shrink-0" />
-            <span className="truncate">{song.bandName ?? m.band()}</span>
-          </Chip>
-        ) : null}
         {versionCount !== undefined ? (
           <Chip>{m.versionCount({ count: String(versionCount) })}</Chip>
         ) : null}

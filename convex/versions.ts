@@ -1,17 +1,26 @@
 import { v } from 'convex/values'
 import type { Doc, Id } from './_generated/dataModel'
 import { internalQuery, mutation, query } from './_generated/server'
-import type { DatabaseReader, QueryCtx } from './_generated/server'
+import type { DatabaseReader, MutationCtx, QueryCtx } from './_generated/server'
 import { tabMeasure } from './schema'
 import {
-  canEditSong,
-  canReadSong,
+  canEditBand,
+  canEditVersion,
+  canReadVersion,
+  edits,
+  findVisibleSong,
+  openGate,
+  presentVersion,
   requireIdentity,
+  sees,
   songOfVersion,
+  versionView,
+  bandNames,
 } from './lib/access'
 import { fail } from './lib/errors'
-import { cloneVersionTree, deleteVersionTree } from './lib/cascade'
-import { findSongByTitle, insertSong, uniqueVersionName } from './lib/songs'
+import { cloneVersionTree } from './lib/cascade'
+import { copyVersion, deleteVersion, moveVersion } from './lib/ownership'
+import { insertSong, uniqueVersionName } from './lib/songs'
 import {
   DEFAULT_TRACK,
   isBuiltInTrack,
@@ -19,6 +28,7 @@ import {
   trackOf,
 } from '../src/lib/tracks'
 import { transposeSymbol } from '../src/lib/music/chords'
+import { newShareToken, sameSecret } from '../src/lib/share-token'
 import { transposeChordPro } from '../src/lib/music/chordpro'
 import {
   cleanTabMeasures,
@@ -28,10 +38,6 @@ import {
 
 const MAX_REPEAT = 16
 
-function token() {
-  return crypto.randomUUID().replaceAll('-', '').slice(0, 12)
-}
-
 async function loadVersion(ctx: QueryCtx, versionId: Id<'versions'>) {
   const version = await ctx.db.get(versionId)
   if (!version) fail('NOT_FOUND')
@@ -39,22 +45,31 @@ async function loadVersion(ctx: QueryCtx, versionId: Id<'versions'>) {
   return { version, song }
 }
 
+async function editing(ctx: QueryCtx, versionId: Id<'versions'>) {
+  const loaded = await loadVersion(ctx, versionId)
+  await canEditVersion(ctx, loaded.version)
+  return loaded
+}
+
 async function libraryCopyOf(
   ctx: QueryCtx,
   version: Doc<'versions'>,
   userId: string,
 ) {
-  if (version.createdBy === userId && !version.bandId) {
+  if (!version.bandId && version.createdBy === userId)
     return { songId: version.songId, versionId: version._id }
-  }
   const copies = await ctx.db
     .query('versions')
     .withIndex('by_parent_creator', (q) =>
       q.eq('parentVersionId', version._id).eq('createdBy', userId),
     )
     .collect()
-  const personal = copies.find((copy) => !copy.bandId)
-  return personal ? { songId: personal.songId, versionId: personal._id } : null
+  const mine = copies
+    .filter((copy) => !copy.bandId)
+    .sort((a, b) => b._creationTime - a._creationTime)
+  if (mine.length === 0) return null
+  const copy = mine[0]
+  return { songId: copy.songId, versionId: copy._id }
 }
 
 async function bundle(
@@ -97,7 +112,14 @@ async function bundle(
       .withIndex('by_song', (q: any) => q.eq('songId', song._id))
       .collect()
   ).length
-  return { version, song, timeline, shapes, canEdit, versionCount }
+  return {
+    version: presentVersion(version),
+    song,
+    timeline,
+    shapes,
+    canEdit,
+    versionCount,
+  }
 }
 
 export const sectionIndex = internalQuery({
@@ -115,14 +137,13 @@ export const getBundle = query({
   args: { versionId: v.id('versions') },
   handler: async (ctx, args) => {
     const { version, song } = await loadVersion(ctx, args.versionId)
-    await canReadSong(ctx, song)
-    let canEdit = true
-    try {
-      await canEditSong(ctx, song)
-    } catch {
-      canEdit = false
+    const identity = await canReadVersion(ctx, version)
+    const gate = await openGate(ctx, identity.subject)
+    const names = await bandNames(ctx, [version.bandId])
+    return {
+      ...versionView(version, gate, names),
+      ...(await bundle(ctx, version, song, edits(version, gate))),
     }
-    return bundle(ctx, version, song, canEdit)
   },
 })
 
@@ -136,8 +157,18 @@ export const getByShare = query({
       .unique()
     if (!version) fail('NOT_FOUND')
     const song = await songOfVersion(ctx, version)
+    const names = await bandNames(ctx, [version.bandId])
+    const packed = await bundle(ctx, version, song, false)
     return {
-      ...(await bundle(ctx, version, song, false)),
+      version: packed.version,
+      song: {
+        title: song.title,
+        ...(song.subTitle !== undefined ? { subTitle: song.subTitle } : {}),
+      },
+      timeline: packed.timeline,
+      shapes: packed.shapes,
+      ownerBandId: version.bandId ?? null,
+      ownerName: version.bandId ? (names.get(version.bandId) ?? null) : null,
       libraryCopy: await libraryCopyOf(ctx, version, identity.subject),
     }
   },
@@ -155,8 +186,7 @@ export const updateMeta = mutation({
     suggestedCapo: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const { version, song } = await loadVersion(ctx, args.versionId)
-    await canEditSong(ctx, song)
+    const { version } = await editing(ctx, args.versionId)
     const { versionId, artist, ...rest } = args
     await ctx.db.patch(versionId, {
       ...rest,
@@ -173,8 +203,7 @@ export const updateMeta = mutation({
 export const saveWrittenKey = mutation({
   args: { versionId: v.id('versions'), semitones: v.number() },
   handler: async (ctx, args) => {
-    const { version, song } = await loadVersion(ctx, args.versionId)
-    await canEditSong(ctx, song)
+    const { version } = await editing(ctx, args.versionId)
     if (args.semitones === 0) return
     const parts = await ctx.db
       .query('parts')
@@ -212,26 +241,28 @@ export const saveWrittenKey = mutation({
 })
 
 export const duplicate = mutation({
-  args: { versionId: v.id('versions') },
+  args: { versionId: v.id('versions'), token: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const identity = await requireIdentity(ctx)
     const { version, song } = await loadVersion(ctx, args.versionId)
+    const gate = await openGate(ctx, identity.subject)
+    const party = sees(version, gate)
+    if (!party && !sameSecret(version.shareToken, args.token)) fail('FORBIDDEN')
 
-    try {
-      await canReadSong(ctx, song)
-    } catch {
-      if (!version.shareToken) fail('FORBIDDEN')
+    if (party) {
+      const before = await priorId(ctx, version, { userId: identity.subject })
+      const versionId = await copyVersion(ctx, version, {
+        userId: identity.subject,
+      })
+      return {
+        songId: version.songId,
+        versionId,
+        existing: versionId === before,
+        joinedSong: undefined,
+      }
     }
 
-    const existing = await libraryCopyOf(ctx, version, identity.subject)
-    if (existing) return { ...existing, existing: true, joinedSong: undefined }
-
-    const sameSong = await findSongByTitle(
-      ctx,
-      { userId: identity.subject },
-      song.title,
-    )
-
+    const sameSong = await findVisibleSong(ctx, gate, song.title)
     const copySongId =
       sameSong?._id ??
       (await insertSong(ctx, {
@@ -239,15 +270,13 @@ export const duplicate = mutation({
         subTitle: song.subTitle,
         createdBy: identity.subject,
       }))
-
     const copyVersionId = await cloneVersionTree(ctx, version, {
       songId: copySongId,
-      name: sameSong
-        ? await uniqueVersionName(ctx, copySongId, version.name)
-        : version.name,
+      name: await uniqueVersionName(ctx, copySongId, version.name, {
+        userId: identity.subject,
+      }),
       createdBy: identity.subject,
     })
-
     return {
       songId: copySongId,
       versionId: copyVersionId,
@@ -257,16 +286,83 @@ export const duplicate = mutation({
   },
 })
 
+export const copyTo = mutation({
+  args: { versionId: v.id('versions'), bandId: v.optional(v.id('bands')) },
+  handler: async (ctx, args) => {
+    const { version } = await loadVersion(ctx, args.versionId)
+    const identity = args.bandId
+      ? await canEditVersion(ctx, version)
+      : await canReadVersion(ctx, version)
+    if (args.bandId) await canEditBand(ctx, args.bandId)
+    if (args.bandId && version.bandId === args.bandId)
+      return {
+        songId: version.songId,
+        versionId: version._id,
+        existing: true,
+      }
+    const before = await priorId(ctx, version, {
+      userId: identity.subject,
+      bandId: args.bandId,
+    })
+    const versionId = await copyVersion(ctx, version, {
+      userId: identity.subject,
+      bandId: args.bandId,
+    })
+    return { songId: version.songId, versionId, existing: versionId === before }
+  },
+})
+
+async function priorId(
+  ctx: MutationCtx,
+  version: Doc<'versions'>,
+  owner: { userId: string; bandId?: Id<'bands'> },
+) {
+  const rows = await ctx.db
+    .query('versions')
+    .withIndex('by_song', (q) => q.eq('songId', version.songId))
+    .collect()
+  return rows.find(
+    (row) =>
+      row.parentVersionId === version._id &&
+      (owner.bandId
+        ? row.bandId === owner.bandId
+        : !row.bandId && row.createdBy === owner.userId),
+  )?._id
+}
+
+export const moveTo = mutation({
+  args: { versionId: v.id('versions'), bandId: v.optional(v.id('bands')) },
+  handler: async (ctx, args) => {
+    const { version } = await loadVersion(ctx, args.versionId)
+    const identity = await canEditVersion(ctx, version)
+    if (args.bandId) await canEditBand(ctx, args.bandId)
+    const sameOwner = args.bandId
+      ? version.bandId === args.bandId
+      : !version.bandId && version.createdBy === identity.subject
+    if (sameOwner) return { songId: version.songId, versionId: version._id }
+    const versionId = await moveVersion(ctx, version, {
+      userId: identity.subject,
+      bandId: args.bandId,
+    })
+    return { songId: version.songId, versionId }
+  },
+})
+
 export const copy = mutation({
   args: { versionId: v.id('versions'), name: v.string() },
   handler: async (ctx, args) => {
-    const { version, song } = await loadVersion(ctx, args.versionId)
-    const identity = await canEditSong(ctx, song)
+    const { version, song } = await editing(ctx, args.versionId)
+    const identity = await requireIdentity(ctx)
     return cloneVersionTree(ctx, version, {
       songId: song._id,
-      name: args.name.trim() || version.name,
-      bandId: version.bandId,
+      name: await uniqueVersionName(
+        ctx,
+        song._id,
+        args.name.trim() || version.name,
+        { userId: identity.subject, bandId: version.bandId },
+      ),
       createdBy: identity.subject,
+      bandId: version.bandId,
     })
   },
 })
@@ -274,35 +370,46 @@ export const copy = mutation({
 export const remove = mutation({
   args: { versionId: v.id('versions') },
   handler: async (ctx, args) => {
-    const { version, song } = await loadVersion(ctx, args.versionId)
-    await canEditSong(ctx, song)
-    const siblings = await ctx.db
-      .query('versions')
-      .withIndex('by_song', (q) => q.eq('songId', song._id))
-      .collect()
-    await deleteVersionTree(ctx, version._id)
-    const deletedSong = siblings.length <= 1
-    if (deletedSong) await ctx.db.delete(song._id)
-    return { songId: song._id, deletedSong }
+    const { version } = await editing(ctx, args.versionId)
+    const result = await deleteVersion(ctx, version._id)
+    return { songId: version.songId, deletedSong: result.deletedSong }
   },
 })
 
 export const ensureShare = mutation({
   args: { versionId: v.id('versions') },
   handler: async (ctx, args) => {
-    const { version, song } = await loadVersion(ctx, args.versionId)
-    await canEditSong(ctx, song)
-    const shareToken = version.shareToken ?? token()
+    const { version } = await editing(ctx, args.versionId)
+    if (version.shareToken) return version.shareToken
+    const shareToken = newShareToken()
     await ctx.db.patch(version._id, { shareToken })
     return shareToken
+  },
+})
+
+export const rotateShare = mutation({
+  args: { versionId: v.id('versions') },
+  handler: async (ctx, args) => {
+    const { version } = await editing(ctx, args.versionId)
+    const shareToken = newShareToken()
+    await ctx.db.patch(version._id, { shareToken })
+    return shareToken
+  },
+})
+
+export const revokeShare = mutation({
+  args: { versionId: v.id('versions') },
+  handler: async (ctx, args) => {
+    const { version } = await editing(ctx, args.versionId)
+    if (!version.shareToken) return
+    await ctx.db.patch(version._id, { shareToken: undefined })
   },
 })
 
 export const addSection = mutation({
   args: { versionId: v.id('versions'), name: v.string() },
   handler: async (ctx, args) => {
-    const { version, song } = await loadVersion(ctx, args.versionId)
-    await canEditSong(ctx, song)
+    const { version } = await editing(ctx, args.versionId)
     const sectionId = await ctx.db.insert('sections', {
       versionId: version._id,
       name: args.name.trim() || 'Section',
@@ -320,8 +427,7 @@ export const addSection = mutation({
 export const repeatSection = mutation({
   args: { versionId: v.id('versions'), sectionId: v.id('sections') },
   handler: async (ctx, args) => {
-    const { version, song } = await loadVersion(ctx, args.versionId)
-    await canEditSong(ctx, song)
+    const { version } = await editing(ctx, args.versionId)
     const section = await ctx.db.get(args.sectionId)
     if (!section || section.versionId !== version._id) fail('NOT_FOUND')
     await ctx.db.patch(version._id, {
@@ -336,8 +442,7 @@ export const repeatSection = mutation({
 export const detachEntry = mutation({
   args: { versionId: v.id('versions'), entryId: v.string() },
   handler: async (ctx, args) => {
-    const { version, song } = await loadVersion(ctx, args.versionId)
-    await canEditSong(ctx, song)
+    const { version } = await editing(ctx, args.versionId)
     const entry = version.timeline.find(
       (item: any) => item.entryId === args.entryId,
     )
@@ -383,8 +488,7 @@ export const setRepeat = mutation({
     repeat: v.number(),
   },
   handler: async (ctx, args) => {
-    const { version, song } = await loadVersion(ctx, args.versionId)
-    await canEditSong(ctx, song)
+    const { version } = await editing(ctx, args.versionId)
     const repeat = Math.round(args.repeat)
     if (repeat < 1 || repeat > MAX_REPEAT) fail('INVALID')
     if (!version.timeline.some((entry) => entry.entryId === args.entryId))
@@ -402,8 +506,7 @@ export const setRepeat = mutation({
 export const reorderTimeline = mutation({
   args: { versionId: v.id('versions'), entryIds: v.array(v.string()) },
   handler: async (ctx, args) => {
-    const { version, song } = await loadVersion(ctx, args.versionId)
-    await canEditSong(ctx, song)
+    const { version } = await editing(ctx, args.versionId)
     const byId = new Map(
       version.timeline.map((entry) => [entry.entryId, entry]),
     )
@@ -425,8 +528,7 @@ export const updateSection = mutation({
   handler: async (ctx, args) => {
     const section = await ctx.db.get(args.sectionId)
     if (!section) fail('NOT_FOUND')
-    const { song } = await loadVersion(ctx, section.versionId)
-    await canEditSong(ctx, song)
+    await editing(ctx, section.versionId)
     await ctx.db.patch(section._id, {
       ...(args.name !== undefined
         ? { name: args.name.trim() || section.name }
@@ -439,8 +541,7 @@ export const updateSection = mutation({
 export const removeEntry = mutation({
   args: { versionId: v.id('versions'), entryId: v.string() },
   handler: async (ctx, args) => {
-    const { version, song } = await loadVersion(ctx, args.versionId)
-    await canEditSong(ctx, song)
+    const { version } = await editing(ctx, args.versionId)
     const entry = version.timeline.find(
       (item: any) => item.entryId === args.entryId,
     )
@@ -484,8 +585,7 @@ export const addPart = mutation({
   handler: async (ctx, args) => {
     const section = await ctx.db.get(args.sectionId)
     if (!section) fail('NOT_FOUND')
-    const { version, song } = await loadVersion(ctx, section.versionId)
-    await canEditSong(ctx, song)
+    const { version } = await editing(ctx, section.versionId)
     const existing = await ctx.db
       .query('parts')
       .withIndex('by_section', (q) => q.eq('sectionId', section._id))
@@ -517,8 +617,7 @@ export const updatePart = mutation({
   handler: async (ctx, args) => {
     const part = await ctx.db.get(args.partId)
     if (!part) fail('NOT_FOUND')
-    const { version, song } = await loadVersion(ctx, part.versionId)
-    await canEditSong(ctx, song)
+    const { version } = await editing(ctx, part.versionId)
     const repeat =
       args.repeat === undefined ? undefined : Math.round(args.repeat)
     if (repeat !== undefined && (repeat < 1 || repeat > MAX_REPEAT))
@@ -546,8 +645,7 @@ export const removePart = mutation({
   handler: async (ctx, args) => {
     const part = await ctx.db.get(args.partId)
     if (!part) return
-    const { song } = await loadVersion(ctx, part.versionId)
-    await canEditSong(ctx, song)
+    await editing(ctx, part.versionId)
     await ctx.db.delete(part._id)
   },
 })
@@ -563,8 +661,7 @@ function trackName(name: string) {
 export const addTrack = mutation({
   args: { versionId: v.id('versions'), name: v.string() },
   handler: async (ctx, args) => {
-    const { version, song } = await loadVersion(ctx, args.versionId)
-    await canEditSong(ctx, song)
+    const { version } = await editing(ctx, args.versionId)
     const id = crypto.randomUUID().slice(0, 8)
     await ctx.db.patch(version._id, {
       tracks: [...(version.tracks ?? []), { id, name: trackName(args.name) }],
@@ -576,8 +673,7 @@ export const addTrack = mutation({
 export const renameTrack = mutation({
   args: { versionId: v.id('versions'), trackId: v.string(), name: v.string() },
   handler: async (ctx, args) => {
-    const { version, song } = await loadVersion(ctx, args.versionId)
-    await canEditSong(ctx, song)
+    const { version } = await editing(ctx, args.versionId)
     const tracks = version.tracks ?? []
     const name = trackName(args.name)
     if (tracks.some((track) => track.id === args.trackId)) {
@@ -598,8 +694,7 @@ export const renameTrack = mutation({
 export const removeTrack = mutation({
   args: { versionId: v.id('versions'), trackId: v.string() },
   handler: async (ctx, args) => {
-    const { version, song } = await loadVersion(ctx, args.versionId)
-    await canEditSong(ctx, song)
+    const { version } = await editing(ctx, args.versionId)
     await ctx.db.patch(version._id, {
       tracks: (version.tracks ?? []).filter(
         (track) => track.id !== args.trackId,

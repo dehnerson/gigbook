@@ -3,6 +3,7 @@ import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
 import { ConfirmDialog } from '@/components/app/confirm-dialog'
+import { songSearch } from '@/lib/song-context'
 import { m } from '@/paraglide/messages'
 
 export function versionDeleteCopy(
@@ -33,6 +34,7 @@ export function DeleteVersionDialog({
   songTitle,
   isOnlyVersion,
   redirectToSong = false,
+  bandId = null,
 }: {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
@@ -41,6 +43,7 @@ export function DeleteVersionDialog({
   songTitle: string
   isOnlyVersion: boolean
   redirectToSong?: boolean
+  bandId?: string | null
 }) {
   const removeVersion = useMutation(api.versions.remove)
   const navigate = useNavigate()
@@ -59,6 +62,7 @@ export function DeleteVersionDialog({
           await navigate({
             to: '/songs/$songId',
             params: { songId: result.songId },
+            search: songSearch(bandId),
           })
       }}
     />

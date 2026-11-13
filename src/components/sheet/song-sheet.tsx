@@ -1,6 +1,7 @@
 import { cn } from 'cn'
 import { StickyNoteIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { Chip } from '@/components/app/chip'
 import { soundsAs } from '@/lib/music/chords'
 import { chartChords } from '@/lib/music/chordpro'
@@ -67,6 +68,11 @@ export function versionChords(
   return [...new Set(symbols)]
 }
 
+export function versionLine(name: string, artist?: string) {
+  const performer = artist?.trim()
+  return performer ? `${name} · ${performer}` : name
+}
+
 export function VersionCaption({
   name,
   artist,
@@ -78,12 +84,12 @@ export function VersionCaption({
 }) {
   const performer = artist?.trim()
   return (
-    <p className={cn('text-sm', className)}>
+    <span className={cn('block text-sm', className)}>
       <span className="font-medium text-foreground">{name}</span>
       {performer ? (
         <span className="text-muted-foreground"> · {performer}</span>
       ) : null}
-    </p>
+    </span>
   )
 }
 
@@ -137,20 +143,23 @@ export function SheetHeader({
   version,
   settings,
   showStats = true,
+  mark,
   className,
 }: {
   song: SheetSong
   version: SheetVersion
   settings?: SheetSettings
   showStats?: boolean
+  mark?: ReactNode
   className?: string
 }) {
   const subtitle = song.subTitle?.trim()
   return (
     <header className={className}>
       <div className="space-y-0.5">
-        <h1 className="text-3xl leading-tight font-semibold tracking-tight">
-          {song.title}
+        <h1 className="flex items-center gap-3 text-3xl leading-tight font-semibold tracking-tight">
+          {mark}
+          <span className="min-w-0">{song.title}</span>
         </h1>
         {subtitle ? (
           <p className="text-base text-muted-foreground">{subtitle}</p>
@@ -296,6 +305,7 @@ export function SongSheet({
   showHeader = true,
   versionId,
   canEdit = false,
+  mark,
   className,
 }: {
   version: SheetVersion
@@ -309,6 +319,7 @@ export function SongSheet({
   showHeader?: boolean
   versionId?: Id<'versions'>
   canEdit?: boolean
+  mark?: ReactNode
   className?: string
 }) {
   const symbols = versionChords(timeline, version.tracks, visibleTrackIds)
@@ -340,11 +351,16 @@ export function SongSheet({
         }))
   return (
     <article
-      className={cn('space-y-8', className)}
+      className={cn('min-w-0 space-y-8', className)}
       style={{ fontSize: `${1.0625 * settings.scale}rem` }}
     >
       {showHeader ? (
-        <SheetHeader song={song} version={version} settings={settings} />
+        <SheetHeader
+          song={song}
+          version={version}
+          settings={settings}
+          mark={mark}
+        />
       ) : null}
       {settings.layers.chords ? (
         <PickableChordStrip
@@ -469,17 +485,23 @@ export function SectionNav({
 }) {
   useEffect(() => {
     if (!activeEntryId) return
-    document.getElementById(`nav-${activeEntryId}`)?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'nearest',
-      inline: 'center',
-    })
+    const button = document.getElementById(`nav-${activeEntryId}`)
+    const scroller = button?.closest('nav')
+    if (!button || !scroller) return
+    const buttonBox = button.getBoundingClientRect()
+    const scrollerBox = scroller.getBoundingClientRect()
+    const left =
+      scroller.scrollLeft +
+      buttonBox.left -
+      scrollerBox.left -
+      (scroller.clientWidth - buttonBox.width) / 2
+    scroller.scrollTo({ left: Math.max(0, left), behavior: 'smooth' })
   }, [activeEntryId])
   if (passes.length === 0) return null
   return (
     <nav
       aria-label={m.sections()}
-      className={cn('scrollbar-none overflow-x-auto', className)}
+      className={cn('scrollbar-none max-w-full overflow-x-auto', className)}
     >
       <div className="flex w-max gap-1.5">
         {passes.map((item, index) => {

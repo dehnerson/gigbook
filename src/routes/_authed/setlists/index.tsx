@@ -1,15 +1,21 @@
 import { convexQuery } from '@convex-dev/react-query'
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation } from 'convex/react'
-import { ListMusicIcon, PlusIcon, UsersIcon } from 'lucide-react'
+import { ListMusicIcon, PlusIcon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '../../../../convex/_generated/api'
 import type { Id } from '../../../../convex/_generated/dataModel'
-import { Chip } from '@/components/app/chip'
+import { CollectionCard } from '@/components/app/collection-card'
+import { ContextMark } from '@/components/app/context-mark'
 import { EmptyState } from '@/components/app/empty-state'
 import { Field } from '@/components/app/field'
-import { PageHeader } from '@/components/app/page-header'
+import { HeaderButton, PageHeader } from '@/components/app/page-header'
+import {
+  NoMatches,
+  ownershipSegments,
+  SearchField,
+} from '@/components/app/search-field'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -22,6 +28,8 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { messageFor } from '@/lib/errors'
 import { useLiveQuery } from '@/lib/live'
+import { matchesScope, matchesSearch } from '@/lib/search'
+import type { Scope } from '@/lib/search'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/setlists/')({
@@ -36,6 +44,18 @@ export const Route = createFileRoute('/_authed/setlists/')({
 function SetlistsPage() {
   const setlists = useLiveQuery(convexQuery(api.setlists.list, {}))
   const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [scope, setScope] = useState<Scope>('all')
+  const rows = setlists.data
+  const hasBandSetlists = rows.some((setlist) => setlist.bandId)
+  const visible = rows.filter(
+    (setlist) =>
+      matchesScope(scope, {
+        personal: !setlist.bandId,
+        band: Boolean(setlist.bandId),
+      }) &&
+      matchesSearch(query, [setlist.name, setlist.bandName, ...setlist.titles]),
+  )
 
   return (
     <div>
@@ -43,64 +63,84 @@ function SetlistsPage() {
         title={m.setlists()}
         subtitle={m.setlistsHint()}
         actions={
-          <Button onPress={() => setOpen(true)}>
+          <HeaderButton onPress={() => setOpen(true)}>
             <PlusIcon />
             {m.createSetlist()}
-          </Button>
+          </HeaderButton>
         }
       />
       <NewSetlistDialog isOpen={open} onOpenChange={setOpen} />
-      {setlists.data.length === 0 ? (
+      {rows.length === 0 ? (
         <EmptyState
           icon={ListMusicIcon}
           title={m.noSetlists()}
           description={m.noSetlistsHint()}
           action={
-            <Button onPress={() => setOpen(true)}>
+            <HeaderButton onPress={() => setOpen(true)}>
               <PlusIcon />
               {m.createSetlist()}
-            </Button>
+            </HeaderButton>
           }
         />
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {setlists.data.map((setlist) => (
-            <li
-              key={setlist._id}
-              className="group relative flex flex-col gap-3 rounded-2xl border bg-card p-5 transition-colors hover:border-foreground/15"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
-                  <ListMusicIcon className="size-5" />
-                </div>
-                {setlist.bandName ? (
-                  <Chip tone="primary" className="max-w-40">
-                    <UsersIcon className="size-3 shrink-0" />
-                    <span className="truncate">{setlist.bandName}</span>
-                  </Chip>
-                ) : null}
-              </div>
-              <div className="min-w-0">
-                <Link
+        <div className="space-y-4">
+          <SearchField
+            label={m.searchSetlists()}
+            value={query}
+            onChange={setQuery}
+            segments={
+              hasBandSetlists
+                ? {
+                    label: m.filterSetlists(),
+                    value: scope,
+                    onChange: setScope,
+                    options: ownershipSegments(),
+                  }
+                : undefined
+            }
+          />
+          {visible.length === 0 ? (
+            <NoMatches
+              query={query}
+              onClear={() => {
+                setQuery('')
+                setScope('all')
+              }}
+            />
+          ) : (
+            <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {visible.map((setlist) => (
+                <CollectionCard
+                  key={setlist._id}
                   to="/setlists/$setlistId"
                   params={{ setlistId: setlist._id }}
-                  className="block truncate text-lg font-semibold outline-none after:absolute after:inset-0 after:rounded-2xl focus-visible:after:ring-2 focus-visible:after:ring-ring"
+                  title={setlist.name}
+                  leading={
+                    <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
+                      <ListMusicIcon className="size-5" />
+                    </div>
+                  }
+                  trailing={
+                    <ContextMark
+                      bandId={setlist.bandId}
+                      name={setlist.bandName}
+                    />
+                  }
+                  footer={
+                    setlist.preview.length > 0 ? (
+                      <p className="truncate text-sm text-foreground/70">
+                        {setlist.preview.join(' · ')}
+                        {setlist.count > setlist.preview.length ? ' …' : ''}
+                      </p>
+                    ) : null
+                  }
                 >
-                  {setlist.name}
-                </Link>
-                <p className="text-sm text-muted-foreground">
                   {m.songCount({ count: String(setlist.count) })}
-                </p>
-              </div>
-              {setlist.preview.length > 0 ? (
-                <p className="mt-auto truncate text-sm text-foreground/70">
-                  {setlist.preview.join(' · ')}
-                  {setlist.count > setlist.preview.length ? ' …' : ''}
-                </p>
-              ) : null}
-            </li>
-          ))}
-        </ul>
+                </CollectionCard>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
     </div>
   )

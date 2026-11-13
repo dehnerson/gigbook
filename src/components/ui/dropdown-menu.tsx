@@ -10,9 +10,13 @@ import {
   MenuTrigger as MenuTriggerPrimitive,
   Popover as PopoverPrimitive,
   Separator as SeparatorPrimitive,
+  SubmenuTrigger,
 } from 'react-aria-components'
 import type { MenuItemProps as MenuItemPrimitiveProps } from 'react-aria-components'
-import { CheckIcon } from 'lucide-react'
+import { CheckIcon, ChevronRightIcon } from 'lucide-react'
+
+const menuContentClass =
+  'z-50 w-(--trigger-width) min-w-32 origin-(--trigger-anchor-point) overflow-x-hidden overflow-y-auto rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 outline-none data-entering:animate-in data-entering:fade-in-0 data-entering:zoom-in-95 data-exiting:animate-out data-exiting:overflow-hidden data-exiting:fade-out-0 data-exiting:zoom-out-95 data-[placement=bottom]:slide-in-from-top-2 data-[placement=left]:slide-in-from-right-2 data-[placement=right]:slide-in-from-left-2 data-[placement=top]:slide-in-from-bottom-2 **:data-[slot$=-item]:data-focused:bg-foreground/10'
 
 function DropdownMenuTrigger({
   ...props
@@ -46,10 +50,7 @@ function DropdownMenu({
       placement={placement}
       offset={offset}
       crossOffset={crossOffset}
-      className={cn(
-        'z-50 w-(--trigger-width) min-w-32 origin-(--trigger-anchor-point) overflow-x-hidden overflow-y-auto rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 outline-none data-entering:animate-in data-entering:fade-in-0 data-entering:zoom-in-95 data-exiting:animate-out data-exiting:overflow-hidden data-exiting:fade-out-0 data-exiting:zoom-out-95 data-[placement=bottom]:slide-in-from-top-2 data-[placement=left]:slide-in-from-right-2 data-[placement=right]:slide-in-from-left-2 data-[placement=top]:slide-in-from-bottom-2 **:data-[slot$=-item]:data-focused:bg-foreground/10',
-        className,
-      )}
+      className={cn(menuContentClass, className)}
     >
       <MenuPrimitive
         className="max-h-[inherit] overflow-x-hidden overflow-y-auto outline-hidden"
@@ -92,14 +93,16 @@ function DropdownMenuItem({
       data-inset={inset}
       data-variant={variant}
       textValue={typeof children === 'string' ? children : props.textValue}
-      className={composeRenderProps(className, (className, { selectionMode }) =>
-        cn(dropdownMenuItemVariants({ selectionMode }), className),
+      className={composeRenderProps(
+        className,
+        (itemClassName, { selectionMode }) =>
+          cn(dropdownMenuItemVariants({ selectionMode }), itemClassName),
       )}
       {...props}
     >
       {composeRenderProps(
         children,
-        (children, { isSelected, selectionMode }) => (
+        (itemChildren, { isSelected, selectionMode }) => (
           <>
             {selectionMode !== 'none' ? (
               <span
@@ -113,11 +116,52 @@ function DropdownMenuItem({
                 {isSelected ? <CheckIcon /> : null}
               </span>
             ) : null}
-            {children}
+            {itemChildren}
           </>
         ),
       )}
     </MenuItemPrimitive>
+  )
+}
+
+function DropdownMenuSub({
+  children,
+}: {
+  children: [React.ReactElement, React.ReactElement]
+}) {
+  return <SubmenuTrigger>{children}</SubmenuTrigger>
+}
+
+function DropdownMenuSubTrigger({
+  children,
+  ...props
+}: Omit<MenuItemPrimitiveProps<object>, 'children'> & {
+  children?: React.ReactNode
+}) {
+  return (
+    <DropdownMenuItem {...props}>
+      {children}
+      <ChevronRightIcon className="ml-auto text-muted-foreground" />
+    </DropdownMenuItem>
+  )
+}
+
+function DropdownMenuSubContent({
+  className,
+  children,
+  ...props
+}: Omit<React.ComponentProps<typeof PopoverPrimitive>, 'children'> & {
+  children?: React.ReactNode
+}) {
+  return (
+    <PopoverPrimitive
+      className={cn(menuContentClass, 'w-56', className)}
+      {...props}
+    >
+      <MenuPrimitive className="max-h-[inherit] overflow-x-hidden overflow-y-auto outline-hidden">
+        {children}
+      </MenuPrimitive>
+    </PopoverPrimitive>
   )
 }
 
@@ -139,4 +183,7 @@ export {
   DropdownMenu,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 }

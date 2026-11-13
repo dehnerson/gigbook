@@ -3,6 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { LockIcon } from 'lucide-react'
 import { api } from '../../../../../convex/_generated/api'
 import type { Id } from '../../../../../convex/_generated/dataModel'
+import { ContextMark } from '@/components/app/context-mark'
 import { EmptyState } from '@/components/app/empty-state'
 import type { EditorEntry } from '@/components/editor/types'
 import { ButtonLink } from '@/components/ui/button'
@@ -46,6 +47,20 @@ function EditPage() {
       timeline={bundle.data.timeline as Array<EditorEntry>}
       shapes={bundle.data.shapes}
       versionCount={bundle.data.versionCount}
+      band={
+        bundle.data.ownerBandId
+          ? {
+              id: bundle.data.ownerBandId,
+              name: bundle.data.ownerName ?? '',
+            }
+          : null
+      }
+      mark={
+        <ContextMark
+          bandId={bundle.data.ownerBandId}
+          name={bundle.data.ownerName}
+        />
+      }
     />
   )
 }

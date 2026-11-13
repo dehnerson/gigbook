@@ -60,7 +60,9 @@
   "noSongs": "Deine Bibliothek ist leer",
   "noSongsHint": "Schreib einen Song selbst oder importiere ein Songblatt, das du schon hast.",
   "searchSongs": "Songs suchen",
+  "searchSetlists": "Setlists suchen",
   "filterSongs": "Songs filtern",
+  "filterSetlists": "Setlists filtern",
   "clearSearch": "Suche löschen",
   "clearFilters": "Filter zurücksetzen",
   "noMatches": "Keine Treffer",
@@ -72,6 +74,16 @@
       "match": {
         "countPlural=one": "{count} Song",
         "countPlural=other": "{count} Songs"
+      }
+    }
+  ],
+  "setlistCount": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} Setlist",
+        "countPlural=other": "{count} Setlists"
       }
     }
   ],
@@ -113,13 +125,37 @@
   "deleteVersionConfirm": "„{name}“ löschen?",
   "deleteVersionHint": "Version wird gelöscht und aus Setlists entfernt. Das kann nicht rückgängig gemacht werden.",
   "deleteOnlyVersionHint": "„{name}“ ist die einzige Version von „{title}“. Beim Löschen wird auch der Song gelöscht und aus Setlists entfernt. Das kann nicht rückgängig gemacht werden.",
+  "shareMenu": "Teilen",
   "share": "Link teilen",
   "linkCopied": "Link kopiert",
   "forkToLibrary": "In meine Bibliothek kopieren",
+  "makeMyCopy": "Eigene Kopie",
+  "copyToLibrary": "In meine Bibliothek kopieren",
+  "moveToLibrary": "In meine Bibliothek verschieben",
+  "copyToBand": "Zu {band} kopieren",
+  "moveToBand": "Zu {band} verschieben",
+  "copyVerb": "Kopieren",
+  "moveVerb": "Verschieben",
+  "myLibrary": "Meine Bibliothek",
+  "copyWhere": "Wohin soll die Kopie?",
+  "moveWhere": "Wohin soll der Chart? Setlists, die ihn enthalten, verlieren ihn.",
+  "copiedToBand": "Die Band hat einen eigenen Chart",
+  "movedChart": "Der Chart hat einen neuen Besitzer. Setlists, die ihn enthielten, tun das nicht mehr.",
+  "madeMyCopy": "Deine Kopie ist bereit",
+  "bringChart": "Chart mitnehmen",
   "copiedToLibrary": "In deine Bibliothek kopiert",
   "alreadyInLibrary": "Schon in deiner Bibliothek",
   "openInLibrary": "In meiner Bibliothek öffnen",
   "sharedWithYou": "Mit dir geteilt",
+  "sharedStaysCurrent": "Änderungen erscheinen hier, bis der Link ausgeschaltet wird.",
+  "stopSharing": "Teilen beenden",
+  "stopSharingTitle": "Freigabelink ausschalten?",
+  "stopSharingHint": "Wer den aktuellen Link hat, verliert den Zugriff. Du kannst später einen neuen teilen.",
+  "shareStopped": "Freigabelink ausgeschaltet",
+  "newShareLink": "Neuer Freigabelink",
+  "newShareLinkTitle": "Freigabelink ersetzen?",
+  "newShareLinkHint": "Der aktuelle Link funktioniert nicht mehr. Der neue wird kopiert.",
+  "newLinkCopied": "Neuer Link kopiert. Der bisherige Link funktioniert nicht mehr.",
 
   "concertKey": "Tonart (klingend)",
   "timeSignature": "Takt",
@@ -349,6 +385,12 @@
   "emailPlaceholder": "name@beispiel.de",
   "memberAdded": "Mitglied hinzugefügt",
   "removeMember": "{name} entfernen",
+  "leaveBand": "Band verlassen",
+  "leaveBandConfirm": "{name} verlassen?",
+  "leaveBandHint": "Du verlierst den Zugriff auf die Songs und Setlists dieser Band.",
+  "deleteBand": "Band löschen",
+  "deleteBandConfirm": "{name} löschen?",
+  "deleteBandHint": "Die Charts und Setlists der Band werden gelöscht. Deine eigenen Charts bleiben.",
 
   "jamHint": "Spielt zusammen. Alle sehen denselben Song wie der Host.",
   "startJam": "Jam starten",
@@ -453,5 +495,6 @@
   "providerAnthropicHint": "Kosten pro Nutzung. Erstell einen Schlüssel in der Anthropic Console.",
   "errorImportFailed": "Das Modell konnte die Quelle nicht lesen.",
   "errorUserNotFound": "Mit dieser E-Mail hat noch niemand die App geöffnet.",
+  "errorLastMember": "Du bist das letzte Mitglied. Lösche die Band, damit ihre Songs bei dir bleiben.",
   "errorInvalid": "Dieser Wert ist ungültig."
 }

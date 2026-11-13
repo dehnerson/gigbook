@@ -116,15 +116,10 @@ export default defineSchema({
     title: v.string(),
     subTitle: v.optional(v.string()),
     createdBy: v.string(),
-    bandId: v.optional(v.id('bands')),
   })
     .index('by_creator', ['createdBy'])
-    .index('by_band', ['bandId'])
-    .index('by_creator_title', ['createdBy', 'bandId', 'title'])
-    .index('by_band_title', ['bandId', 'title'])
     .searchIndex('search_title', {
       searchField: 'title',
-      filterFields: ['createdBy', 'bandId'],
     }),
 
   versions: defineTable({
@@ -145,13 +140,14 @@ export default defineSchema({
     ),
     tracks: v.optional(v.array(v.object({ id: v.string(), name: v.string() }))),
     parentVersionId: v.optional(v.id('versions')),
-    bandId: v.optional(v.id('bands')),
     createdBy: v.string(),
+    bandId: v.optional(v.id('bands')),
     shareToken: v.optional(v.string()),
   })
     .index('by_song', ['songId'])
     .index('by_share', ['shareToken'])
     .index('by_creator', ['createdBy'])
+    .index('by_band', ['bandId'])
     .index('by_parent_creator', ['parentVersionId', 'createdBy']),
 
   sections: defineTable({
@@ -190,14 +186,16 @@ export default defineSchema({
     symbol: v.string(),
     frets: v.array(v.number()),
     fingers: v.optional(v.array(v.number())),
-  }).index('by_user_tuning_symbol', ['userId', 'tuning', 'symbol']),
+  })
+    .index('by_user', ['userId'])
+    .index('by_user_tuning_symbol', ['userId', 'tuning', 'symbol']),
 
   setlists: defineTable({
     name: v.string(),
-    ownerId: v.string(),
+    createdBy: v.string(),
     bandId: v.optional(v.id('bands')),
   })
-    .index('by_owner', ['ownerId'])
+    .index('by_creator', ['createdBy'])
     .index('by_band', ['bandId']),
 
   setlistItems: defineTable({
@@ -218,7 +216,9 @@ export default defineSchema({
     concertTranspose: v.number(),
   })
     .index('by_code', ['code'])
-    .index('by_host', ['hostUserId']),
+    .index('by_host', ['hostUserId'])
+    .index('by_version', ['versionId'])
+    .index('by_setlist', ['setlistId']),
 
   jamMembers: defineTable({
     roomId: v.id('jamRooms'),
@@ -231,7 +231,8 @@ export default defineSchema({
   })
     .index('by_room', ['roomId'])
     .index('by_room_user', ['roomId', 'userId'])
-    .index('by_user', ['userId']),
+    .index('by_user', ['userId'])
+    .index('by_personal_version', ['personalVersionId']),
 
   importDrafts: defineTable({
     ownerId: v.string(),
@@ -252,11 +253,14 @@ export default defineSchema({
     sourceText: v.optional(v.string()),
     storageId: v.optional(v.id('_storage')),
     targetVersionId: v.optional(v.id('versions')),
+    homeBandId: v.optional(v.id('bands')),
     youtubeId: v.optional(v.string()),
     output: v.optional(importOutput),
     mapping: v.array(v.union(v.string(), v.null())),
     warnings: v.array(v.string()),
     error: v.optional(v.string()),
     createdAt: v.number(),
-  }).index('by_owner', ['ownerId']),
+  })
+    .index('by_owner', ['ownerId'])
+    .index('by_target', ['targetVersionId']),
 })

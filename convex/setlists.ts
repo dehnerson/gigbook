@@ -1,18 +1,24 @@
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
 import {
-  canReadSong,
+  bandNames,
+  canReadVersion,
   membership,
+  openGate,
+  permitted,
   requireIdentity,
-  songOfVersion,
+  presentVersion,
+  versionView,
+  writes,
 } from './lib/access'
+import { deleteSetlist, removeSetlistItem } from './lib/cascade'
 import { fail } from './lib/errors'
 
 async function canEditSetlist(ctx: any, setlist: any, userId: string) {
-  if (setlist.ownerId === userId && !setlist.bandId) return
+  if (setlist.createdBy === userId && !setlist.bandId) return
   if (!setlist.bandId) fail('FORBIDDEN')
-  const row = await membership(ctx.db, setlist.bandId, userId)
-  if (!row || row.role === 'viewer') fail('FORBIDDEN')
+  if (!writes(await membership(ctx.db, setlist.bandId, userId)))
+    fail('FORBIDDEN')
 }
 
 export const list = query({
@@ -21,7 +27,8 @@ export const list = query({
     const identity = await requireIdentity(ctx)
     const own = await ctx.db
       .query('setlists')
-      .withIndex('by_owner', (q) => q.eq('ownerId', identity.subject))
+      .withIndex('by_creator', (q) => q.eq('createdBy', identity.subject))
+      .filter((q) => q.eq(q.field('bandId'), undefined))
       .collect()
     const memberships = await ctx.db
       .query('bandMemberships')
@@ -45,22 +52,24 @@ export const list = query({
           .query('setlistItems')
           .withIndex('by_setlist', (q) => q.eq('setlistId', setlist._id))
           .collect()
-        const preview = await Promise.all(
-          items
-            .sort((a, b) => a.order - b.order)
-            .slice(0, 3)
-            .map(async (item) => {
-              const version = await ctx.db.get(item.versionId)
-              const song = version ? await ctx.db.get(version.songId) : null
-              return song?.title
-            }),
-        )
+        const titles = (
+          await Promise.all(
+            items
+              .sort((a, b) => a.order - b.order)
+              .map(async (item) => {
+                const version = await ctx.db.get(item.versionId)
+                const song = version ? await ctx.db.get(version.songId) : null
+                return song?.title
+              }),
+          )
+        ).filter((title) => title !== undefined)
         const band = setlist.bandId ? await ctx.db.get(setlist.bandId) : null
         return {
           ...setlist,
           count: items.length,
           bandName: band?.name,
-          preview: preview.filter((title) => title !== undefined),
+          titles,
+          preview: titles.slice(0, 3),
         }
       }),
     )
@@ -74,30 +83,34 @@ export const get = query({
     const identity = await requireIdentity(ctx)
     const setlist = await ctx.db.get(args.setlistId)
     if (!setlist) fail('NOT_FOUND')
-    if (setlist.ownerId !== identity.subject) {
-      if (!setlist.bandId) fail('FORBIDDEN')
+    if (setlist.bandId) {
       const row = await membership(ctx.db, setlist.bandId, identity.subject)
       if (!row) fail('FORBIDDEN')
-    }
+    } else if (setlist.createdBy !== identity.subject) fail('FORBIDDEN')
     const items = await ctx.db
       .query('setlistItems')
       .withIndex('by_setlist', (q) => q.eq('setlistId', setlist._id))
       .collect()
-    const entries = await Promise.all(
-      items
-        .sort((a, b) => a.order - b.order)
-        .map(async (item) => {
-          const version = await ctx.db.get(item.versionId)
-          const song = version ? await ctx.db.get(version.songId) : null
-          return version && song ? [{ item, version, song }] : []
-        }),
-    )
-    let canEdit = true
-    try {
-      await canEditSetlist(ctx, setlist, identity.subject)
-    } catch {
-      canEdit = false
+    const gate = await openGate(ctx, identity.subject)
+    const loaded = []
+    for (const item of items.sort((a, b) => a.order - b.order)) {
+      const version = await ctx.db.get(item.versionId)
+      const song = version ? await ctx.db.get(version.songId) : null
+      if (version && song) loaded.push({ item, version, song })
     }
+    const names = await bandNames(
+      ctx,
+      loaded.map((row) => row.version.bandId),
+    )
+    const entries = loaded.map((row) => ({
+      item: row.item,
+      song: row.song,
+      version: presentVersion(row.version),
+      ...versionView(row.version, gate, names),
+    }))
+    const canEdit = await permitted(() =>
+      canEditSetlist(ctx, setlist, identity.subject),
+    )
     const band = setlist.bandId ? await ctx.db.get(setlist.bandId) : null
     return {
       setlist,
@@ -128,12 +141,7 @@ export const remove = mutation({
     const setlist = await ctx.db.get(args.setlistId)
     if (!setlist) return
     await canEditSetlist(ctx, setlist, identity.subject)
-    const items = await ctx.db
-      .query('setlistItems')
-      .withIndex('by_setlist', (q) => q.eq('setlistId', setlist._id))
-      .collect()
-    for (const item of items) await ctx.db.delete(item._id)
-    await ctx.db.delete(setlist._id)
+    await deleteSetlist(ctx, setlist._id)
   },
 })
 
@@ -169,7 +177,7 @@ export const create = mutation({
     }
     return ctx.db.insert('setlists', {
       name: args.name.trim() || 'Setlist',
-      ownerId: identity.subject,
+      createdBy: identity.subject,
       bandId: args.bandId,
     })
   },
@@ -184,8 +192,7 @@ export const addVersion = mutation({
     await canEditSetlist(ctx, setlist, identity.subject)
     const version = await ctx.db.get(args.versionId)
     if (!version) fail('NOT_FOUND')
-    const song = await songOfVersion(ctx, version)
-    await canReadSong(ctx, song)
+    await canReadVersion(ctx, version)
     const items = await ctx.db
       .query('setlistItems')
       .withIndex('by_setlist', (q) => q.eq('setlistId', setlist._id))
@@ -207,6 +214,6 @@ export const removeItem = mutation({
     const setlist = await ctx.db.get(item.setlistId)
     if (!setlist) return
     await canEditSetlist(ctx, setlist, identity.subject)
-    await ctx.db.delete(item._id)
+    await removeSetlistItem(ctx, item)
   },
 })

@@ -21,12 +21,15 @@ import type * as lib_ai from "../lib/ai.js";
 import type * as lib_cascade from "../lib/cascade.js";
 import type * as lib_crypto from "../lib/crypto.js";
 import type * as lib_errors from "../lib/errors.js";
+import type * as lib_membership from "../lib/membership.js";
+import type * as lib_ownership from "../lib/ownership.js";
 import type * as lib_songs from "../lib/songs.js";
 import type * as lib_users from "../lib/users.js";
 import type * as setlists from "../setlists.js";
 import type * as songs from "../songs.js";
 import type * as users from "../users.js";
 import type * as versions from "../versions.js";
+import type * as wipe from "../wipe.js";
 
 import type {
   ApiFromModules,
@@ -48,12 +51,15 @@ declare const fullApi: ApiFromModules<{
   "lib/cascade": typeof lib_cascade;
   "lib/crypto": typeof lib_crypto;
   "lib/errors": typeof lib_errors;
+  "lib/membership": typeof lib_membership;
+  "lib/ownership": typeof lib_ownership;
   "lib/songs": typeof lib_songs;
   "lib/users": typeof lib_users;
   setlists: typeof setlists;
   songs: typeof songs;
   users: typeof users;
   versions: typeof versions;
+  wipe: typeof wipe;
 }>;
 
 /**

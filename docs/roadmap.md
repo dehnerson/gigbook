@@ -67,9 +67,9 @@ Findings:
 **Account deletion:** nothing is kept as an orphan. Content that belongs to a band moves to the band; everything personal is deleted. `users.deleteFromClerk` schedules the cleanup in batches, because a large library can exceed the limits of a single mutation.
 
 - **Bands the user owns:** hand ownership to the longest-standing editor, or the longest-standing viewer if there are no editors. If the user was the only member, delete the band together with its songs and setlists.
-- **Band songs and versions** (`bandId` set) stay in the band. Set `createdBy` to the band's current owner, since `canReadSong` and `canEditSong` also check `createdBy`.
-- **Band setlists** stay in the band, with `ownerId` set to the band's owner.
-- **Personal songs** (no `bandId`) are deleted via `deleteVersionTree`, which also removes their entries in other people's setlists. Personal setlists are deleted too.
+- **Band versions** stay with the band. They are not reassigned. The successor becomes `band.createdBy` when that field named the departing user, and `createdBy` on band setlists that named them.
+- **Band setlists** stay in the band.
+- **Personal versions** (no `bandId`) are deleted via `deleteVersion`. A folder that still holds someone else's version stays. A folder with nothing left is deleted. Personal setlists are deleted too.
 - **Everything else tied to the user** is deleted: memberships, jam rooms they host (including their members), jam memberships, import drafts with their uploaded files, AI credentials, personal chord shapes (3.3), and the `users` row.
 
 ### 1.2 Play mode cursor (#11)

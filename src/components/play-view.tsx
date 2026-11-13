@@ -146,7 +146,7 @@ export function StageDock({
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
       <div
         className={cn(
-          'scrollbar-none pointer-events-auto flex max-w-full items-center gap-2 overflow-x-auto rounded-2xl border bg-popover/90 p-2 shadow-2xl shadow-black/40 backdrop-blur-xl',
+          'scrollbar-none pointer-events-auto flex max-w-full min-w-0 items-center gap-2 overflow-x-auto rounded-2xl border bg-popover/90 p-2 shadow-2xl shadow-black/40 backdrop-blur-xl',
           className,
         )}
       >

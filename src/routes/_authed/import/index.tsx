@@ -16,9 +16,11 @@ import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '../../../../convex/_generated/api'
 import type { Id } from '../../../../convex/_generated/dataModel'
+import { ContextMark } from '@/components/app/context-mark'
 import { EmptyState } from '@/components/app/empty-state'
 import { Field } from '@/components/app/field'
-import { PageHeader } from '@/components/app/page-header'
+import { HeaderButton, PageHeader } from '@/components/app/page-header'
+import { versionLine } from '@/components/sheet/song-sheet'
 import { Segmented } from '@/components/app/segmented'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -48,6 +50,7 @@ function youtubeIdOf(value: string) {
 function ImportPage() {
   const me = useLiveQuery(convexQuery(api.users.me, {}))
   const catalog = useLiveQuery(convexQuery(api.songs.catalog, {}))
+  const bands = useLiveQuery(convexQuery(api.bands.list, {}))
   const create = useMutation(api.importDrafts.create)
   const uploadUrl = useMutation(api.importDrafts.generateUploadUrl)
   const navigate = useNavigate()
@@ -108,14 +111,18 @@ function ImportPage() {
   const start = async () => {
     setBusy(true)
     try {
+      const homeBandId = target.startsWith('band:')
+        ? (target.slice(5) as Id<'bands'>)
+        : undefined
       const targetVersionId =
-        target === 'new' ? undefined : (target as Id<'versions'>)
+        target === 'new' || homeBandId ? undefined : (target as Id<'versions'>)
       let draftId: Id<'importDrafts'>
       if (source === 'paste') {
         draftId = await create({
           sourceKind: 'paste',
           sourceText: text,
           targetVersionId,
+          homeBandId,
         })
       } else if (source === 'file' && file) {
         const postUrl = await uploadUrl({})
@@ -131,6 +138,7 @@ function ImportPage() {
           sourceKind: file.type === 'application/pdf' ? 'pdf' : 'photo',
           storageId: payload.storageId,
           targetVersionId,
+          homeBandId,
         })
       } else if (source === 'youtube') {
         draftId = await create({
@@ -138,12 +146,14 @@ function ImportPage() {
           youtubeId: videoId ?? undefined,
           sourceText: [description, transcript].filter(Boolean).join('\n\n'),
           targetVersionId,
+          homeBandId,
         })
       } else {
         draftId = await create({
           sourceKind: 'url',
           sourceText: url.trim(),
           targetVersionId,
+          homeBandId,
         })
       }
       await navigate({ to: '/import/$draftId', params: { draftId } })
@@ -305,36 +315,86 @@ function ImportPage() {
           </p>
         ) : null}
 
-        <Select
-          label={m.targetVersion()}
-          value={target}
-          onChange={setTarget}
-          options={[
-            {
-              id: 'new',
-              label: m.newSongFromImport(),
-              description: m.newSongFromImportHint(),
-            },
-            ...catalog.data.flatMap((row) =>
-              row.versions.map((version) => ({
-                id: version._id,
-                label: row.song.title,
-                description: version.name,
-              })),
-            ),
-          ]}
-        />
+        <div className="flex items-end gap-3">
+          <div className="min-w-0 flex-1">
+            <Select
+              label={m.targetVersion()}
+              value={target}
+              onChange={setTarget}
+              options={[
+                {
+                  id: 'new',
+                  label: m.newSongFromImport(),
+                  description: m.personal(),
+                },
+                ...bands.data
+                  .filter((row) => row.membership.role !== 'viewer')
+                  .map((row) => ({
+                    id: `band:${row.band._id}`,
+                    label: m.newSongFromImport(),
+                    description: row.band.name,
+                  })),
+                ...catalog.data.flatMap((row) =>
+                  row.versions
+                    .filter((version) => version.canEdit)
+                    .map((version) => ({
+                      id: version._id,
+                      label: row.song.title,
+                      description: versionLine(version.name, version.artist),
+                    })),
+                ),
+              ]}
+            />
+          </div>
+          <ImportTargetMark
+            target={target}
+            bands={bands.data}
+            catalog={catalog.data}
+          />
+        </div>
 
         <div className="flex items-center justify-between gap-4 border-t pt-5">
           <p className="text-xs text-muted-foreground">
             {m.importPrivacy({ provider: PROVIDER_LABELS[ai.provider] })}
           </p>
-          <Button type="submit" size="lg" isDisabled={!ready || busy}>
+          <HeaderButton type="submit" isDisabled={!ready || busy}>
             <SparklesIcon />
             {busy ? m.starting() : m.startImport()}
-          </Button>
+          </HeaderButton>
         </div>
       </form>
     </div>
   )
+}
+
+function ImportTargetMark({
+  target,
+  bands,
+  catalog,
+}: {
+  target: string
+  bands: Array<{ band: { _id: string; name: string } }>
+  catalog: Array<{
+    versions: Array<{
+      _id: string
+      ownerBandId: string | null
+      ownerName: string | null
+    }>
+  }>
+}) {
+  if (target.startsWith('band:')) {
+    const band = bands.find((row) => `band:${row.band._id}` === target)
+    return (
+      <ContextMark
+        bandId={band?.band._id}
+        name={band?.band.name}
+        className="mb-1.5"
+      />
+    )
+  }
+  for (const row of catalog) {
+    const version = row.versions.find((item) => item._id === target)
+    if (version) return <ContextMark {...version} className="mb-1.5" />
+  }
+  return <ContextMark className="mb-1.5" />
 }

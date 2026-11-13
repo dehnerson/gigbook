@@ -1,6 +1,12 @@
 import { CheckIcon, EyeIcon, PencilIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Crumb } from '@/components/app/page-header'
+import type { ReactNode } from 'react'
+import {
+  Breadcrumbs,
+  Crumb,
+  HeaderActions,
+  HeaderButtonLink,
+} from '@/components/app/page-header'
 import { SaveIndicator, useSaver } from '@/components/app/save'
 import { Segmented } from '@/components/app/segmented'
 import { DetailsPanel } from '@/components/editor/details-panel'
@@ -13,9 +19,9 @@ import {
 } from '@/components/editor/use-editor'
 import { SheetHeader, SongSheet } from '@/components/sheet/song-sheet'
 import type { ChordShapeOverride } from '@/components/sheet/types'
-import { ButtonLink } from '@/components/ui/button'
 import { chartChords } from '@/lib/music/chordpro'
 import { DEFAULT_LAYERS } from '@/lib/sheet-layers'
+import { songCrumbs } from '@/components/app/song-crumbs'
 import { m } from '@/paraglide/messages'
 import { useNotation } from './use-notation'
 
@@ -25,12 +31,16 @@ export function VersionEditor({
   timeline,
   shapes,
   versionCount,
+  mark,
+  band,
 }: {
   version: EditorVersion
   song: { _id: string; title: string; subTitle?: string }
   timeline: Array<EditorEntry>
   shapes: Array<ChordShapeOverride>
   versionCount: number
+  mark?: ReactNode
+  band?: { id: string; name: string } | null
 }) {
   const notation = useNotation()
   const mutations = useEditorMutations()
@@ -75,42 +85,47 @@ export function VersionEditor({
   return (
     <EditorContext.Provider value={{ mutations, save: saver.run }}>
       <div className="space-y-6">
-        <nav className="flex min-w-0 items-center gap-1.5 text-sm">
-          <Crumb to="/">{m.library()}</Crumb>
-          <span className="text-muted-foreground/50">/</span>
-          <Crumb to="/songs/$songId" params={{ songId: song._id }}>
-            {song.title}
-          </Crumb>
-          <span className="text-muted-foreground/50">/</span>
-          <Crumb to="/versions/$versionId" params={{ versionId: version._id }}>
-            {version.name}
-          </Crumb>
-        </nav>
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <SheetHeader
-            song={song}
-            version={version}
-            showStats={false}
-            className="min-w-0 md:flex-1"
-          />
-          <div className="flex shrink-0 flex-wrap items-center gap-3">
-            <SaveIndicator state={saver.state} />
-            <Segmented
-              aria-label={m.view()}
-              value={view}
-              onChange={setView}
-              options={[
-                { id: 'edit', label: m.edit(), icon: PencilIcon },
-                { id: 'preview', label: m.preview(), icon: EyeIcon },
-              ]}
-            />
-            <ButtonLink
+        <div className="space-y-3">
+          <Breadcrumbs>
+            {songCrumbs({
+              songId: song._id,
+              title: song.title,
+              band,
+            })}
+            <Crumb
               to="/versions/$versionId"
               params={{ versionId: version._id }}
             >
-              <CheckIcon />
-              {m.done()}
-            </ButtonLink>
+              {version.name}
+            </Crumb>
+          </Breadcrumbs>
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <SheetHeader
+              song={song}
+              version={version}
+              showStats={false}
+              mark={mark}
+              className="min-w-0 md:flex-1"
+            />
+            <HeaderActions>
+              <SaveIndicator state={saver.state} />
+              <Segmented
+                aria-label={m.view()}
+                value={view}
+                onChange={setView}
+                options={[
+                  { id: 'edit', label: m.edit(), icon: PencilIcon },
+                  { id: 'preview', label: m.preview(), icon: EyeIcon },
+                ]}
+              />
+              <HeaderButtonLink
+                to="/versions/$versionId"
+                params={{ versionId: version._id }}
+              >
+                <CheckIcon />
+                {m.done()}
+              </HeaderButtonLink>
+            </HeaderActions>
           </div>
         </div>
 
@@ -179,6 +194,7 @@ export function VersionEditor({
                   notation={notation}
                   songTitle={song.title}
                   isOnlyVersion={versionCount <= 1}
+                  bandId={band?.id}
                 />
               )}
             </section>
