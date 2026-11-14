@@ -63,10 +63,12 @@ function SetlistsPage() {
         title={m.setlists()}
         subtitle={m.setlistsHint()}
         actions={
-          <HeaderButton onPress={() => setOpen(true)}>
-            <PlusIcon />
-            {m.createSetlist()}
-          </HeaderButton>
+          rows.length > 0 ? (
+            <HeaderButton onPress={() => setOpen(true)}>
+              <PlusIcon />
+              {m.setlist()}
+            </HeaderButton>
+          ) : null
         }
       />
       <NewSetlistDialog isOpen={open} onOpenChange={setOpen} />
@@ -78,7 +80,7 @@ function SetlistsPage() {
           action={
             <HeaderButton onPress={() => setOpen(true)}>
               <PlusIcon />
-              {m.createSetlist()}
+              {m.setlist()}
             </HeaderButton>
           }
         />
@@ -91,11 +93,11 @@ function SetlistsPage() {
             segments={
               hasBandSetlists
                 ? {
-                    label: m.filterSetlists(),
-                    value: scope,
-                    onChange: setScope,
-                    options: ownershipSegments(),
-                  }
+                  label: m.filterSetlists(),
+                  value: scope,
+                  onChange: setScope,
+                  options: ownershipSegments(),
+                }
                 : undefined
             }
           />

@@ -39,10 +39,12 @@ function BandsPage() {
         title={m.bands()}
         subtitle={m.bandsHint()}
         actions={
-          <HeaderButton onPress={() => setOpen(true)}>
-            <PlusIcon />
-            {m.createBand()}
-          </HeaderButton>
+          bands.data.length > 0 ? (
+            <HeaderButton onPress={() => setOpen(true)}>
+              <PlusIcon />
+              {m.band()}
+            </HeaderButton>
+          ) : null
         }
       />
       <NewBandDialog isOpen={open} onOpenChange={setOpen} />
@@ -54,7 +56,7 @@ function BandsPage() {
           action={
             <HeaderButton onPress={() => setOpen(true)}>
               <PlusIcon />
-              {m.createBand()}
+              {m.band()}
             </HeaderButton>
           }
         />

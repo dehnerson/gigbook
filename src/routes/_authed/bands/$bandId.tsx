@@ -58,6 +58,7 @@ import { matchesSearch } from '@/lib/search'
 import { m } from '@/paraglide/messages'
 import { useVersionActions } from '@/components/version-actions'
 import { roleName } from './-roles'
+import { ButtonGroup } from '@/components/ui/button-group'
 
 const facePileLimit = 3
 
@@ -147,22 +148,20 @@ function BandPage() {
         }
         actions={
           <>
-            {canWrite ? (
+            {canWrite && songs.length > 0 ? (
               <>
-                <HeaderButtonLink variant="outline" to="/import">
-                  <FileInputIcon />
-                  {m.importLabel()}
-                </HeaderButtonLink>
-                <HeaderButton
-                  variant="outline"
-                  onPress={() => setBringOpen(true)}
-                >
+                <ButtonGroup>
+                  <HeaderButton onPress={() => setNewSong(true)}>
+                    <PlusIcon />
+                    {m.song()}
+                  </HeaderButton>
+                  <HeaderButtonLink to="/import">
+                    <FileInputIcon />
+                  </HeaderButtonLink>
+                </ButtonGroup>
+                <HeaderButton variant="outline" onPress={() => setBringOpen(true)}                >
                   <PlusIcon />
                   {m.bringChart()}
-                </HeaderButton>
-                <HeaderButton onPress={() => setNewSong(true)}>
-                  <PlusIcon />
-                  {m.newSong()}
                 </HeaderButton>
               </>
             ) : null}
@@ -225,10 +224,21 @@ function BandPage() {
             description={m.noBandSongsHint()}
             action={
               canWrite ? (
-                <Button onPress={() => setNewSong(true)}>
-                  <PlusIcon />
-                  {m.newSong()}
-                </Button>
+                <>
+                  <ButtonGroup>
+                    <HeaderButton onPress={() => setNewSong(true)}>
+                      <PlusIcon />
+                      {m.song()}
+                    </HeaderButton>
+                    <HeaderButtonLink to="/import">
+                      <FileInputIcon />
+                    </HeaderButtonLink>
+                  </ButtonGroup>
+                  <HeaderButton variant="outline" onPress={() => setBringOpen(true)}                >
+                    <PlusIcon />
+                    {m.bringChart()}
+                  </HeaderButton>
+                </>
               ) : undefined
             }
           />

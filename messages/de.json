@@ -3,6 +3,7 @@
   "library": "Bibliothek",
   "importLabel": "Import",
   "bands": "Bands",
+  "setlist": "Setlist",
   "setlists": "Setlists",
   "settings": "Einstellungen",
   "jam": "Jam",
@@ -40,6 +41,7 @@
   "signInFeatureImport": "Import aus Fotos, PDFs, Links und YouTube",
   "missingKeys": "Trage die Clerk- und Convex-Schlüssel in die Umgebung ein, bevor du dich anmeldest.",
 
+  "song": "Song",
   "newSong": "Neuer Song",
   "newSongHint": "Fang mit dem Wichtigsten an. Teile, Text und Tabs fügst du danach hinzu.",
   "title": "Titel",

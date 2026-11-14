@@ -20,6 +20,7 @@ import { useLiveQuery } from '@/lib/live'
 import { matchesScope, matchesSearch } from '@/lib/search'
 import type { Scope } from '@/lib/search'
 import { m } from '@/paraglide/messages'
+import { ButtonGroup } from '@/components/ui/button-group'
 
 export const Route = createFileRoute('/_authed/')({
   loader: ({ context }) => context.load(convexQuery(api.songs.catalog, {})),
@@ -63,16 +64,17 @@ function LibraryPage() {
             : undefined
         }
         actions={
-          <>
-            <HeaderButtonLink variant="outline" to="/import">
-              <FileInputIcon />
-              {m.importLabel()}
-            </HeaderButtonLink>
-            <HeaderButton onPress={() => setOpen(true)}>
-              <PlusIcon />
-              {m.newSong()}
-            </HeaderButton>
-          </>
+          rows.length > 0 ? (
+            <ButtonGroup>
+              <HeaderButton onPress={() => setOpen(true)}>
+                <PlusIcon />
+                {m.song()}
+              </HeaderButton>
+              <HeaderButtonLink to="/import">
+                <FileInputIcon />
+              </HeaderButtonLink>
+            </ButtonGroup>
+          ) : null
         }
       />
       <NewSongDialog isOpen={open} onOpenChange={setOpen} />
@@ -83,16 +85,15 @@ function LibraryPage() {
           title={m.noSongs()}
           description={m.noSongsHint()}
           action={
-            <>
+            <ButtonGroup>
               <HeaderButton onPress={() => setOpen(true)}>
                 <PlusIcon />
-                {m.newSong()}
+                {m.song()}
               </HeaderButton>
-              <HeaderButtonLink variant="outline" to="/import">
+              <HeaderButtonLink to="/import">
                 <FileInputIcon />
-                {m.importLabel()}
               </HeaderButtonLink>
-            </>
+            </ButtonGroup>
           }
         />
       ) : (
@@ -104,11 +105,11 @@ function LibraryPage() {
             segments={
               hasBandSongs
                 ? {
-                    label: m.filterSongs(),
-                    value: scope,
-                    onChange: setScope,
-                    options: ownershipSegments(),
-                  }
+                  label: m.filterSongs(),
+                  value: scope,
+                  onChange: setScope,
+                  options: ownershipSegments(),
+                }
                 : undefined
             }
           />

@@ -3,6 +3,7 @@
   "library": "Library",
   "importLabel": "Import",
   "bands": "Bands",
+  "setlist": "Setlist",
   "setlists": "Setlists",
   "settings": "Settings",
   "jam": "Jam",
@@ -40,6 +41,7 @@
   "signInFeatureImport": "Import from photos, PDFs, links and YouTube",
   "missingKeys": "Add Clerk and Convex keys to the environment before signing in.",
 
+  "song": "Song",
   "newSong": "New song",
   "newSongHint": "Start with the basics. You can add sections, lyrics and tab next.",
   "title": "Title",
