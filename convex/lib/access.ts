@@ -35,6 +35,13 @@ export function writes(row: { role: string } | null) {
   return Boolean(row && row.role !== 'viewer')
 }
 
+export function sameHome(
+  left: { bandId?: string | null },
+  right: { bandId?: string | null },
+) {
+  return (left.bandId ?? null) === (right.bandId ?? null)
+}
+
 export async function permitted(check: () => Promise<unknown>) {
   try {
     await check()

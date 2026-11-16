@@ -11,12 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthedRouteRouteImport } from './routes/_authed/route'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
+import { Route as AuthedMembersRouteImport } from './routes/_authed/members'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
 import { Route as LabTabsRouteImport } from './routes/lab/tabs'
 import { Route as SignInIndexRouteImport } from './routes/sign-in/index'
 import { Route as SignInSplatRouteImport } from './routes/sign-in/$'
-import { Route as AuthedBandsIndexRouteImport } from './routes/_authed/bands/index'
-import { Route as AuthedBandsBandIdRouteImport } from './routes/_authed/bands/$bandId'
 import { Route as AuthedImportIndexRouteImport } from './routes/_authed/import/index'
 import { Route as AuthedImportDraftIdRouteImport } from './routes/_authed/import/$draftId'
 import { Route as AuthedJamIndexRouteImport } from './routes/_authed/jam/index'
@@ -24,6 +23,7 @@ import { Route as AuthedJamCodeRouteImport } from './routes/_authed/jam/$code'
 import { Route as AuthedSetlistsIndexRouteImport } from './routes/_authed/setlists/index'
 import { Route as AuthedSetlistsSetlistIdRouteImport } from './routes/_authed/setlists/$setlistId'
 import { Route as AuthedShareTokenRouteImport } from './routes/_authed/share/$token'
+import { Route as AuthedSongsIndexRouteImport } from './routes/_authed/songs/index'
 import { Route as AuthedSongsSongIdRouteImport } from './routes/_authed/songs/$songId'
 import { Route as AuthedVersionsVersionIdIndexRouteImport } from './routes/_authed/versions/$versionId/index'
 import { Route as AuthedVersionsVersionIdEditRouteImport } from './routes/_authed/versions/$versionId/edit'
@@ -36,6 +36,11 @@ const AuthedRouteRoute = AuthedRouteRouteImport.update({
 const AuthedIndexRoute = AuthedIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
+const AuthedMembersRoute = AuthedMembersRouteImport.update({
+  id: '/members',
+  path: '/members',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
 const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
@@ -57,16 +62,6 @@ const SignInSplatRoute = SignInSplatRouteImport.update({
   id: '/sign-in/$',
   path: '/sign-in/$',
   getParentRoute: () => rootRouteImport,
-} as any)
-const AuthedBandsIndexRoute = AuthedBandsIndexRouteImport.update({
-  id: '/bands/',
-  path: '/bands/',
-  getParentRoute: () => AuthedRouteRoute,
-} as any)
-const AuthedBandsBandIdRoute = AuthedBandsBandIdRouteImport.update({
-  id: '/bands/$bandId',
-  path: '/bands/$bandId',
-  getParentRoute: () => AuthedRouteRoute,
 } as any)
 const AuthedImportIndexRoute = AuthedImportIndexRouteImport.update({
   id: '/import/',
@@ -103,6 +98,11 @@ const AuthedShareTokenRoute = AuthedShareTokenRouteImport.update({
   path: '/share/$token',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
+const AuthedSongsIndexRoute = AuthedSongsIndexRouteImport.update({
+  id: '/songs/',
+  path: '/songs/',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
 const AuthedSongsSongIdRoute = AuthedSongsSongIdRouteImport.update({
   id: '/songs/$songId',
   path: '/songs/$songId',
@@ -129,40 +129,40 @@ const AuthedVersionsVersionIdPlayRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthedIndexRoute
+  '/members': typeof AuthedMembersRoute
   '/settings': typeof AuthedSettingsRoute
   '/lab/tabs': typeof LabTabsRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-in/': typeof SignInIndexRoute
-  '/bands/$bandId': typeof AuthedBandsBandIdRoute
   '/import/$draftId': typeof AuthedImportDraftIdRoute
   '/jam/$code': typeof AuthedJamCodeRoute
   '/setlists/$setlistId': typeof AuthedSetlistsSetlistIdRoute
   '/share/$token': typeof AuthedShareTokenRoute
   '/songs/$songId': typeof AuthedSongsSongIdRoute
-  '/bands/': typeof AuthedBandsIndexRoute
   '/import/': typeof AuthedImportIndexRoute
   '/jam/': typeof AuthedJamIndexRoute
   '/setlists/': typeof AuthedSetlistsIndexRoute
+  '/songs/': typeof AuthedSongsIndexRoute
   '/versions/$versionId/edit': typeof AuthedVersionsVersionIdEditRoute
   '/versions/$versionId/play': typeof AuthedVersionsVersionIdPlayRoute
   '/versions/$versionId/': typeof AuthedVersionsVersionIdIndexRoute
 }
 export interface FileRoutesByTo {
+  '/members': typeof AuthedMembersRoute
   '/settings': typeof AuthedSettingsRoute
   '/lab/tabs': typeof LabTabsRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/': typeof AuthedIndexRoute
   '/sign-in': typeof SignInIndexRoute
-  '/bands/$bandId': typeof AuthedBandsBandIdRoute
   '/import/$draftId': typeof AuthedImportDraftIdRoute
   '/jam/$code': typeof AuthedJamCodeRoute
   '/setlists/$setlistId': typeof AuthedSetlistsSetlistIdRoute
   '/share/$token': typeof AuthedShareTokenRoute
   '/songs/$songId': typeof AuthedSongsSongIdRoute
-  '/bands': typeof AuthedBandsIndexRoute
   '/import': typeof AuthedImportIndexRoute
   '/jam': typeof AuthedJamIndexRoute
   '/setlists': typeof AuthedSetlistsIndexRoute
+  '/songs': typeof AuthedSongsIndexRoute
   '/versions/$versionId/edit': typeof AuthedVersionsVersionIdEditRoute
   '/versions/$versionId/play': typeof AuthedVersionsVersionIdPlayRoute
   '/versions/$versionId': typeof AuthedVersionsVersionIdIndexRoute
@@ -170,21 +170,21 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authed': typeof AuthedRouteRouteWithChildren
+  '/_authed/members': typeof AuthedMembersRoute
   '/_authed/settings': typeof AuthedSettingsRoute
   '/lab/tabs': typeof LabTabsRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/_authed/': typeof AuthedIndexRoute
   '/sign-in/': typeof SignInIndexRoute
-  '/_authed/bands/$bandId': typeof AuthedBandsBandIdRoute
   '/_authed/import/$draftId': typeof AuthedImportDraftIdRoute
   '/_authed/jam/$code': typeof AuthedJamCodeRoute
   '/_authed/setlists/$setlistId': typeof AuthedSetlistsSetlistIdRoute
   '/_authed/share/$token': typeof AuthedShareTokenRoute
   '/_authed/songs/$songId': typeof AuthedSongsSongIdRoute
-  '/_authed/bands/': typeof AuthedBandsIndexRoute
   '/_authed/import/': typeof AuthedImportIndexRoute
   '/_authed/jam/': typeof AuthedJamIndexRoute
   '/_authed/setlists/': typeof AuthedSetlistsIndexRoute
+  '/_authed/songs/': typeof AuthedSongsIndexRoute
   '/_authed/versions/$versionId/edit': typeof AuthedVersionsVersionIdEditRoute
   '/_authed/versions/$versionId/play': typeof AuthedVersionsVersionIdPlayRoute
   '/_authed/versions/$versionId/': typeof AuthedVersionsVersionIdIndexRoute
@@ -193,61 +193,61 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/members'
     | '/settings'
     | '/lab/tabs'
     | '/sign-in/$'
     | '/sign-in/'
-    | '/bands/$bandId'
     | '/import/$draftId'
     | '/jam/$code'
     | '/setlists/$setlistId'
     | '/share/$token'
     | '/songs/$songId'
-    | '/bands/'
     | '/import/'
     | '/jam/'
     | '/setlists/'
+    | '/songs/'
     | '/versions/$versionId/edit'
     | '/versions/$versionId/play'
     | '/versions/$versionId/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/members'
     | '/settings'
     | '/lab/tabs'
     | '/sign-in/$'
     | '/'
     | '/sign-in'
-    | '/bands/$bandId'
     | '/import/$draftId'
     | '/jam/$code'
     | '/setlists/$setlistId'
     | '/share/$token'
     | '/songs/$songId'
-    | '/bands'
     | '/import'
     | '/jam'
     | '/setlists'
+    | '/songs'
     | '/versions/$versionId/edit'
     | '/versions/$versionId/play'
     | '/versions/$versionId'
   id:
     | '__root__'
     | '/_authed'
+    | '/_authed/members'
     | '/_authed/settings'
     | '/lab/tabs'
     | '/sign-in/$'
     | '/_authed/'
     | '/sign-in/'
-    | '/_authed/bands/$bandId'
     | '/_authed/import/$draftId'
     | '/_authed/jam/$code'
     | '/_authed/setlists/$setlistId'
     | '/_authed/share/$token'
     | '/_authed/songs/$songId'
-    | '/_authed/bands/'
     | '/_authed/import/'
     | '/_authed/jam/'
     | '/_authed/setlists/'
+    | '/_authed/songs/'
     | '/_authed/versions/$versionId/edit'
     | '/_authed/versions/$versionId/play'
     | '/_authed/versions/$versionId/'
@@ -274,6 +274,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AuthedIndexRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
+    '/_authed/members': {
+      id: '/_authed/members'
+      path: '/members'
+      fullPath: '/members'
+      preLoaderRoute: typeof AuthedMembersRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
     '/_authed/settings': {
@@ -303,20 +310,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/sign-in/$'
       preLoaderRoute: typeof SignInSplatRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/_authed/bands/': {
-      id: '/_authed/bands/'
-      path: '/bands'
-      fullPath: '/bands/'
-      preLoaderRoute: typeof AuthedBandsIndexRouteImport
-      parentRoute: typeof AuthedRouteRoute
-    }
-    '/_authed/bands/$bandId': {
-      id: '/_authed/bands/$bandId'
-      path: '/bands/$bandId'
-      fullPath: '/bands/$bandId'
-      preLoaderRoute: typeof AuthedBandsBandIdRouteImport
-      parentRoute: typeof AuthedRouteRoute
     }
     '/_authed/import/': {
       id: '/_authed/import/'
@@ -367,6 +360,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedShareTokenRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
+    '/_authed/songs/': {
+      id: '/_authed/songs/'
+      path: '/songs'
+      fullPath: '/songs/'
+      preLoaderRoute: typeof AuthedSongsIndexRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
     '/_authed/songs/$songId': {
       id: '/_authed/songs/$songId'
       path: '/songs/$songId'
@@ -399,36 +399,36 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthedRouteRouteChildren {
+  AuthedMembersRoute: typeof AuthedMembersRoute
   AuthedSettingsRoute: typeof AuthedSettingsRoute
   AuthedIndexRoute: typeof AuthedIndexRoute
-  AuthedBandsBandIdRoute: typeof AuthedBandsBandIdRoute
   AuthedImportDraftIdRoute: typeof AuthedImportDraftIdRoute
   AuthedJamCodeRoute: typeof AuthedJamCodeRoute
   AuthedSetlistsSetlistIdRoute: typeof AuthedSetlistsSetlistIdRoute
   AuthedShareTokenRoute: typeof AuthedShareTokenRoute
   AuthedSongsSongIdRoute: typeof AuthedSongsSongIdRoute
-  AuthedBandsIndexRoute: typeof AuthedBandsIndexRoute
   AuthedImportIndexRoute: typeof AuthedImportIndexRoute
   AuthedJamIndexRoute: typeof AuthedJamIndexRoute
   AuthedSetlistsIndexRoute: typeof AuthedSetlistsIndexRoute
+  AuthedSongsIndexRoute: typeof AuthedSongsIndexRoute
   AuthedVersionsVersionIdEditRoute: typeof AuthedVersionsVersionIdEditRoute
   AuthedVersionsVersionIdPlayRoute: typeof AuthedVersionsVersionIdPlayRoute
   AuthedVersionsVersionIdIndexRoute: typeof AuthedVersionsVersionIdIndexRoute
 }
 
 const AuthedRouteRouteChildren: AuthedRouteRouteChildren = {
+  AuthedMembersRoute: AuthedMembersRoute,
   AuthedSettingsRoute: AuthedSettingsRoute,
   AuthedIndexRoute: AuthedIndexRoute,
-  AuthedBandsBandIdRoute: AuthedBandsBandIdRoute,
   AuthedImportDraftIdRoute: AuthedImportDraftIdRoute,
   AuthedJamCodeRoute: AuthedJamCodeRoute,
   AuthedSetlistsSetlistIdRoute: AuthedSetlistsSetlistIdRoute,
   AuthedShareTokenRoute: AuthedShareTokenRoute,
   AuthedSongsSongIdRoute: AuthedSongsSongIdRoute,
-  AuthedBandsIndexRoute: AuthedBandsIndexRoute,
   AuthedImportIndexRoute: AuthedImportIndexRoute,
   AuthedJamIndexRoute: AuthedJamIndexRoute,
   AuthedSetlistsIndexRoute: AuthedSetlistsIndexRoute,
+  AuthedSongsIndexRoute: AuthedSongsIndexRoute,
   AuthedVersionsVersionIdEditRoute: AuthedVersionsVersionIdEditRoute,
   AuthedVersionsVersionIdPlayRoute: AuthedVersionsVersionIdPlayRoute,
   AuthedVersionsVersionIdIndexRoute: AuthedVersionsVersionIdIndexRoute,

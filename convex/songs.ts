@@ -7,6 +7,7 @@ import {
   canEditBand,
   canReadSong,
   canRenameSong,
+  edits,
   findVisibleSong,
   openGate,
   readableVersions,
@@ -18,6 +19,7 @@ import {
 import { fail } from './lib/errors'
 import { insertSong, uniqueVersionName } from './lib/songs'
 import { STANDARD_TUNING } from '../src/lib/music/diagrams'
+import { PERSONAL_HOME } from '../src/lib/song-context'
 
 export const catalog = query({
   args: {},
@@ -51,16 +53,22 @@ export const catalog = query({
 })
 
 export const get = query({
-  args: { songId: v.id('songs'), bandId: v.optional(v.id('bands')) },
+  args: {
+    songId: v.id('songs'),
+    bandId: v.optional(v.union(v.id('bands'), v.literal(PERSONAL_HOME))),
+  },
   handler: async (ctx, args) => {
     const song = await ctx.db.get(args.songId)
     if (!song) fail('NOT_FOUND')
     const identity = await canReadSong(ctx, song)
     const gate = await openGate(ctx, identity.subject)
-    let visible = await readableVersions(ctx, song, gate)
+    const readable = await readableVersions(ctx, song, gate)
+    let visible = readable
     let band: { _id: Id<'bands'>; name: string } | null = null
     let canAdd = true
-    if (args.bandId) {
+    if (args.bandId === PERSONAL_HOME) {
+      visible = visible.filter((version) => !version.bandId)
+    } else if (args.bandId) {
       const membership = gate.bands.get(args.bandId)
       if (!membership) fail('FORBIDDEN')
       const found = await ctx.db.get(args.bandId)
@@ -82,7 +90,7 @@ export const get = query({
       song,
       versions,
       versionCount: all.length,
-      canRename: versions.some((version) => version.canEdit),
+      canRename: readable.some((version) => edits(version, gate)),
       canAdd,
       band,
     }

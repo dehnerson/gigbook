@@ -1,6 +1,11 @@
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
-import { canReadVersion, requireIdentity } from './lib/access'
+import {
+  canReadVersion,
+  membership,
+  requireIdentity,
+  sameHome,
+} from './lib/access'
 import { fail } from './lib/errors'
 import { withNames } from './lib/users'
 
@@ -13,13 +18,18 @@ function roomCode() {
 }
 
 export const create = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { bandId: v.union(v.null(), v.id('bands')) },
+  handler: async (ctx, args) => {
     const identity = await requireIdentity(ctx)
+    if (args.bandId) {
+      const mine = await membership(ctx.db, args.bandId, identity.subject)
+      if (!mine) fail('FORBIDDEN')
+    }
     const code = roomCode()
     const roomId = await ctx.db.insert('jamRooms', {
       code,
       hostUserId: identity.subject,
+      bandId: args.bandId ?? undefined,
       setlistIndex: 0,
       timelineIndex: 0,
       concertTranspose: 0,
@@ -103,6 +113,7 @@ export const setVersion = mutation({
     const version = await ctx.db.get(args.versionId)
     if (!version) fail('NOT_FOUND')
     await canReadVersion(ctx, version)
+    if (!sameHome(version, room)) fail('FORBIDDEN')
     await ctx.db.patch(room._id, { versionId: version._id, timelineIndex: 0 })
   },
 })
@@ -162,6 +173,8 @@ export const attachSetlist = mutation({
       .withIndex('by_code', (q: any) => q.eq('code', args.code))
       .unique()
     if (!room || room.hostUserId !== identity.subject) fail('FORBIDDEN')
+    const setlist = await ctx.db.get(args.setlistId)
+    if (!setlist || !sameHome(setlist, room)) fail('FORBIDDEN')
     const items = await ctx.db
       .query('setlistItems')
       .withIndex('by_setlist', (q: any) => q.eq('setlistId', args.setlistId))
@@ -198,6 +211,19 @@ export const setMemberView = mutation({
       )
       .unique()
     if (!member) fail('FORBIDDEN')
+    if (args.personalVersionId) {
+      const personal = await ctx.db.get(args.personalVersionId)
+      const roomVersion = room.versionId
+        ? await ctx.db.get(room.versionId)
+        : null
+      if (
+        !personal ||
+        !roomVersion ||
+        personal.songId !== roomVersion.songId ||
+        !sameHome(personal, roomVersion)
+      )
+        fail('FORBIDDEN')
+    }
     await ctx.db.patch(member._id, {
       capo: args.capo,
       following: args.following,

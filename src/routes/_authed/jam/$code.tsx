@@ -338,6 +338,7 @@ function JamRoomPage() {
                 <Suspense fallback={<Skeleton className="h-9 w-72" />}>
                   <JamSongCombo
                     code={code}
+                    bandId={room.bandId}
                     value={null}
                     notation={notation}
                     placeholder={m.searchSongs()}
@@ -386,6 +387,7 @@ function JamRoomPage() {
             >
               <JamSongCombo
                 code={code}
+                bandId={room.bandId}
                 value={room.versionId ?? null}
                 notation={notation}
                 placeholder={m.chooseSong()}
@@ -452,7 +454,11 @@ function JamRoomPage() {
           <>
             <DockDivider />
             <Suspense fallback={<Skeleton className="h-9 w-40 shrink-0" />}>
-              <JamSetlistSelect code={code} value={room.setlistId ?? ''} />
+              <JamSetlistSelect
+                code={code}
+                bandId={room.bandId ?? null}
+                value={room.setlistId ?? ''}
+              />
             </Suspense>
             {upNext ? (
               <Button
@@ -509,9 +515,13 @@ function personalVersion(
   roomVersionId: string | undefined,
   personalVersionId: string | undefined,
 ) {
-  return findSong(catalog, roomVersionId)?.versions.find(
+  const song = findSong(catalog, roomVersionId)
+  const room = song?.versions.find((version) => version._id === roomVersionId)
+  return song?.versions.find(
     (version) =>
-      version._id === personalVersionId && version._id !== roomVersionId,
+      version._id === personalVersionId &&
+      version._id !== roomVersionId &&
+      version.ownerBandId === room?.ownerBandId,
   )
 }
 
@@ -589,12 +599,14 @@ function JamOthersNotice({
 
 function JamSongCombo({
   code,
+  bandId,
   value,
   notation,
   placeholder,
   className,
 }: {
   code: string
+  bandId?: Id<'bands'>
   value: string | null
   notation: Notation
   placeholder: string
@@ -609,19 +621,21 @@ function JamSongCombo({
       emptyText={m.noMatches()}
       value={value}
       options={catalog.flatMap((row) =>
-        row.versions.map((version) => ({
-          id: version._id,
-          label: row.song.title,
-          description: `${versionLine(version.name, version.artist)} · ${displayChord(version.concertKey, 0, 0, notation)}`,
-          textValue: [
-            row.song.title,
-            row.song.subTitle,
-            version.name,
-            version.artist,
-          ]
-            .filter(Boolean)
-            .join(' '),
-        })),
+        row.versions
+          .filter((version) => (version.ownerBandId ?? undefined) === bandId)
+          .map((version) => ({
+            id: version._id,
+            label: row.song.title,
+            description: `${versionLine(version.name, version.artist)} · ${displayChord(version.concertKey, 0, 0, notation)}`,
+            textValue: [
+              row.song.title,
+              row.song.subTitle,
+              version.name,
+              version.artist,
+            ]
+              .filter(Boolean)
+              .join(' '),
+          })),
       )}
       className={className}
       onChange={(next) => {
@@ -654,7 +668,13 @@ function JamVersionSelect({
       options={[
         { id: 'room', label: m.roomVersion() },
         ...song.versions
-          .filter((version) => version._id !== roomVersionId)
+          .filter(
+            (version) =>
+              version._id !== roomVersionId &&
+              version.ownerBandId ===
+                song.versions.find((item) => item._id === roomVersionId)
+                  ?.ownerBandId,
+          )
           .map((version) => ({ id: version._id, label: version.name })),
       ]}
       onChange={(next) =>
@@ -664,8 +684,16 @@ function JamVersionSelect({
   )
 }
 
-function JamSetlistSelect({ code, value }: { code: string; value: string }) {
-  const setlists = useLiveQuery(convexQuery(api.setlists.list, {})).data
+function JamSetlistSelect({
+  code,
+  bandId,
+  value,
+}: {
+  code: string
+  bandId: Id<'bands'> | null
+  value: string
+}) {
+  const setlists = useLiveQuery(convexQuery(api.setlists.list, { bandId })).data
   const attach = useMutation(api.jam.attachSetlist)
   return (
     <Select

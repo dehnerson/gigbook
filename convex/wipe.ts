@@ -11,6 +11,8 @@ const TABLES = [
   'versions',
   'songs',
   'importDrafts',
+  'bandMemberships',
+  'bands',
 ] as const
 
 export const run = internalMutation({

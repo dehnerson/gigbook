@@ -1,6 +1,5 @@
-import { convexQuery } from '@convex-dev/react-query'
+import { useQuery, useMutation } from 'convex/react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useMutation } from 'convex/react'
 import { ListMusicIcon, PlusIcon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -11,11 +10,7 @@ import { ContextMark } from '@/components/app/context-mark'
 import { EmptyState } from '@/components/app/empty-state'
 import { Field } from '@/components/app/field'
 import { HeaderButton, PageHeader } from '@/components/app/page-header'
-import {
-  NoMatches,
-  ownershipSegments,
-  SearchField,
-} from '@/components/app/search-field'
+import { NoMatches, SearchField } from '@/components/app/search-field'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -25,63 +20,70 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
 import { messageFor } from '@/lib/errors'
-import { useLiveQuery } from '@/lib/live'
-import { matchesScope, matchesSearch } from '@/lib/search'
-import type { Scope } from '@/lib/search'
+import { matchesSearch } from '@/lib/search'
+import { useWorkspace } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/setlists/')({
-  loader: ({ context }) =>
-    Promise.all([
-      context.load(convexQuery(api.setlists.list, {})),
-      context.load(convexQuery(api.bands.list, {})),
-    ]),
   component: SetlistsPage,
 })
 
 function SetlistsPage() {
-  const setlists = useLiveQuery(convexQuery(api.setlists.list, {}))
+  const workspace = useWorkspace()
+  const setlists = useQuery(
+    api.setlists.list,
+    workspace.ready ? { bandId: workspace.bandId } : 'skip',
+  )
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
-  const [scope, setScope] = useState<Scope>('all')
-  const rows = setlists.data
-  const hasBandSetlists = rows.some((setlist) => setlist.bandId)
-  const visible = rows.filter(
-    (setlist) =>
-      matchesScope(scope, {
-        personal: !setlist.bandId,
-        band: Boolean(setlist.bandId),
-      }) &&
-      matchesSearch(query, [setlist.name, setlist.bandName, ...setlist.titles]),
+  const rows = setlists ?? []
+  const visible = rows.filter((setlist) =>
+    matchesSearch(query, [setlist.name, ...setlist.titles]),
   )
 
   return (
     <div>
       <PageHeader
         title={m.setlists()}
-        subtitle={m.setlistsHint()}
+        subtitle={
+          <span className="inline-flex items-center gap-2">
+            <ContextMark
+              bandId={workspace.organizationId ? workspace.bandId : null}
+              name={workspace.organizationId ? workspace.label : null}
+            />
+            {workspace.label}
+          </span>
+        }
         actions={
           rows.length > 0 ? (
-            <HeaderButton onPress={() => setOpen(true)}>
+            <HeaderButton
+              isDisabled={!workspace.ready || workspace.role === 'viewer'}
+              onPress={() => setOpen(true)}
+            >
               <PlusIcon />
               {m.setlist()}
             </HeaderButton>
           ) : null
         }
       />
-      <NewSetlistDialog isOpen={open} onOpenChange={setOpen} />
-      {rows.length === 0 ? (
+      <NewSetlistDialog
+        isOpen={open}
+        onOpenChange={setOpen}
+        bandId={workspace.bandId}
+      />
+      {setlists === undefined ? null : rows.length === 0 ? (
         <EmptyState
           icon={ListMusicIcon}
           title={m.noSetlists()}
           description={m.noSetlistsHint()}
           action={
-            <HeaderButton onPress={() => setOpen(true)}>
-              <PlusIcon />
-              {m.setlist()}
-            </HeaderButton>
+            workspace.role === 'viewer' ? undefined : (
+              <HeaderButton onPress={() => setOpen(true)}>
+                <PlusIcon />
+                {m.setlist()}
+              </HeaderButton>
+            )
           }
         />
       ) : (
@@ -90,25 +92,9 @@ function SetlistsPage() {
             label={m.searchSetlists()}
             value={query}
             onChange={setQuery}
-            segments={
-              hasBandSetlists
-                ? {
-                  label: m.filterSetlists(),
-                  value: scope,
-                  onChange: setScope,
-                  options: ownershipSegments(),
-                }
-                : undefined
-            }
           />
           {visible.length === 0 ? (
-            <NoMatches
-              query={query}
-              onClear={() => {
-                setQuery('')
-                setScope('all')
-              }}
-            />
+            <NoMatches query={query} onClear={() => setQuery('')} />
           ) : (
             <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {visible.map((setlist) => (
@@ -121,12 +107,6 @@ function SetlistsPage() {
                     <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
                       <ListMusicIcon className="size-5" />
                     </div>
-                  }
-                  trailing={
-                    <ContextMark
-                      bandId={setlist.bandId}
-                      name={setlist.bandName}
-                    />
                   }
                   footer={
                     setlist.preview.length > 0 ? (
@@ -151,17 +131,16 @@ function SetlistsPage() {
 function NewSetlistDialog({
   isOpen,
   onOpenChange,
+  bandId,
 }: {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
+  bandId: Id<'bands'> | null
 }) {
-  const bands = useLiveQuery(convexQuery(api.bands.list, {}))
   const create = useMutation(api.setlists.create)
   const navigate = useNavigate()
   const [name, setName] = useState('')
-  const [owner, setOwner] = useState('personal')
   const [busy, setBusy] = useState(false)
-  const editable = bands.data.filter((row) => row.membership.role !== 'viewer')
 
   return (
     <Dialog isOpen={isOpen} onOpenChange={onOpenChange} className="sm:max-w-md">
@@ -175,10 +154,7 @@ function NewSetlistDialog({
           event.preventDefault()
           if (!name.trim()) return
           setBusy(true)
-          create({
-            name,
-            bandId: owner === 'personal' ? undefined : (owner as Id<'bands'>),
-          })
+          create({ name, bandId: bandId ?? undefined })
             .then((setlistId) => {
               onOpenChange(false)
               setName('')
@@ -200,20 +176,6 @@ function NewSetlistDialog({
             onChange={(event) => setName(event.target.value)}
           />
         </Field>
-        {editable.length > 0 ? (
-          <Select
-            label={m.belongsTo()}
-            value={owner}
-            onChange={setOwner}
-            options={[
-              { id: 'personal', label: m.personal() },
-              ...editable.map((row) => ({
-                id: row.band._id,
-                label: row.band.name,
-              })),
-            ]}
-          />
-        ) : null}
         <DialogFooter>
           <Button variant="outline" onPress={() => onOpenChange(false)}>
             {m.cancel()}

@@ -29,6 +29,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { PROVIDER_LABELS } from '@/lib/import/models'
 import { messageFor } from '@/lib/errors'
 import { useLiveQuery } from '@/lib/live'
+import { useWorkspace } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/import/')({
@@ -50,7 +51,7 @@ function youtubeIdOf(value: string) {
 function ImportPage() {
   const me = useLiveQuery(convexQuery(api.users.me, {}))
   const catalog = useLiveQuery(convexQuery(api.songs.catalog, {}))
-  const bands = useLiveQuery(convexQuery(api.bands.list, {}))
+  const workspace = useWorkspace()
   const create = useMutation(api.importDrafts.create)
   const uploadUrl = useMutation(api.importDrafts.generateUploadUrl)
   const navigate = useNavigate()
@@ -111,11 +112,10 @@ function ImportPage() {
   const start = async () => {
     setBusy(true)
     try {
-      const homeBandId = target.startsWith('band:')
-        ? (target.slice(5) as Id<'bands'>)
-        : undefined
+      const homeBandId =
+        target === 'new' ? (workspace.bandId ?? undefined) : undefined
       const targetVersionId =
-        target === 'new' || homeBandId ? undefined : (target as Id<'versions'>)
+        target === 'new' ? undefined : (target as Id<'versions'>)
       let draftId: Id<'importDrafts'>
       if (source === 'paste') {
         draftId = await create({
@@ -325,15 +325,8 @@ function ImportPage() {
                 {
                   id: 'new',
                   label: m.newSongFromImport(),
-                  description: m.personal(),
+                  description: workspace.label,
                 },
-                ...bands.data
-                  .filter((row) => row.membership.role !== 'viewer')
-                  .map((row) => ({
-                    id: `band:${row.band._id}`,
-                    label: m.newSongFromImport(),
-                    description: row.band.name,
-                  })),
                 ...catalog.data.flatMap((row) =>
                   row.versions
                     .filter((version) => version.canEdit)
@@ -348,7 +341,8 @@ function ImportPage() {
           </div>
           <ImportTargetMark
             target={target}
-            bands={bands.data}
+            label={workspace.label}
+            bandId={workspace.bandId}
             catalog={catalog.data}
           />
         </div>
@@ -369,11 +363,13 @@ function ImportPage() {
 
 function ImportTargetMark({
   target,
-  bands,
+  label,
+  bandId,
   catalog,
 }: {
   target: string
-  bands: Array<{ band: { _id: string; name: string } }>
+  label: string
+  bandId: Id<'bands'> | null
   catalog: Array<{
     versions: Array<{
       _id: string
@@ -382,16 +378,14 @@ function ImportTargetMark({
     }>
   }>
 }) {
-  if (target.startsWith('band:')) {
-    const band = bands.find((row) => `band:${row.band._id}` === target)
+  if (target === 'new')
     return (
       <ContextMark
-        bandId={band?.band._id}
-        name={band?.band.name}
+        bandId={bandId}
+        name={bandId ? label : null}
         className="mb-1.5"
       />
     )
-  }
   for (const row of catalog) {
     const version = row.versions.find((item) => item._id === target)
     if (version) return <ContextMark {...version} className="mb-1.5" />

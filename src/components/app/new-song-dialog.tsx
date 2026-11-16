@@ -181,7 +181,7 @@ export function NewSongDialog({
                         void navigate({
                           to: '/songs/$songId',
                           params: { songId: song._id },
-                          search: songSearch(bandId),
+                          search: songSearch(),
                         })
                       }}
                     >

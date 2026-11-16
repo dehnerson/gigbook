@@ -10,13 +10,15 @@ import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 import type { ConvexQueryClient } from '@convex-dev/react-query'
 import type { QueryClient } from '@tanstack/react-query'
+import { ConvexProviderWithAuth } from 'convex/react'
 import type { ConvexReactClient } from 'convex/react'
-import { ConvexProviderWithClerk } from 'convex/react-clerk'
+import { useCallback, useMemo, useRef } from 'react'
 import { ThemeProvider } from 'next-themes'
 import { Toaster } from '@/components/ui/sonner'
 import { auth } from '@clerk/tanstack-react-start/server'
 import { createServerFn } from '@tanstack/react-start'
 import { RouteError, RouteNotFound } from '@/components/app/route-states'
+import { WorkspaceState } from '@/lib/workspace'
 import type { Load } from '@/lib/load'
 import { getLocale } from '@/paraglide/runtime'
 import { m } from '@/paraglide/messages'
@@ -70,6 +72,40 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   component: RootComponent,
 })
 
+function useClerkConvexAuth() {
+  const { isLoaded, isSignedIn, getToken, sessionClaims } = useAuth()
+  const getTokenRef = useRef(getToken)
+  getTokenRef.current = getToken
+  const audience = sessionClaims?.aud
+  const convexAudience =
+    audience === 'convex' ||
+    (Array.isArray(audience) && audience.includes('convex'))
+  const fetchAccessToken = useCallback(
+    async ({ forceRefreshToken }: { forceRefreshToken: boolean }) => {
+      try {
+        const token = convexAudience
+          ? await getTokenRef.current({ skipCache: forceRefreshToken })
+          : await getTokenRef.current({
+              template: 'convex',
+              skipCache: forceRefreshToken,
+            })
+        return token ?? null
+      } catch {
+        return null
+      }
+    },
+    [convexAudience],
+  )
+  return useMemo(
+    () => ({
+      isLoading: !isLoaded,
+      isAuthenticated: isSignedIn ?? false,
+      fetchAccessToken,
+    }),
+    [fetchAccessToken, isLoaded, isSignedIn],
+  )
+}
+
 function RootComponent() {
   const { convexClient } = Route.useRouteContext()
   const key = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
@@ -111,9 +147,12 @@ function RootComponent() {
         },
       }}
     >
-      <ConvexProviderWithClerk client={convexClient} useAuth={useAuth}>
-        {tree}
-      </ConvexProviderWithClerk>
+      <ConvexProviderWithAuth
+        client={convexClient}
+        useAuth={useClerkConvexAuth}
+      >
+        <WorkspaceState>{tree}</WorkspaceState>
+      </ConvexProviderWithAuth>
     </ClerkProvider>
   )
 }

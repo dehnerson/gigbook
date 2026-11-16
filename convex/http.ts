@@ -66,6 +66,43 @@ http.route({
         await ctx.runMutation(internal.users.deleteFromClerk, {
           clerkUserId: id,
         })
+    } else if (
+      event.type === 'organization.created' ||
+      event.type === 'organization.updated'
+    ) {
+      const data = event.data as {
+        id?: string
+        name?: string
+        created_by?: string
+      }
+      if (data.id)
+        await ctx.runMutation(internal.clerkSync.upsertOrganization, {
+          clerkOrganizationId: data.id,
+          name: data.name ?? 'Band',
+          createdBy: data.created_by,
+        })
+    } else if (event.type === 'organization.deleted') {
+      const id = (event.data as { id?: string }).id
+      if (id)
+        await ctx.runMutation(internal.clerkSync.releaseOrganization, {
+          clerkOrganizationId: id,
+        })
+    } else if (event.type.startsWith('organizationMembership.')) {
+      const data = event.data as {
+        role?: string
+        organization?: { id?: string; name?: string }
+        public_user_data?: { user_id?: string }
+      }
+      const organizationId = data.organization?.id
+      const userId = data.public_user_data?.user_id
+      if (organizationId && userId)
+        await ctx.runMutation(internal.clerkSync.applyMembership, {
+          clerkOrganizationId: organizationId,
+          organizationName: data.organization?.name ?? 'Band',
+          userId,
+          role: data.role ?? 'org:viewer',
+          deleted: event.type === 'organizationMembership.deleted',
+        })
     }
     return new Response(null, { status: 200 })
   }),

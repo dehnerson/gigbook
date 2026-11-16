@@ -1,0 +1,79 @@
+import {
+  useOrganization,
+  useOrganizationList,
+  useUser,
+} from '@clerk/tanstack-react-start'
+import { useQuery } from 'convex/react'
+import { createContext, useContext } from 'react'
+import type { ReactNode } from 'react'
+import { api } from '../../convex/_generated/api'
+import type { Id } from '../../convex/_generated/dataModel'
+import { m } from '@/paraglide/messages'
+
+export type Workspace = {
+  ready: boolean
+  bandId: Id<'bands'> | null
+  label: string
+  role: 'owner' | 'editor' | 'viewer'
+  organizationId: string | null
+  activate: (organizationId: string | null) => Promise<void>
+  switchTo: (bandId: string | null) => Promise<void>
+}
+
+const WorkspaceContext = createContext<Workspace | null>(null)
+
+function personalWorkspace(): Workspace {
+  return {
+    ready: true,
+    bandId: null,
+    label: m.personal(),
+    role: 'owner',
+    organizationId: null,
+    activate: async () => {},
+    switchTo: async () => {},
+  }
+}
+
+export function WorkspaceState({ children }: { children: ReactNode }) {
+  const { organization, isLoaded: orgLoaded } = useOrganization()
+  const { user } = useUser()
+  const { setActive, isLoaded: listLoaded } = useOrganizationList()
+  const bands = useQuery(api.bands.list)
+  const organizationId = organization?.id ?? null
+  const row = bands?.find(
+    (item) => item.band.clerkOrganizationId === organizationId,
+  )
+  const waiting = Boolean(organizationId) && bands !== undefined && !row
+  const value: Workspace = {
+    ready: Boolean(orgLoaded && listLoaded && bands !== undefined && !waiting),
+    bandId: organizationId ? (row?.band._id ?? null) : null,
+    label: organizationId
+      ? (row?.band.name ?? organization?.name ?? m.personal())
+      : m.personal(),
+    role: row?.membership.role ?? 'owner',
+    organizationId,
+    async activate(next) {
+      if (
+        next &&
+        !user?.organizationMemberships.some(
+          (membership) => membership.organization.id === next,
+        )
+      )
+        await user?.reload()
+      await setActive?.({ organization: next })
+    },
+    async switchTo(bandId) {
+      if (!bandId) {
+        await this.activate(null)
+        return
+      }
+      const match = bands?.find((item) => item.band._id === bandId)
+      if (match) await this.activate(match.band.clerkOrganizationId)
+    },
+  }
+  return <WorkspaceContext value={value}>{children}</WorkspaceContext>
+}
+
+export function useWorkspace() {
+  return useContext(WorkspaceContext) ?? personalWorkspace()
+}

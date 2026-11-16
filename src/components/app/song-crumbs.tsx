@@ -6,20 +6,21 @@ import { m } from '@/paraglide/messages'
 export function songCrumbs({
   songId,
   title,
-  band,
   linked = true,
+  home,
 }: {
   songId: string
   title: string
-  band?: { id: string; name: string } | null
   linked?: boolean
+  home?: string | null
 }): Array<ReactNode> {
+  const scoped = home !== undefined
   const song = linked ? (
     <Crumb
       key="song"
       to="/songs/$songId"
       params={{ songId }}
-      search={songSearch(band?.id)}
+      search={songSearch(scoped ? home : undefined)}
     >
       {title}
     </Crumb>
@@ -28,21 +29,16 @@ export function songCrumbs({
       {title}
     </span>
   )
-  if (!band) {
-    return [
-      <Crumb key="library" to="/">
-        {m.library()}
-      </Crumb>,
-      song,
-    ]
-  }
   return [
-    <Crumb key="bands" to="/bands">
-      {m.bands()}
-    </Crumb>,
-    <Crumb key="band" to="/bands/$bandId" params={{ bandId: band.id }}>
-      {band.name}
-    </Crumb>,
+    scoped ? (
+      <Crumb key="songs" to="/songs" activeOptions={{ exact: true }}>
+        {m.songs()}
+      </Crumb>
+    ) : (
+      <Crumb key="library" to="/">
+        {m.allSongs()}
+      </Crumb>
+    ),
     song,
   ]
 }

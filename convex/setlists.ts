@@ -8,9 +8,11 @@ import {
   permitted,
   requireIdentity,
   presentVersion,
+  sameHome,
   versionView,
   writes,
 } from './lib/access'
+import { copyVersion } from './lib/ownership'
 import { deleteSetlist, removeSetlistItem } from './lib/cascade'
 import { fail } from './lib/errors'
 
@@ -22,32 +24,25 @@ async function canEditSetlist(ctx: any, setlist: any, userId: string) {
 }
 
 export const list = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { bandId: v.union(v.null(), v.id('bands')) },
+  handler: async (ctx, args) => {
     const identity = await requireIdentity(ctx)
-    const own = await ctx.db
-      .query('setlists')
-      .withIndex('by_creator', (q) => q.eq('createdBy', identity.subject))
-      .filter((q) => q.eq(q.field('bandId'), undefined))
-      .collect()
-    const memberships = await ctx.db
-      .query('bandMemberships')
-      .withIndex('by_user', (q) => q.eq('userId', identity.subject))
-      .collect()
-    const bandLists = (
-      await Promise.all(
-        memberships.map((row) =>
-          ctx.db
+    const rows = args.bandId
+      ? await (async () => {
+          const mine = await membership(ctx.db, args.bandId!, identity.subject)
+          if (!mine) fail('FORBIDDEN')
+          return ctx.db
             .query('setlists')
-            .withIndex('by_band', (q) => q.eq('bandId', row.bandId))
-            .collect(),
-        ),
-      )
-    ).flat()
-    const byId = new Map(own.map((row) => [row._id, row]))
-    for (const row of bandLists) byId.set(row._id, row)
+            .withIndex('by_band', (q) => q.eq('bandId', args.bandId!))
+            .collect()
+        })()
+      : await ctx.db
+          .query('setlists')
+          .withIndex('by_creator', (q) => q.eq('createdBy', identity.subject))
+          .filter((q) => q.eq(q.field('bandId'), undefined))
+          .collect()
     const lists = await Promise.all(
-      [...byId.values()].map(async (setlist) => {
+      rows.map(async (setlist) => {
         const items = await ctx.db
           .query('setlistItems')
           .withIndex('by_setlist', (q) => q.eq('setlistId', setlist._id))
@@ -63,11 +58,9 @@ export const list = query({
               }),
           )
         ).filter((title) => title !== undefined)
-        const band = setlist.bandId ? await ctx.db.get(setlist.bandId) : null
         return {
           ...setlist,
           count: items.length,
-          bandName: band?.name,
           titles,
           preview: titles.slice(0, 3),
         }
@@ -193,15 +186,23 @@ export const addVersion = mutation({
     const version = await ctx.db.get(args.versionId)
     if (!version) fail('NOT_FOUND')
     await canReadVersion(ctx, version)
+    const versionId = sameHome(version, setlist)
+      ? version._id
+      : await copyVersion(ctx, version, {
+          userId: identity.subject,
+          bandId: setlist.bandId,
+        })
     const items = await ctx.db
       .query('setlistItems')
       .withIndex('by_setlist', (q) => q.eq('setlistId', setlist._id))
       .collect()
-    await ctx.db.insert('setlistItems', {
-      setlistId: setlist._id,
-      versionId: version._id,
-      order: items.length,
-    })
+    if (!items.some((item) => item.versionId === versionId))
+      await ctx.db.insert('setlistItems', {
+        setlistId: setlist._id,
+        versionId,
+        order: items.length,
+      })
+    return { copied: versionId !== version._id }
   },
 })
 

@@ -1,14 +1,3 @@
-export type Scope = 'all' | 'personal' | 'band'
-
-export function matchesScope(
-  scope: Scope,
-  flags: { personal: boolean; band: boolean },
-) {
-  if (scope === 'personal') return flags.personal
-  if (scope === 'band') return flags.band
-  return true
-}
-
 export function matchesSearch(
   query: string,
   parts: Array<string | null | undefined>,

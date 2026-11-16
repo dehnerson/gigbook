@@ -99,7 +99,7 @@ export function useVersionActions() {
         await navigate({
           to: '/songs/$songId',
           params: { songId: forked.songId },
-          search: songSearch(),
+          search: songSearch(null),
         })
       } catch (error) {
         toast.error(messageFor(error))

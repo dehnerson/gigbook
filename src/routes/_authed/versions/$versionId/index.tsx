@@ -11,6 +11,7 @@ import { useState } from 'react'
 import { api } from '../../../../../convex/_generated/api'
 import type { Id } from '../../../../../convex/_generated/dataModel'
 import { ContextMark } from '@/components/app/context-mark'
+import { WorkspaceNotice } from '@/components/app/workspace-notice'
 import {
   Breadcrumbs,
   HeaderActions,
@@ -117,9 +118,7 @@ function ReadPage() {
           {songCrumbs({
             songId: song._id,
             title: song.title,
-            band: ownerBandId
-              ? { id: ownerBandId, name: ownerName ?? '' }
-              : null,
+            home: ownerBandId,
           })}
           <span className="truncate text-foreground">{version.name}</span>
         </Breadcrumbs>
@@ -166,6 +165,7 @@ function ReadPage() {
             />
           </HeaderActions>
         </div>
+        <WorkspaceNotice homeBandId={ownerBandId} homeName={ownerName} />
       </div>
 
       <div className="sticky top-15.25 z-9000 -mx-4 space-y-3 border-b bg-background/85 px-4 py-3 backdrop-blur-lg sm:-mx-8 sm:px-8 lg:top-0">

@@ -90,7 +90,7 @@ export function VersionEditor({
             {songCrumbs({
               songId: song._id,
               title: song.title,
-              band,
+              home: band ? band.id : null,
             })}
             <Crumb
               to="/versions/$versionId"

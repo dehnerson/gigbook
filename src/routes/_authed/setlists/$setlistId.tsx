@@ -6,6 +6,7 @@ import {
   ArrowDownIcon,
   ArrowUpIcon,
   CheckIcon,
+  CopyIcon,
   EllipsisIcon,
   GripVerticalIcon,
   ListMusicIcon,
@@ -21,6 +22,7 @@ import type { Id } from '../../../../convex/_generated/dataModel'
 import { Monogram } from '@/components/app/chip'
 import { ContextMark } from '@/components/app/context-mark'
 import { ConfirmDialog } from '@/components/app/confirm-dialog'
+import { WorkspaceNotice } from '@/components/app/workspace-notice'
 import { EmptyState } from '@/components/app/empty-state'
 import { InlineEdit } from '@/components/app/inline-edit'
 import {
@@ -172,6 +174,7 @@ function SetlistPage() {
           </>
         }
       />
+      <WorkspaceNotice homeBandId={setlist.bandId} homeName={bandName} />
 
       {entries.length === 0 ? (
         <EmptyState
@@ -227,7 +230,6 @@ function SetlistPage() {
                       >
                         {entry.song.title}
                       </Link>
-                      <ContextMark {...entry} />
                     </span>
                     <VersionCaption
                       name={entry.version.name}
@@ -343,6 +345,7 @@ function SetlistPage() {
             isOpen={picker}
             onOpenChange={setPicker}
             setlistId={setlistId}
+            bandId={setlist.bandId}
             included={new Set(entries.map((entry) => entry.version._id))}
           />
         </Suspense>
@@ -377,11 +380,13 @@ function SongPicker({
   isOpen,
   onOpenChange,
   setlistId,
+  bandId,
   included,
 }: {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
   setlistId: Id<'setlists'>
+  bandId?: Id<'bands'>
   included: Set<string>
 }) {
   const catalog = useLiveQuery(convexQuery(api.songs.catalog, {}))
@@ -427,15 +432,18 @@ function SongPicker({
         {rows.map((row) =>
           row.versions.map((version) => {
             const added = included.has(version._id)
+            const foreign = (version.ownerBandId ?? null) !== (bandId ?? null)
             return (
               <li key={version._id}>
                 <button
                   type="button"
                   onClick={() =>
                     void addVersion({ setlistId, versionId: version._id })
-                      .then(() =>
+                      .then((result) =>
                         toast.success(
-                          m.addedToSetlist({ title: row.song.title }),
+                          result.copied
+                            ? m.copiedToSetlist({ title: row.song.title })
+                            : m.addedToSetlist({ title: row.song.title }),
                         ),
                       )
                       .catch((error: unknown) => toast.error(messageFor(error)))
@@ -446,7 +454,7 @@ function SongPicker({
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2 font-medium">
                       <span className="truncate">{row.song.title}</span>
-                      <ContextMark {...version} />
+                      {foreign ? <ContextMark {...version} /> : null}
                     </span>
                     <VersionCaption
                       name={version.name}
@@ -459,6 +467,8 @@ function SongPicker({
                       className="size-4 text-success"
                       aria-label={m.inSetlist()}
                     />
+                  ) : foreign ? (
+                    <CopyIcon className="size-4 text-muted-foreground" />
                   ) : (
                     <PlusIcon className="size-4 text-muted-foreground" />
                   )}

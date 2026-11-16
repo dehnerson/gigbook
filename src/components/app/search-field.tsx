@@ -7,14 +7,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { m } from '@/paraglide/messages'
 
-export function ownershipSegments() {
-  return [
-    { id: 'all' as const, label: m.all() },
-    { id: 'personal' as const, label: m.personal() },
-    { id: 'band' as const, label: m.bands() },
-  ]
-}
-
 export function NoMatches({
   query,
   onClear,

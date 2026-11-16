@@ -101,7 +101,8 @@ export default defineSchema({
   bands: defineTable({
     name: v.string(),
     createdBy: v.string(),
-  }),
+    clerkOrganizationId: v.string(),
+  }).index('by_clerk', ['clerkOrganizationId']),
 
   bandMemberships: defineTable({
     bandId: v.id('bands'),
@@ -209,6 +210,7 @@ export default defineSchema({
   jamRooms: defineTable({
     code: v.string(),
     hostUserId: v.string(),
+    bandId: v.optional(v.id('bands')),
     versionId: v.optional(v.id('versions')),
     setlistId: v.optional(v.id('setlists')),
     setlistIndex: v.number(),

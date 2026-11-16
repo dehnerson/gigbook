@@ -14,27 +14,38 @@ import { InlineEdit } from '@/components/app/inline-edit'
 import { PerformerLine } from '@/components/app/performer-line'
 import { PageHeader, SectionTitle } from '@/components/app/page-header'
 import { songCrumbs } from '@/components/app/song-crumbs'
+import { WorkspaceNotice } from '@/components/app/workspace-notice'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { useNotation } from '@/components/use-notation'
 import { VersionMenu } from '@/components/version-menu'
-import { songSearch } from '@/lib/song-context'
+import { songHome, songSearch } from '@/lib/song-context'
 import { messageFor } from '@/lib/errors'
 import { useLiveQuery } from '@/lib/live'
+import { useWorkspace } from '@/lib/workspace'
 import { displayChord } from '@/lib/music/chords'
 import { TUNING_PRESETS } from '@/lib/music/diagrams'
 import type { Notation } from '@/lib/music/pitch'
 import { m } from '@/paraglide/messages'
 
+function songArgs(songId: Id<'songs'>, band?: string) {
+  return {
+    songId,
+    ...(band ? { bandId: band as Id<'bands'> | 'personal' } : {}),
+  }
+}
+
 export const Route = createFileRoute('/_authed/songs/$songId')({
   validateSearch: (search: Record<string, unknown>) =>
-    songSearch(typeof search.band === 'string' ? search.band : undefined),
+    songSearch(
+      typeof search.band === 'string' ? songHome(search.band) : undefined,
+    ),
   loaderDeps: ({ search }) => ({ band: search.band }),
   loader: ({ context, params, deps }) =>
     context.load(
-      convexQuery(api.songs.get, {
-        songId: params.songId as Id<'songs'>,
-        ...(deps.band ? { bandId: deps.band as Id<'bands'> } : {}),
-      }),
+      convexQuery(
+        api.songs.get,
+        songArgs(params.songId as Id<'songs'>, deps.band),
+      ),
     ),
   component: SongPage,
 })
@@ -50,12 +61,10 @@ function tuningLabel(tuning: Array<string>) {
 function SongPage() {
   const songId = Route.useParams().songId as Id<'songs'>
   const { band: bandParam } = Route.useSearch()
-  const bandId = bandParam as Id<'bands'> | undefined
+  const home = songHome(bandParam)
+  const workspace = useWorkspace()
   const query = useLiveQuery(
-    convexQuery(api.songs.get, {
-      songId,
-      ...(bandId ? { bandId } : {}),
-    }),
+    convexQuery(api.songs.get, songArgs(songId, bandParam)),
   )
   const { song, versions, versionCount, canRename, canAdd, band } = query.data
   const update = useMutation(api.songs.update)
@@ -63,6 +72,12 @@ function SongPage() {
   const navigate = useNavigate()
   const notation = useNotation()
   const [addingVersion, setAddingVersion] = useState(false)
+  const scoped = home !== undefined
+  const fileBandId =
+    home === undefined ? (workspace.bandId ?? undefined) : (home ?? undefined)
+  const allowAdd =
+    home === undefined ? workspace.ready && workspace.role !== 'viewer' : canAdd
+  const homeName = home === null ? m.personal() : band?.name
 
   const save = (values: { title?: string; subTitle?: string }) =>
     update({ songId, ...values }).catch((error: unknown) =>
@@ -75,8 +90,8 @@ function SongPage() {
         breadcrumbs={songCrumbs({
           songId,
           title: song.title,
-          band: band ? { id: band._id, name: band.name } : null,
           linked: false,
+          home,
         })}
         title={
           <InlineEdit
@@ -95,10 +110,13 @@ function SongPage() {
           />
         }
       />
+      {scoped ? (
+        <WorkspaceNotice homeBandId={home} homeName={homeName} />
+      ) : null}
 
       <SectionTitle
         action={
-          canAdd ? (
+          allowAdd ? (
             <Button
               size="sm"
               variant="outline"
@@ -108,7 +126,7 @@ function SongPage() {
                 addVersion({
                   songId,
                   versionName: m.newVersionName(),
-                  bandId,
+                  ...(fileBandId ? { bandId: fileBandId as Id<'bands'> } : {}),
                 })
                   .then((added) =>
                     navigate({
@@ -126,7 +144,15 @@ function SongPage() {
           ) : null
         }
       >
-        {m.versions()}
+        <span className="inline-flex items-center gap-2">
+          {m.versions()}
+          {scoped ? (
+            <span className="inline-flex items-center gap-1.5 font-medium tracking-normal text-foreground normal-case">
+              <ContextMark bandId={home} name={homeName} />
+              {homeName}
+            </span>
+          ) : null}
+        </span>
       </SectionTitle>
       {versions.length === 0 ? (
         <EmptyState icon={FileMusicIcon} title={m.noVersions()} />
@@ -139,6 +165,7 @@ function SongPage() {
               songTitle={song.title}
               isOnlyVersion={versionCount === 1}
               notation={notation}
+              showHome={!scoped}
             />
           ))}
         </ul>
@@ -152,6 +179,7 @@ function VersionCard({
   songTitle,
   isOnlyVersion,
   notation,
+  showHome,
 }: {
   version: Omit<
     Doc<'versions'>,
@@ -165,6 +193,7 @@ function VersionCard({
   songTitle: string
   isOnlyVersion: boolean
   notation: Notation
+  showHome: boolean
 }) {
   const tuning = tuningLabel(version.tuning)
   const sections = version.timeline.length
@@ -174,7 +203,7 @@ function VersionCard({
       to="/versions/$versionId"
       params={{ versionId: version._id }}
       title={version.name}
-      trailing={<ContextMark {...version} />}
+      trailing={showHome ? <ContextMark {...version} /> : null}
       footer={
         <div className="flex flex-wrap gap-1.5">
           <Chip label={m.timeSignature()}>{version.timeSignature}</Chip>

@@ -7,7 +7,9 @@ import { api } from '../../../../convex/_generated/api'
 import { PageHeader } from '@/components/app/page-header'
 import { Button } from '@/components/ui/button'
 import { messageFor } from '@/lib/errors'
+import { useWorkspace } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
+import { ContextMark } from '@/components/app/context-mark'
 
 export const Route = createFileRoute('/_authed/jam/')({
   component: JamLobby,
@@ -16,6 +18,7 @@ export const Route = createFileRoute('/_authed/jam/')({
 const CODE_LENGTH = 6
 
 function JamLobby() {
+  const workspace = useWorkspace()
   const create = useMutation(api.jam.create)
   const join = useMutation(api.jam.join)
   const navigate = useNavigate()
@@ -38,15 +41,21 @@ function JamLobby() {
             <h2 className="text-2xl font-semibold tracking-tight">
               {m.startJam()}
             </h2>
-            <p className="text-muted-foreground">{m.startJamHint()}</p>
+            <span className="inline-flex items-center gap-2 text-muted-foreground">
+              <ContextMark
+                bandId={workspace.organizationId ? workspace.bandId : null}
+                name={workspace.organizationId ? workspace.label : null}
+              />
+              {workspace.label}
+            </span>
           </div>
           <Button
             size="lg"
             className="mt-auto w-full sm:w-fit"
-            isDisabled={busy !== null}
+            isDisabled={busy !== null || !workspace.ready}
             onPress={() => {
               setBusy('start')
-              create({})
+              create({ bandId: workspace.bandId })
                 .then(enter)
                 .catch(fail)
                 .finally(() => setBusy(null))

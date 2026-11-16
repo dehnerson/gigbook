@@ -11,6 +11,7 @@
 import type * as accountCleanup from "../accountCleanup.js";
 import type * as bands from "../bands.js";
 import type * as chordShapes from "../chordShapes.js";
+import type * as clerkSync from "../clerkSync.js";
 import type * as http from "../http.js";
 import type * as importAction from "../importAction.js";
 import type * as importDrafts from "../importDrafts.js";
@@ -19,6 +20,8 @@ import type * as jam from "../jam.js";
 import type * as lib_access from "../lib/access.js";
 import type * as lib_ai from "../lib/ai.js";
 import type * as lib_cascade from "../lib/cascade.js";
+import type * as lib_clerkApi from "../lib/clerkApi.js";
+import type * as lib_clerkRoles from "../lib/clerkRoles.js";
 import type * as lib_crypto from "../lib/crypto.js";
 import type * as lib_errors from "../lib/errors.js";
 import type * as lib_membership from "../lib/membership.js";
@@ -41,6 +44,7 @@ declare const fullApi: ApiFromModules<{
   accountCleanup: typeof accountCleanup;
   bands: typeof bands;
   chordShapes: typeof chordShapes;
+  clerkSync: typeof clerkSync;
   http: typeof http;
   importAction: typeof importAction;
   importDrafts: typeof importDrafts;
@@ -49,6 +53,8 @@ declare const fullApi: ApiFromModules<{
   "lib/access": typeof lib_access;
   "lib/ai": typeof lib_ai;
   "lib/cascade": typeof lib_cascade;
+  "lib/clerkApi": typeof lib_clerkApi;
+  "lib/clerkRoles": typeof lib_clerkRoles;
   "lib/crypto": typeof lib_crypto;
   "lib/errors": typeof lib_errors;
   "lib/membership": typeof lib_membership;

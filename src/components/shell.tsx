@@ -5,16 +5,17 @@ import {
   GuitarIcon,
   LibraryBigIcon,
   ListMusicIcon,
+  MusicIcon,
   RadioTowerIcon,
   SettingsIcon,
-  UsersIcon,
 } from 'lucide-react'
+import { WorkspaceSwitcher } from '@/components/app/workspace-switcher'
 import { m } from '@/paraglide/messages'
 
 const links = [
-  { to: '/', label: () => m.library(), icon: LibraryBigIcon, exact: true },
+  { to: '/', label: () => m.allSongs(), icon: LibraryBigIcon, exact: true },
+  { to: '/songs', label: () => m.songs(), icon: MusicIcon, exact: true },
   { to: '/setlists', label: () => m.setlists(), icon: ListMusicIcon },
-  { to: '/bands', label: () => m.bands(), icon: UsersIcon },
   { to: '/jam', label: () => m.jam(), icon: RadioTowerIcon },
 ] as const
 
@@ -56,7 +57,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <Logo />
         </div>
         <nav className="mt-8 flex flex-col gap-1">
-          {links.map((link) => (
+          <Link to="/" activeOptions={{ exact: true }} className={navItem}>
+            <LibraryBigIcon className="size-4.5" />
+            {m.allSongs()}
+          </Link>
+          {hasClerk ? <WorkspaceSwitcher /> : null}
+          {links.slice(1).map((link) => (
             <Link
               key={link.to}
               to={link.to}
@@ -84,6 +90,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-9000 flex items-center justify-between border-b bg-background/80 px-4 py-3 backdrop-blur-lg lg:hidden">
         <Logo />
         <div className="flex items-center gap-2">
+          {hasClerk ? <WorkspaceSwitcher compact /> : null}
           <Link
             to="/settings"
             aria-label={m.settings()}
