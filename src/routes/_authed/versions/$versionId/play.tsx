@@ -204,7 +204,7 @@ function PlayPage() {
           ) : null}
         </div>
         <div className="mx-auto max-w-5xl space-y-2 px-3 pb-2">
-          <VersionStats version={version} settings={settings} />
+          <VersionStats version={version} />
           <SectionNav passes={passes} activeEntryId={active} onJump={move} />
         </div>
       </header>

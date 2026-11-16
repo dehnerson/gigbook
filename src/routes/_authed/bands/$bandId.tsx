@@ -119,7 +119,6 @@ function BandPage() {
         }
         subtitle={
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <span>{m.yourRole()}</span>
             <Chip tone={role === 'owner' ? 'primary' : 'default'}>
               {roleName(role)}
             </Chip>
@@ -159,7 +158,10 @@ function BandPage() {
                     <FileInputIcon />
                   </HeaderButtonLink>
                 </ButtonGroup>
-                <HeaderButton variant="outline" onPress={() => setBringOpen(true)}                >
+                <HeaderButton
+                  variant="outline"
+                  onPress={() => setBringOpen(true)}
+                >
                   <PlusIcon />
                   {m.bringChart()}
                 </HeaderButton>
@@ -234,7 +236,10 @@ function BandPage() {
                       <FileInputIcon />
                     </HeaderButtonLink>
                   </ButtonGroup>
-                  <HeaderButton variant="outline" onPress={() => setBringOpen(true)}                >
+                  <HeaderButton
+                    variant="outline"
+                    onPress={() => setBringOpen(true)}
+                  >
                     <PlusIcon />
                     {m.bringChart()}
                   </HeaderButton>

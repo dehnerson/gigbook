@@ -3,7 +3,6 @@ import { StickyNoteIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Chip } from '@/components/app/chip'
-import { soundsAs } from '@/lib/music/chords'
 import { chartChords } from '@/lib/music/chordpro'
 import { STANDARD_TUNING, stringLabels } from '@/lib/music/diagrams'
 import { tabChords } from '@/lib/music/tab'
@@ -34,7 +33,7 @@ import type {
   SheetVersion,
 } from './types'
 
-export function entryElementId(entryId: string) {
+function entryElementId(entryId: string) {
   return `entry-${entryId}`
 }
 
@@ -95,11 +94,9 @@ export function VersionCaption({
 
 export function VersionStats({
   version,
-  settings,
   className,
 }: {
   version: SheetVersion
-  settings: SheetSettings
   className?: string
 }) {
   const standard =
@@ -107,24 +104,14 @@ export function VersionStats({
     version.tuning.join(' ') === STANDARD_TUNING.join(' ')
   return (
     <div className={cn('flex flex-wrap gap-1.5', className)}>
-      <Chip label={m.keyShort()}>
-        <span className="font-mono">
-          {soundsAs(version.concertKey, settings.transpose, settings.notation)}
-        </span>
+      <Chip label={m.timeSignature()}>
+        <span className="font-mono">{version.timeSignature}</span>
       </Chip>
-      {settings.capo > 0 || version.suggestedCapo > 0 ? (
-        <Chip label={m.capo()} tone={settings.capo > 0 ? 'primary' : 'default'}>
-          <span className="font-mono">{settings.capo}</span>
-        </Chip>
-      ) : null}
       {version.bpm ? (
         <Chip label={m.bpm()}>
           <span className="font-mono">{version.bpm}</span>
         </Chip>
       ) : null}
-      <Chip label={m.timeSignature()}>
-        <span className="font-mono">{version.timeSignature}</span>
-      </Chip>
       {standard ? null : (
         <Chip label={m.tuning()}>
           <span className="font-mono">
@@ -141,14 +128,12 @@ export function VersionStats({
 export function SheetHeader({
   song,
   version,
-  settings,
   showStats = true,
   mark,
   className,
 }: {
   song: SheetSong
   version: SheetVersion
-  settings?: SheetSettings
   showStats?: boolean
   mark?: ReactNode
   className?: string
@@ -170,9 +155,7 @@ export function SheetHeader({
         artist={version.artist}
         className="mt-2"
       />
-      {showStats && settings ? (
-        <VersionStats version={version} settings={settings} className="mt-3" />
-      ) : null}
+      {showStats ? <VersionStats version={version} className="mt-3" /> : null}
     </header>
   )
 }
@@ -355,12 +338,7 @@ export function SongSheet({
       style={{ fontSize: `${1.0625 * settings.scale}rem` }}
     >
       {showHeader ? (
-        <SheetHeader
-          song={song}
-          version={version}
-          settings={settings}
-          mark={mark}
-        />
+        <SheetHeader song={song} version={version} mark={mark} />
       ) : null}
       {settings.layers.chords ? (
         <PickableChordStrip

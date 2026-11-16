@@ -128,7 +128,6 @@ function ReadPage() {
           <SheetHeader
             song={song}
             version={version}
-            settings={settings}
             className="min-w-0 md:flex-1"
             mark={<ContextMark bandId={ownerBandId} name={ownerName} />}
           />

@@ -46,11 +46,9 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { VersionCaption } from '@/components/sheet/song-sheet'
-import { useNotation } from '@/components/use-notation'
 import { messageFor } from '@/lib/errors'
 import { matchesSearch } from '@/lib/search'
 import { useLiveQuery } from '@/lib/live'
-import { displayChord } from '@/lib/music/chords'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/setlists/$setlistId')({
@@ -72,7 +70,6 @@ function SetlistPage() {
   const reorder = useMutation(api.setlists.reorder)
   const removeItem = useMutation(api.setlists.removeItem)
   const navigate = useNavigate()
-  const notation = useNotation()
   const [picker, setPicker] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [songQuery, setSongQuery] = useState('')
@@ -142,10 +139,15 @@ function SetlistPage() {
             ) : null}
             {canEdit ? (
               <>
-                <HeaderButton variant="outline" onPress={() => setPicker(true)}>
-                  <PlusIcon />
-                  {m.addSong()}
-                </HeaderButton>
+                {entries.length > 0 ? (
+                  <HeaderButton
+                    variant="outline"
+                    onPress={() => setPicker(true)}
+                  >
+                    <PlusIcon />
+                    {m.addSong()}
+                  </HeaderButton>
+                ) : null}
                 <DropdownMenuTrigger>
                   <HeaderButton
                     size="icon-lg"
@@ -233,9 +235,6 @@ function SetlistPage() {
                       className="truncate"
                     />
                   </div>
-                  <span className="hidden font-mono text-base font-semibold text-chord sm:inline">
-                    {displayChord(entry.version.concertKey, 0, 0, notation)}
-                  </span>
                   <div className="relative z-10 flex shrink-0 items-center gap-0.5">
                     {canEdit && !searching ? (
                       <>
@@ -387,7 +386,6 @@ function SongPicker({
 }) {
   const catalog = useLiveQuery(convexQuery(api.songs.catalog, {}))
   const addVersion = useMutation(api.setlists.addVersion)
-  const notation = useNotation()
   const [query, setQuery] = useState('')
   const rows = catalog.data.flatMap((row) => {
     const versions = row.versions.filter((version) =>
@@ -455,9 +453,6 @@ function SongPicker({
                       artist={version.artist}
                       className="truncate text-xs font-normal"
                     />
-                  </span>
-                  <span className="font-mono text-sm font-semibold text-chord">
-                    {displayChord(version.concertKey, 0, 0, notation)}
                   </span>
                   {added ? (
                     <CheckIcon

@@ -2,6 +2,8 @@ import { convexQuery } from '@convex-dev/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import {
   CopyIcon,
+  FileSymlinkIcon,
+  Layers2Icon,
   Link2OffIcon,
   PencilIcon,
   RefreshCwIcon,
@@ -176,7 +178,7 @@ export function VersionMenu({
                 })
               }
             >
-              <CopyIcon />
+              <Layers2Icon />
               {m.duplicate()}
             </DropdownMenuItem>
           ) : null}
@@ -185,6 +187,7 @@ export function VersionMenu({
               textValue={m.copyVerb()}
               onAction={() => open('copy', copyHomes)}
             >
+              <CopyIcon />
               {m.copyVerb()}
             </DropdownMenuItem>
           ) : null}
@@ -193,6 +196,7 @@ export function VersionMenu({
               textValue={m.moveVerb()}
               onAction={() => open('move', moveHomes)}
             >
+              <FileSymlinkIcon />
               {m.moveVerb()}
             </DropdownMenuItem>
           ) : null}
