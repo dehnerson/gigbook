@@ -2,17 +2,16 @@ import {
   ArrowDownIcon,
   ArrowUpIcon,
   EllipsisIcon,
-  FileMusicIcon,
   GuitarIcon,
   RepeatIcon,
   Trash2Icon,
   UnlinkIcon,
 } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { ConfirmDialog } from '@/components/app/confirm-dialog'
 import { useDebounced } from '@/components/app/save'
 import { Stepper } from '@/components/app/stepper'
-import { trackName } from '@/components/sheet/tracks'
+import { partName } from '@/components/sheet/parts'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -20,141 +19,56 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import type { Notation } from '@/lib/music/pitch'
 import type { VersionShape } from '@/lib/music/shapes'
-import { allTracks, trackOf } from '@/lib/tracks'
+import { allParts, GUITAR_PART_ID, partTuning } from '@/lib/parts'
+import type { Instrument } from '@/lib/parts'
 import { m } from '@/paraglide/messages'
 import { ChartEditor, textareaClass } from './chart-editor'
 import { TabEditor } from './tab-editor'
-import type { EditorEntry, EditorPart, EditorVersion } from './types'
+import type { EditorEntry, EditorLine, EditorVersion } from './types'
 import { useEditor } from './use-editor'
 
-const NEW_TRACK = '__new'
-
-function PartCard({
-  part,
+function LineCard({
+  line,
   version,
-  palette,
   notation,
   shapes,
 }: {
-  part: EditorPart
+  line: EditorLine
   version: EditorVersion
-  palette: Array<string>
   notation: Notation
   shapes: Array<VersionShape>
 }) {
   const { mutations, save } = useEditor()
-  const [label, setLabel] = useState(part.label)
-  const [newTrack, setNewTrack] = useState<string | null>(null)
   const [confirm, setConfirm] = useState(false)
-  const saveLabel = useDebounced((value: string) => {
-    void save(() =>
-      mutations.updatePart({ partId: part._id, label: value.trim() }),
-    )
-  })
-  const Icon = part.kind === 'chart' ? FileMusicIcon : GuitarIcon
-  const isEmpty =
-    part.kind === 'chart'
-      ? !part.chartBody?.trim()
-      : (part.measures?.length ?? 0) === 0
-  const setTrack = (trackId: string) =>
-    void save(() => mutations.updatePart({ partId: part._id, trackId }))
-  const naming = useRef(false)
-  const startTrack = () => {
-    naming.current = true
-    setNewTrack('')
-  }
-  const createTrack = (name: string) => {
-    if (!naming.current) return
-    naming.current = false
-    setNewTrack(null)
-    if (!name.trim()) return
-    void save(async () => {
-      const trackId = await mutations.addTrack({
-        versionId: version._id,
-        name,
-      })
-      await mutations.updatePart({ partId: part._id, trackId })
-    })
-  }
+  const part = allParts(version.parts).find((item) => item.id === line.partId)
+  const tuning = part ? partTuning(part, version.tuning) : version.tuning
+  const isEmpty = (line.measures?.length ?? 0) === 0
 
   return (
     <div className="rounded-2xl border bg-card">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-2.5">
         <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
-          <Icon className="size-4" />
+          <GuitarIcon className="size-4" />
         </span>
         <div className="min-w-0 flex-1">
           <div className="text-[0.65rem] font-semibold tracking-widest text-muted-foreground uppercase">
-            {part.kind === 'chart' ? m.lyricsAndChords() : m.tabPart()}
+            {m.tabPart()}
           </div>
-          <input
-            value={label}
-            aria-label={m.partLabel()}
-            placeholder={m.partLabelPlaceholder()}
-            onChange={(event) => {
-              setLabel(event.target.value)
-              saveLabel.call(event.target.value)
-            }}
-            className="w-full bg-transparent text-sm font-medium outline-none placeholder:font-normal placeholder:text-muted-foreground/70"
-          />
+          <div className="text-sm font-medium">
+            {part ? partName(part) : line.partId}
+          </div>
         </div>
-        {newTrack === null ? (
-          <Select
-            aria-label={m.track()}
-            value={trackOf(part, version.tracks)}
-            className="w-44"
-            triggerClassName="h-8"
-            options={[
-              ...allTracks(version.tracks).map((track) => ({
-                id: track.id,
-                label: trackName(track),
-              })),
-              { id: NEW_TRACK, label: m.newTrack() },
-            ]}
-            onChange={(id) => {
-              if (id === NEW_TRACK) startTrack()
-              else setTrack(id)
-            }}
-          />
-        ) : (
-          <input
-            autoFocus
-            value={newTrack}
-            aria-label={m.newTrackName()}
-            placeholder={m.newTrackName()}
-            maxLength={60}
-            onChange={(event) => setNewTrack(event.target.value)}
-            onBlur={() => createTrack(newTrack)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') createTrack(newTrack)
-              if (event.key === 'Escape') {
-                naming.current = false
-                setNewTrack(null)
-              }
-            }}
-            className="h-8 w-44 rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          />
-        )}
-        <Stepper
-          label={m.repeatCount()}
-          value={part.repeat ?? 1}
-          min={1}
-          max={16}
-          format={(value) => `×${value}`}
-          onChange={(repeat) =>
-            void save(() => mutations.updatePart({ partId: part._id, repeat }))
-          }
-        />
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-label={m.removePart()}
+          aria-label={m.removeLine()}
           onPress={() => {
             if (isEmpty)
-              void save(() => mutations.removePart({ partId: part._id }))
+              void save(() => mutations.removeLine({ lineId: line._id }))
             else setConfirm(true)
           }}
         >
@@ -162,31 +76,132 @@ function PartCard({
         </Button>
       </div>
       <div className="p-4">
-        {part.kind === 'chart' ? (
-          <ChartEditor
-            part={part}
-            palette={palette}
-            notation={notation}
-            timeSignature={version.timeSignature}
-          />
-        ) : (
-          <TabEditor
-            part={part}
-            tuning={version.tuning}
-            timeSignature={version.timeSignature}
-            bpm={version.bpm}
-            notation={notation}
-            shapes={shapes}
-          />
-        )}
+        <TabEditor
+          line={line}
+          tuning={tuning}
+          timeSignature={version.timeSignature}
+          bpm={version.bpm}
+          notation={notation}
+          shapes={part?.instrument === 'guitar' ? shapes : []}
+        />
       </div>
       <ConfirmDialog
         isOpen={confirm}
         onOpenChange={setConfirm}
-        title={m.removePartConfirm()}
+        title={m.removeLineConfirm()}
         confirmLabel={m.remove()}
-        onConfirm={() => mutations.removePart({ partId: part._id })}
+        onConfirm={() => mutations.removeLine({ lineId: line._id })}
       />
+    </div>
+  )
+}
+
+function AddLine({
+  entry,
+  version,
+}: {
+  entry: EditorEntry
+  version: EditorVersion
+}) {
+  const { mutations, save } = useEditor()
+  const [name, setName] = useState('')
+  const [instrument, setInstrument] = useState<Instrument>('guitar')
+  const guitarTaken = entry.lines.some((line) => line.partId === GUITAR_PART_ID)
+  const missing = allParts(version.parts).filter(
+    (part) => !entry.lines.some((line) => line.partId === part.id),
+  )
+
+  const addFor = (partId?: string) =>
+    void save(() => mutations.addLine({ sectionId: entry.section._id, partId }))
+
+  const addNamed = () => {
+    const trimmed = name.trim()
+    if (instrument === 'guitar' && !trimmed && !guitarTaken) {
+      addFor(undefined)
+      return
+    }
+    void save(async () => {
+      const partId = await mutations.addPart({
+        versionId: version._id,
+        instrument,
+        name: trimmed || undefined,
+      })
+      await mutations.addLine({ sectionId: entry.section._id, partId })
+    })
+    setName('')
+  }
+
+  return (
+    <div className="space-y-3">
+      {!guitarTaken ? (
+        <button
+          type="button"
+          onClick={() => addFor(undefined)}
+          className="flex w-full items-center gap-3 rounded-2xl border border-dashed p-4 text-left transition-colors hover:border-primary/50 hover:bg-primary/5"
+        >
+          <span className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary">
+            <GuitarIcon className="size-5" />
+          </span>
+          <span>
+            <span className="block font-medium">{m.addTab()}</span>
+            <span className="block text-xs text-muted-foreground">
+              {m.addTabHint()}
+            </span>
+          </span>
+        </button>
+      ) : null}
+      {missing
+        .filter((part) => part.id !== GUITAR_PART_ID)
+        .map((part) => (
+          <button
+            key={part.id}
+            type="button"
+            onClick={() => addFor(part.id)}
+            className="flex w-full items-center gap-3 rounded-2xl border border-dashed p-4 text-left transition-colors hover:border-primary/50 hover:bg-primary/5"
+          >
+            <span className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary">
+              <GuitarIcon className="size-5" />
+            </span>
+            <span className="font-medium">
+              {m.addPartTab({ name: partName(part) })}
+            </span>
+          </button>
+        ))}
+      {guitarTaken ? (
+        <form
+          className="flex flex-wrap items-center gap-2 rounded-2xl border border-dashed p-4"
+          onSubmit={(event) => {
+            event.preventDefault()
+            addNamed()
+          }}
+        >
+          <Select
+            aria-label={m.instrument()}
+            value={instrument}
+            className="w-36"
+            options={[
+              { id: 'guitar', label: m.partGuitar() },
+              { id: 'bass', label: m.partBass() },
+            ]}
+            onChange={(id) => setInstrument(id as Instrument)}
+          />
+          <Input
+            value={name}
+            aria-label={m.partName()}
+            placeholder={m.newPartPlaceholder()}
+            maxLength={60}
+            onChange={(event) => setName(event.target.value)}
+            className="w-48"
+          />
+          <Button
+            type="submit"
+            variant="outline"
+            isDisabled={instrument === 'guitar' && !name.trim()}
+          >
+            {m.addTab()}
+          </Button>
+        </form>
+      ) : null}
     </div>
   )
 }
@@ -250,9 +265,6 @@ export function SectionPanel({
       entryId: entry.entryId,
     })
   }
-
-  const addPart = (kind: 'chart' | 'tab') =>
-    void save(() => mutations.addPart({ sectionId: entry.section._id, kind }))
 
   return (
     <div className="space-y-5">
@@ -372,50 +384,30 @@ export function SectionPanel({
         />
       </label>
 
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium">{m.lyricsAndChords()}</h3>
+        <ChartEditor
+          key={entry.section._id}
+          sectionId={entry.section._id}
+          chartBody={entry.section.chartBody}
+          strumming={entry.section.strumming}
+          palette={palette}
+          notation={notation}
+          timeSignature={version.timeSignature}
+        />
+      </div>
+
       <div className="space-y-4">
-        {entry.parts.map((part) => (
-          <PartCard
-            key={part._id}
-            part={part}
+        {entry.lines.map((line) => (
+          <LineCard
+            key={line._id}
+            line={line}
             version={version}
-            palette={palette}
             notation={notation}
             shapes={shapes}
           />
         ))}
-      </div>
-
-      <div className="grid gap-2 sm:grid-cols-2">
-        <button
-          type="button"
-          onClick={() => addPart('chart')}
-          className="flex items-center gap-3 rounded-2xl border border-dashed p-4 text-left transition-colors hover:border-primary/50 hover:bg-primary/5"
-        >
-          <span className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary">
-            <FileMusicIcon className="size-5" />
-          </span>
-          <span>
-            <span className="block font-medium">{m.addLyricsAndChords()}</span>
-            <span className="block text-xs text-muted-foreground">
-              {m.addLyricsAndChordsHint()}
-            </span>
-          </span>
-        </button>
-        <button
-          type="button"
-          onClick={() => addPart('tab')}
-          className="flex items-center gap-3 rounded-2xl border border-dashed p-4 text-left transition-colors hover:border-primary/50 hover:bg-primary/5"
-        >
-          <span className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary">
-            <GuitarIcon className="size-5" />
-          </span>
-          <span>
-            <span className="block font-medium">{m.addTab()}</span>
-            <span className="block text-xs text-muted-foreground">
-              {m.addTabHint()}
-            </span>
-          </span>
-        </button>
+        <AddLine entry={entry} version={version} />
       </div>
 
       <ConfirmDialog

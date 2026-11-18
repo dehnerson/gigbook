@@ -1,5 +1,5 @@
 import { convexQuery } from '@convex-dev/react-query'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useParams } from '@tanstack/react-router'
 import { LockIcon } from 'lucide-react'
 import { api } from '../../../../../convex/_generated/api'
 import type { Id } from '../../../../../convex/_generated/dataModel'
@@ -9,6 +9,8 @@ import type { EditorEntry } from '@/components/editor/types'
 import { ButtonLink } from '@/components/ui/button'
 import { VersionEditor } from '@/components/version-editor'
 import { useLiveQuery } from '@/lib/live'
+import { built } from '@/lib/built'
+import { useGo } from '@/lib/use-trail'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/versions/$versionId/edit')({
@@ -21,8 +23,9 @@ export const Route = createFileRoute('/_authed/versions/$versionId/edit')({
   component: EditPage,
 })
 
-function EditPage() {
-  const versionId = Route.useParams().versionId as Id<'versions'>
+export function EditPage() {
+  const versionId = useParams({ strict: false }).versionId as Id<'versions'>
+  const { href } = useGo()
   const bundle = useLiveQuery(
     convexQuery(api.versions.getBundle, { versionId }),
   )
@@ -33,7 +36,7 @@ function EditPage() {
         title={m.errorForbidden()}
         description={m.readOnlyHint()}
         action={
-          <ButtonLink to="/versions/$versionId" params={{ versionId }}>
+          <ButtonLink {...built(href({ page: 'version', versionId }))}>
             {m.read()}
           </ButtonLink>
         }
@@ -47,14 +50,6 @@ function EditPage() {
       timeline={bundle.data.timeline as Array<EditorEntry>}
       shapes={bundle.data.shapes}
       versionCount={bundle.data.versionCount}
-      band={
-        bundle.data.ownerBandId
-          ? {
-              id: bundle.data.ownerBandId,
-              name: bundle.data.ownerName ?? '',
-            }
-          : null
-      }
       mark={
         <ContextMark
           bandId={bundle.data.ownerBandId}

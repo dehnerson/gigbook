@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 import { messageFor } from '@/lib/errors'
-import { songSearch } from '@/lib/song-context'
+import { PERSONAL, homeKey, path, workspaceTrail } from '@/lib/space'
 import { m } from '@/paraglide/messages'
 
 async function copyShareLink(token: string) {
@@ -24,6 +24,18 @@ export function useVersionActions() {
   const revokeShare = useMutation(api.versions.revokeShare)
   const saveKey = useMutation(api.versions.saveWrittenKey)
   const navigate = useNavigate()
+  const openVersion = (
+    versionId: Id<'versions'>,
+    home: Id<'bands'> | null,
+    leaf: 'read' | 'edit' = 'read',
+  ) =>
+    navigate({
+      href: path(workspaceTrail(homeKey(home)), {
+        page: 'version',
+        versionId,
+        leaf,
+      }),
+    })
 
   return {
     copy: async (version: { _id: Id<'versions'>; name: string }) => {
@@ -44,10 +56,7 @@ export function useVersionActions() {
         const copied = await copyTo({ versionId })
         if (copied.existing) toast.info(m.alreadyInLibrary())
         else toast.success(m.madeMyCopy())
-        await navigate({
-          to: '/versions/$versionId',
-          params: { versionId: copied.versionId },
-        })
+        await openVersion(copied.versionId, null)
       } catch (error) {
         toast.error(messageFor(error))
       }
@@ -57,10 +66,7 @@ export function useVersionActions() {
         const copied = await copyTo({ versionId, bandId })
         if (copied.existing) toast.info(m.alreadyInLibrary())
         else toast.success(m.copiedToBand())
-        await navigate({
-          to: '/versions/$versionId',
-          params: { versionId: copied.versionId },
-        })
+        await openVersion(copied.versionId, bandId)
       } catch (error) {
         toast.error(messageFor(error))
       }
@@ -69,10 +75,7 @@ export function useVersionActions() {
       try {
         const moved = await moveTo({ versionId })
         toast.success(m.movedChart())
-        await navigate({
-          to: '/versions/$versionId',
-          params: { versionId: moved.versionId },
-        })
+        await openVersion(moved.versionId, null)
       } catch (error) {
         toast.error(messageFor(error))
       }
@@ -81,10 +84,7 @@ export function useVersionActions() {
       try {
         const moved = await moveTo({ versionId, bandId })
         toast.success(m.movedChart())
-        await navigate({
-          to: '/versions/$versionId',
-          params: { versionId: moved.versionId },
-        })
+        await openVersion(moved.versionId, bandId)
       } catch (error) {
         toast.error(messageFor(error))
       }
@@ -97,9 +97,10 @@ export function useVersionActions() {
           toast.success(m.addedAsVersion({ title: forked.joinedSong }))
         else toast.success(m.copiedToLibrary())
         await navigate({
-          to: '/songs/$songId',
-          params: { songId: forked.songId },
-          search: songSearch(null),
+          href: path(workspaceTrail(PERSONAL), {
+            page: 'song',
+            songId: forked.songId,
+          }),
         })
       } catch (error) {
         toast.error(messageFor(error))

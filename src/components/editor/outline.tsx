@@ -114,12 +114,12 @@ export function Outline({
                     />
                   ) : null}
                   <span className="flex shrink-0 items-center gap-0.5 text-muted-foreground">
-                    {entry.parts.length === 0 ? null : (
+                    {entry.section.chartBody || entry.lines.length > 0 ? (
                       <span className="flex items-center gap-0.5 text-xs">
                         <FileMusicIcon className="size-3.5" />
-                        {entry.parts.length}
+                        {entry.lines.length > 0 ? entry.lines.length : null}
                       </span>
-                    )}
+                    ) : null}
                   </span>
                 </li>
               )

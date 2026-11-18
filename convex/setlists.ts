@@ -15,6 +15,7 @@ import {
 import { copyVersion } from './lib/ownership'
 import { deleteSetlist, removeSetlistItem } from './lib/cascade'
 import { fail } from './lib/errors'
+import { loadHome } from './lib/home'
 
 async function canEditSetlist(ctx: any, setlist: any, userId: string) {
   if (setlist.createdBy === userId && !setlist.bandId) return
@@ -27,15 +28,14 @@ export const list = query({
   args: { bandId: v.union(v.null(), v.id('bands')) },
   handler: async (ctx, args) => {
     const identity = await requireIdentity(ctx)
-    const rows = args.bandId
-      ? await (async () => {
-          const mine = await membership(ctx.db, args.bandId!, identity.subject)
-          if (!mine) fail('FORBIDDEN')
-          return ctx.db
-            .query('setlists')
-            .withIndex('by_band', (q) => q.eq('bandId', args.bandId!))
-            .collect()
-        })()
+    const home = await loadHome(ctx, identity.subject, args.bandId)
+    if (!home) return []
+    const homeId = home.bandId
+    const rows = homeId
+      ? await ctx.db
+          .query('setlists')
+          .withIndex('by_band', (q) => q.eq('bandId', homeId))
+          .collect()
       : await ctx.db
           .query('setlists')
           .withIndex('by_creator', (q) => q.eq('createdBy', identity.subject))

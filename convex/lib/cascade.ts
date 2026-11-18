@@ -20,7 +20,7 @@ export async function cloneVersionTree(
     bpm: version.bpm,
     tuning: version.tuning,
     suggestedCapo: version.suggestedCapo,
-    tracks: version.tracks,
+    parts: version.parts,
     timeline: [],
     parentVersionId: version._id,
     createdBy: target.createdBy,
@@ -36,25 +36,21 @@ export async function cloneVersionTree(
       versionId: copyVersionId,
       name: section.name,
       notes: section.notes,
+      chartBody: section.chartBody,
+      strumming: section.strumming,
     })
     idMap.set(section._id, newId)
-    const parts = await ctx.db
-      .query('parts')
+    const lines = await ctx.db
+      .query('lines')
       .withIndex('by_section', (q) => q.eq('sectionId', section._id))
       .collect()
-    for (const part of parts) {
-      await ctx.db.insert('parts', {
+    for (const line of lines) {
+      await ctx.db.insert('lines', {
         sectionId: newId,
         versionId: copyVersionId,
-        kind: part.kind,
-        label: part.label,
-        trackId: part.trackId,
-        chartBody: part.chartBody,
-        strumming: part.strumming,
-        measures: part.measures,
-        rhythmGuessed: part.rhythmGuessed,
-        repeat: part.repeat,
-        order: part.order,
+        partId: line.partId,
+        measures: line.measures,
+        rhythmGuessed: line.rhythmGuessed,
       })
     }
   }
@@ -137,8 +133,8 @@ export async function deleteVersionTree(
     .query('sections')
     .withIndex('by_version', (q) => q.eq('versionId', versionId))
     .collect()
-  const parts = await ctx.db
-    .query('parts')
+  const lines = await ctx.db
+    .query('lines')
     .withIndex('by_version', (q) => q.eq('versionId', versionId))
     .collect()
   const shapes = await ctx.db
@@ -149,7 +145,7 @@ export async function deleteVersionTree(
     .query('setlistItems')
     .withIndex('by_version', (q) => q.eq('versionId', versionId))
     .collect()
-  for (const part of parts) await ctx.db.delete(part._id)
+  for (const line of lines) await ctx.db.delete(line._id)
   for (const section of sections) await ctx.db.delete(section._id)
   for (const shape of shapes) await ctx.db.delete(shape._id)
   for (const item of items) await removeSetlistItem(ctx, item)

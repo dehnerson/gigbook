@@ -37,6 +37,7 @@ export async function ensureBand(
     band = await ctx.db.get(bandId)
   } else if (band.name !== label && name.trim()) {
     await ctx.db.patch(band._id, { name: label })
+    band = await ctx.db.get(band._id)
   }
   if (!band) throw new Error('Band missing')
   if (createdBy) {

@@ -24,6 +24,7 @@ import type * as lib_clerkApi from "../lib/clerkApi.js";
 import type * as lib_clerkRoles from "../lib/clerkRoles.js";
 import type * as lib_crypto from "../lib/crypto.js";
 import type * as lib_errors from "../lib/errors.js";
+import type * as lib_home from "../lib/home.js";
 import type * as lib_membership from "../lib/membership.js";
 import type * as lib_ownership from "../lib/ownership.js";
 import type * as lib_songs from "../lib/songs.js";
@@ -57,6 +58,7 @@ declare const fullApi: ApiFromModules<{
   "lib/clerkRoles": typeof lib_clerkRoles;
   "lib/crypto": typeof lib_crypto;
   "lib/errors": typeof lib_errors;
+  "lib/home": typeof lib_home;
   "lib/membership": typeof lib_membership;
   "lib/ownership": typeof lib_ownership;
   "lib/songs": typeof lib_songs;

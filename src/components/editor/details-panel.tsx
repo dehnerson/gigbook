@@ -10,12 +10,12 @@ import { Stepper } from '@/components/app/stepper'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import { trackName } from '@/components/sheet/tracks'
+import { partName } from '@/components/sheet/parts'
 import { TUNING_PRESETS } from '@/lib/music/diagrams'
 import { keyOptions, TIME_SIGNATURES } from '@/lib/music/keys'
 import type { Notation } from '@/lib/music/pitch'
-import { allTracks, trackOf } from '@/lib/tracks'
-import type { Track } from '@/lib/tracks'
+import { allParts, BASS_TUNING } from '@/lib/parts'
+import type { Instrument, Part } from '@/lib/parts'
 import { m } from '@/paraglide/messages'
 import type { Id } from '../../../convex/_generated/dataModel'
 import type { EditorEntry, EditorVersion } from './types'
@@ -30,69 +30,90 @@ function presetName(id: string) {
   return m.tuningCustom()
 }
 
-function TrackRow({
-  track,
+function PartRow({
+  part,
   count,
   versionId,
 }: {
-  track: Track
+  part: Part
   count: number
   versionId: Id<'versions'>
 }) {
   const { mutations, save } = useEditor()
-  const [name, setName] = useState(track.name ?? '')
+  const [name, setName] = useState(part.name ?? '')
+  const [tuningText, setTuningText] = useState(
+    (part.tuning ?? [...BASS_TUNING]).join(' '),
+  )
   const commit = () => {
     const trimmed = name.trim()
-    if (trimmed === (track.name ?? '')) return
-    if (!trimmed) {
-      if (track.builtIn)
-        void save(() => mutations.removeTrack({ versionId, trackId: track.id }))
-      else setName(track.name ?? '')
+    if (trimmed === (part.name ?? '')) return
+    if (!trimmed && !part.builtIn) {
+      setName(part.name ?? '')
       return
     }
     void save(() =>
-      mutations.renameTrack({ versionId, trackId: track.id, name: trimmed }),
+      mutations.renamePart({ versionId, partId: part.id, name: trimmed }),
+    )
+  }
+  const commitTuning = () => {
+    const tuning = tuningText.split(/\s+/).filter(Boolean)
+    const current = (part.tuning ?? [...BASS_TUNING]).join(' ')
+    if (tuning.join(' ') === current) return
+    if (tuning.length < 4 || tuning.length > 8) {
+      setTuningText(current)
+      return
+    }
+    void save(() =>
+      mutations.setPartTuning({ versionId, partId: part.id, tuning }),
     )
   }
   return (
-    <li className="flex items-center gap-2">
-      <Input
-        value={name}
-        aria-label={m.trackName()}
-        placeholder={
-          track.builtIn ? trackName({ ...track, name: undefined }) : undefined
-        }
-        maxLength={60}
-        onChange={(event) => setName(event.target.value)}
-        onBlur={commit}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') event.currentTarget.blur()
-        }}
-      />
-      <span className="w-20 shrink-0 text-right text-xs text-muted-foreground tabular-nums">
-        {m.partCount({ count: String(count) })}
-      </span>
-      {track.builtIn ? (
-        <span className="size-9 shrink-0" />
-      ) : (
+    <li className="space-y-2">
+      <div className="flex items-center gap-2">
+        <Input
+          value={name}
+          aria-label={m.partName()}
+          placeholder={partName({ ...part, name: undefined })}
+          maxLength={60}
+          onChange={(event) => setName(event.target.value)}
+          onBlur={commit}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') event.currentTarget.blur()
+          }}
+        />
+        <span className="w-16 shrink-0 text-right text-xs text-muted-foreground tabular-nums">
+          {m.partCount({ count: String(count) })}
+        </span>
         <Button
           variant="ghost"
           size="icon"
-          aria-label={m.removeTrack()}
+          aria-label={m.removePart()}
           onPress={() =>
             void save(() =>
-              mutations.removeTrack({ versionId, trackId: track.id }),
+              mutations.removePart({ versionId, partId: part.id }),
             )
           }
         >
           <Trash2Icon />
         </Button>
-      )}
+      </div>
+      {part.instrument === 'bass' ? (
+        <Input
+          value={tuningText}
+          aria-label={m.tuning()}
+          className="font-mono"
+          onChange={(event) => setTuningText(event.target.value)}
+          onBlur={commitTuning}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') event.currentTarget.blur()
+          }}
+        />
+      ) : null}
     </li>
   )
 }
 
-function TracksCard({
+function PartsCard({
   version,
   timeline,
 }: {
@@ -101,52 +122,63 @@ function TracksCard({
 }) {
   const { mutations, save } = useEditor()
   const [name, setName] = useState('')
-  const parts = [
-    ...new Map(
-      timeline.flatMap((entry) => entry.parts).map((part) => [part._id, part]),
-    ).values(),
-  ]
+  const [instrument, setInstrument] = useState<Instrument>('guitar')
+  const lines = timeline.flatMap((entry) => entry.lines)
   const add = () => {
     if (!name.trim()) return
-    void save(() => mutations.addTrack({ versionId: version._id, name }))
+    void save(() =>
+      mutations.addPart({
+        versionId: version._id,
+        instrument,
+        name: name.trim(),
+      }),
+    )
     setName('')
   }
   return (
     <div className="space-y-4 rounded-2xl border bg-card p-5">
       <div>
-        <div className="font-medium">{m.tracks()}</div>
-        <p className="text-sm text-muted-foreground">{m.tracksHint()}</p>
+        <div className="font-medium">{m.parts()}</div>
+        <p className="text-sm text-muted-foreground">{m.partsHint()}</p>
       </div>
       <ul className="space-y-2">
-        {allTracks(version.tracks).map((track) => (
-          <TrackRow
-            key={`${track.id}:${track.name ?? ''}`}
-            track={track}
-            count={
-              parts.filter((part) => trackOf(part, version.tracks) === track.id)
-                .length
-            }
+        {allParts(version.parts).map((part) => (
+          <PartRow
+            key={`${part.id}:${part.name ?? ''}:${(part.tuning ?? []).join(' ')}`}
+            part={part}
+            count={lines.filter((line) => line.partId === part.id).length}
             versionId={version._id}
           />
         ))}
       </ul>
       <form
-        className="flex items-center gap-2"
+        className="flex flex-wrap items-center gap-2"
         onSubmit={(event) => {
           event.preventDefault()
           add()
         }}
       >
+        <Select
+          aria-label={m.instrument()}
+          value={instrument}
+          className="w-36"
+          options={[
+            { id: 'guitar', label: m.partGuitar() },
+            { id: 'bass', label: m.partBass() },
+          ]}
+          onChange={(id) => setInstrument(id as Instrument)}
+        />
         <Input
           value={name}
-          aria-label={m.newTrackName()}
-          placeholder={m.newTrackPlaceholder()}
+          aria-label={m.partName()}
+          placeholder={m.newPartPlaceholder()}
           maxLength={60}
           onChange={(event) => setName(event.target.value)}
+          className="min-w-40 flex-1"
         />
         <Button type="submit" variant="outline" isDisabled={!name.trim()}>
           <PlusIcon />
-          {m.addTrack()}
+          {m.addPart()}
         </Button>
       </form>
     </div>
@@ -159,14 +191,12 @@ export function DetailsPanel({
   notation,
   songTitle,
   isOnlyVersion,
-  bandId = null,
 }: {
   version: EditorVersion
   timeline: Array<EditorEntry>
   notation: Notation
   songTitle: string
   isOnlyVersion: boolean
-  bandId?: string | null
 }) {
   const { mutations, save } = useEditor()
   const [name, setName] = useState(version.name)
@@ -327,7 +357,7 @@ export function DetailsPanel({
         ) : null}
       </div>
 
-      <TracksCard version={version} timeline={timeline} />
+      <PartsCard version={version} timeline={timeline} />
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-5">
         <div>
@@ -352,7 +382,6 @@ export function DetailsPanel({
         songTitle={songTitle}
         isOnlyVersion={isOnlyVersion}
         redirectToSong
-        bandId={bandId}
       />
     </div>
   )

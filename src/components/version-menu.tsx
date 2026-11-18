@@ -1,5 +1,5 @@
 import { convexQuery } from '@convex-dev/react-query'
-import { useNavigate } from '@tanstack/react-router'
+import { useGo } from '@/lib/use-trail'
 import {
   CopyIcon,
   FileSymlinkIcon,
@@ -69,7 +69,7 @@ export function VersionMenu({
 }) {
   const bands = useLiveQuery(convexQuery(api.bands.list, {}))
   const actions = useVersionActions()
-  const navigate = useNavigate()
+  const { go } = useGo()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [linkAction, setLinkAction] = useState<'rotate' | 'revoke' | null>(null)
   const [place, setPlace] = useState<'copy' | 'move' | null>(null)
@@ -119,9 +119,10 @@ export function VersionMenu({
             <DropdownMenuItem
               textValue={m.edit()}
               onAction={() =>
-                void navigate({
-                  to: '/versions/$versionId/edit',
-                  params: { versionId: version._id },
+                void go({
+                  page: 'version',
+                  versionId: version._id,
+                  leaf: 'edit',
                 })
               }
             >
@@ -171,9 +172,10 @@ export function VersionMenu({
               onAction={() =>
                 void actions.copy(version).then((copyId) => {
                   if (!copyId) return
-                  return navigate({
-                    to: '/versions/$versionId/edit',
-                    params: { versionId: copyId },
+                  return go({
+                    page: 'version',
+                    versionId: copyId,
+                    leaf: 'edit',
                   })
                 })
               }
@@ -295,7 +297,6 @@ export function VersionMenu({
         songTitle={songTitle}
         isOnlyVersion={isOnlyVersion}
         redirectToSong={redirectToSong}
-        bandId={version.ownerBandId}
       />
     </>
   )

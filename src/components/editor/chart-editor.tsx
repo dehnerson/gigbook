@@ -17,7 +17,7 @@ import {
 import type { Notation } from '@/lib/music/pitch'
 import { DEFAULT_LAYERS } from '@/lib/sheet-layers'
 import { m } from '@/paraglide/messages'
-import type { EditorPart } from './types'
+import type { Id } from '../../../convex/_generated/dataModel'
 import { useEditor } from './use-editor'
 
 const COMMON = ['C', 'D', 'E', 'G', 'A', 'Am', 'Em', 'Dm', 'F', 'Bm']
@@ -34,21 +34,25 @@ export const textareaClass =
   'block w-full resize-y rounded-xl border border-input bg-background/60 px-3.5 py-3 font-mono text-sm leading-relaxed outline-none placeholder:text-muted-foreground/60 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40'
 
 export function ChartEditor({
-  part,
+  sectionId,
+  chartBody,
+  strumming: storedStrumming,
   palette,
   notation,
   timeSignature,
 }: {
-  part: EditorPart
+  sectionId: Id<'sections'>
+  chartBody?: string
+  strumming?: string
   palette: Array<string>
   notation: Notation
   timeSignature: string
 }) {
   const { mutations, save } = useEditor()
   const [text, setText] = useState(() =>
-    toEditorText(part.chartBody ?? '', notation),
+    toEditorText(chartBody ?? '', notation),
   )
-  const [strumming, setStrumming] = useState(part.strumming ?? '')
+  const [strumming, setStrumming] = useState(storedStrumming ?? '')
   const [custom, setCustom] = useState('')
   const history = useRef<Array<string>>([])
   const [canUndo, setCanUndo] = useState(false)
@@ -56,15 +60,15 @@ export function ChartEditor({
 
   const saveBody = useDebounced((value: string) => {
     void save(() =>
-      mutations.updatePart({
-        partId: part._id,
+      mutations.updateSection({
+        sectionId,
         chartBody: fromEditorText(value, notation),
       }),
     )
   })
   const saveStrum = useDebounced((value: string) => {
     void save(() =>
-      mutations.updatePart({ partId: part._id, strumming: value.trim() }),
+      mutations.updateSection({ sectionId, strumming: value.trim() }),
     )
   })
 

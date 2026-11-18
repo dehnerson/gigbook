@@ -23,22 +23,26 @@ import { soundsAs } from '@/lib/music/chords'
 import type { Notation } from '@/lib/music/pitch'
 import { toggleLayer } from '@/lib/sheet-layers'
 import type { Layer, LayerSet } from '@/lib/sheet-layers'
-import { usedTracks } from '@/lib/tracks'
-import type { StoredTrack } from '@/lib/tracks'
+import { usedParts } from '@/lib/parts'
+import type { StoredPart } from '@/lib/parts'
 import { m } from '@/paraglide/messages'
-import { trackName } from './tracks'
+import { partName } from './parts'
 import type { SheetEntry, SheetLayout } from './types'
 import { stepScale } from './use-sheet-prefs'
 
 const LAYER_INFO: Record<
   Layer,
-  { name: () => string; icon: React.ComponentType<{ className?: string }> }
+  {
+    name: () => string
+    hint?: () => string
+    icon: React.ComponentType<{ className?: string }>
+  }
 > = {
   lyrics: { name: m.layerLyrics, icon: MicVocalIcon },
   chords: { name: m.layerChords, icon: GuitarIcon },
   strumming: { name: m.layerStrumming, icon: ArrowDownUpIcon },
   tab: { name: m.layerTab, icon: Rows3Icon },
-  notes: { name: m.layerNotes, icon: Music2Icon },
+  notes: { name: m.layerNotes, hint: m.layerNotesHint, icon: Music2Icon },
 }
 
 export function LayerToggles({
@@ -60,13 +64,15 @@ export function LayerToggles({
       className="inline-flex items-center gap-0.5 rounded-xl border bg-muted/40 p-1"
     >
       {available.map((layer) => {
-        const { name, icon: Icon } = LAYER_INFO[layer]
+        const { name, hint, icon: Icon } = LAYER_INFO[layer]
         return (
           <ToggleButton
             key={layer}
             isSelected={layers[layer]}
             onChange={() => onLayers(toggleLayer(layers, layer, available))}
-            aria-label={iconOnly ? name() : undefined}
+            aria-label={
+              hint ? `${name()}. ${hint()}` : iconOnly ? name() : undefined
+            }
             className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-2.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors outline-none hover:text-foreground data-focus-visible:ring-2 data-focus-visible:ring-ring data-selected:bg-background data-selected:text-foreground data-selected:shadow-sm dark:data-selected:bg-raised"
           >
             <Icon className="size-4" />
@@ -140,26 +146,26 @@ export function TextSizeControl({
   )
 }
 
-export function TracksFilter({
+export function PartsFilter({
   timeline,
-  tracks,
-  visibleTrackIds,
-  onVisibleTrackIds,
+  parts,
+  visiblePartIds,
+  onVisiblePartIds,
   iconOnly = false,
 }: {
   timeline: Array<SheetEntry>
-  tracks: Array<StoredTrack> | undefined
-  visibleTrackIds: Array<string>
-  onVisibleTrackIds: (ids: Array<string>) => void
+  parts: Array<StoredPart> | undefined
+  visiblePartIds: Array<string>
+  onVisiblePartIds: (ids: Array<string>) => void
   iconOnly?: boolean
 }) {
-  const options = usedTracks(
-    tracks,
-    timeline.flatMap((entry) => entry.parts),
+  const options = usedParts(
+    parts,
+    timeline.flatMap((entry) => entry.lines),
   )
   if (options.length < 2) return null
   const all = options.map((option) => option.id)
-  const chosen = visibleTrackIds.filter((id) => all.includes(id))
+  const chosen = visiblePartIds.filter((id) => all.includes(id))
   const visible = chosen.length === 0 ? all : chosen
   const hidden = all.length - visible.length
   return (
@@ -167,11 +173,11 @@ export function TracksFilter({
       <Button
         variant="outline"
         size={iconOnly ? 'icon' : 'default'}
-        aria-label={iconOnly ? m.showTracks() : undefined}
+        aria-label={iconOnly ? m.showParts() : undefined}
         className="relative rounded-xl"
       >
         <ListFilterIcon />
-        {iconOnly ? null : m.showTracks()}
+        {iconOnly ? null : m.showParts()}
         {hidden > 0 ? (
           <span
             className={cn(
@@ -184,13 +190,13 @@ export function TracksFilter({
         ) : null}
       </Button>
       <Popover placement="bottom end" className="w-72">
-        <Dialog className="outline-none" aria-label={m.showTracks()}>
+        <Dialog className="outline-none" aria-label={m.showParts()}>
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm font-semibold">{m.showTracks()}</span>
+            <span className="text-sm font-semibold">{m.showParts()}</span>
             <Button
               variant="ghost"
               size="sm"
-              onPress={() => onVisibleTrackIds([])}
+              onPress={() => onVisiblePartIds([])}
             >
               {m.showAll()}
             </Button>
@@ -202,17 +208,17 @@ export function TracksFilter({
                 className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5"
               >
                 <span className="min-w-0 truncate text-sm font-medium">
-                  {trackName(option)}
+                  {partName(option)}
                 </span>
                 <Switch
-                  aria-label={trackName(option)}
+                  aria-label={partName(option)}
                   isSelected={visible.includes(option.id)}
                   onChange={(on) => {
                     const next = on
                       ? [...visible, option.id]
                       : visible.filter((id) => id !== option.id)
                     if (next.length === 0) return
-                    onVisibleTrackIds(next.length === all.length ? [] : next)
+                    onVisiblePartIds(next.length === all.length ? [] : next)
                   }}
                 />
               </li>

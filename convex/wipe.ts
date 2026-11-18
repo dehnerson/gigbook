@@ -5,7 +5,7 @@ const TABLES = [
   'setlists',
   'jamMembers',
   'jamRooms',
-  'parts',
+  'lines',
   'sections',
   'versionChordShapes',
   'versions',

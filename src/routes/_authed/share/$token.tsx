@@ -20,6 +20,8 @@ import { Button, ButtonLink } from '@/components/ui/button'
 import { useNotation } from '@/components/use-notation'
 import { useVersionActions } from '@/components/version-actions'
 import { useLiveQuery } from '@/lib/live'
+import { built } from '@/lib/built'
+import { libraryVersionPath } from '@/lib/space'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/share/$token')({
@@ -42,11 +44,7 @@ function SharePage() {
   const [capo, setCapo] = useState<number>(version.suggestedCapo)
   const [transpose, setTranspose] = useState(0)
   const [busy, setBusy] = useState(false)
-  const { layers, available } = useSheetLayers(
-    prefs.layers,
-    timeline,
-    version.tracks,
-  )
+  const { layers, available } = useSheetLayers(prefs.layers, timeline)
 
   const settings: SheetSettings = {
     capo,
@@ -69,8 +67,7 @@ function SharePage() {
           {libraryCopy ? (
             <ButtonLink
               variant="secondary"
-              to="/versions/$versionId"
-              params={{ versionId: libraryCopy.versionId }}
+              {...built(libraryVersionPath(libraryCopy.versionId))}
             >
               <LibraryBigIcon />
               {m.openInLibrary()}

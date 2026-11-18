@@ -8,6 +8,7 @@ import { createContext, useContext } from 'react'
 import type { ReactNode } from 'react'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
+import { PERSONAL } from '@/lib/space'
 import { m } from '@/paraglide/messages'
 
 export type Workspace = {
@@ -16,6 +17,7 @@ export type Workspace = {
   label: string
   role: 'owner' | 'editor' | 'viewer'
   organizationId: string | null
+  sessionWorkspace: string
   activate: (organizationId: string | null) => Promise<void>
   switchTo: (bandId: string | null) => Promise<void>
 }
@@ -29,6 +31,7 @@ function personalWorkspace(): Workspace {
     label: m.personal(),
     role: 'owner',
     organizationId: null,
+    sessionWorkspace: PERSONAL,
     activate: async () => {},
     switchTo: async () => {},
   }
@@ -52,6 +55,7 @@ export function WorkspaceState({ children }: { children: ReactNode }) {
       : m.personal(),
     role: row?.membership.role ?? 'owner',
     organizationId,
+    sessionWorkspace: row?.band._id ?? PERSONAL,
     async activate(next) {
       if (
         next &&

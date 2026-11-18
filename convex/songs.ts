@@ -14,19 +14,40 @@ import {
   requireIdentity,
   versionView,
   visibleVersions,
-  writes,
 } from './lib/access'
 import { fail } from './lib/errors'
 import { insertSong, uniqueVersionName } from './lib/songs'
 import { STANDARD_TUNING } from '../src/lib/music/diagrams'
-import { PERSONAL_HOME } from '../src/lib/song-context'
+import { loadHome } from './lib/home'
+
+async function scopedVersions(
+  ctx: { db: Parameters<typeof visibleVersions>[0]['db'] },
+  gate: Awaited<ReturnType<typeof openGate>>,
+  bandId: Id<'bands'> | null | undefined,
+) {
+  if (bandId === undefined) return visibleVersions(ctx, gate)
+  const home = await loadHome(ctx, gate.userId, bandId)
+  if (!home) return []
+  if (!home.bandId) {
+    return (
+      await ctx.db
+        .query('versions')
+        .withIndex('by_creator', (q) => q.eq('createdBy', gate.userId))
+        .collect()
+    ).filter((version) => !version.bandId)
+  }
+  return ctx.db
+    .query('versions')
+    .withIndex('by_band', (q) => q.eq('bandId', home.bandId))
+    .collect()
+}
 
 export const catalog = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { bandId: v.optional(v.union(v.null(), v.id('bands'))) },
+  handler: async (ctx, args) => {
     const identity = await requireIdentity(ctx)
     const gate = await openGate(ctx, identity.subject)
-    const versions = await visibleVersions(ctx, gate)
+    const versions = await scopedVersions(ctx, gate, args.bandId)
     const bySong = new Map<string, typeof versions>()
     for (const version of versions) {
       const rows = bySong.get(version.songId) ?? []
@@ -55,7 +76,7 @@ export const catalog = query({
 export const get = query({
   args: {
     songId: v.id('songs'),
-    bandId: v.optional(v.union(v.id('bands'), v.literal(PERSONAL_HOME))),
+    bandId: v.optional(v.union(v.null(), v.id('bands'))),
   },
   handler: async (ctx, args) => {
     const song = await ctx.db.get(args.songId)
@@ -66,16 +87,18 @@ export const get = query({
     let visible = readable
     let band: { _id: Id<'bands'>; name: string } | null = null
     let canAdd = true
-    if (args.bandId === PERSONAL_HOME) {
-      visible = visible.filter((version) => !version.bandId)
-    } else if (args.bandId) {
-      const membership = gate.bands.get(args.bandId)
-      if (!membership) fail('FORBIDDEN')
-      const found = await ctx.db.get(args.bandId)
-      if (!found) fail('NOT_FOUND')
-      band = { _id: found._id, name: found.name }
-      visible = visible.filter((version) => version.bandId === args.bandId)
-      canAdd = writes(membership)
+    if (args.bandId !== undefined) {
+      const home = await loadHome(ctx, identity.subject, args.bandId)
+      if (!home) {
+        visible = []
+        canAdd = false
+      } else if (!home.bandId) {
+        visible = visible.filter((version) => !version.bandId)
+      } else {
+        band = { _id: home.bandId, name: home.name }
+        visible = visible.filter((version) => version.bandId === home.bandId)
+        canAdd = home.role !== 'viewer'
+      }
     }
     const names = await bandNames(
       ctx,

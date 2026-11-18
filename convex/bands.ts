@@ -13,6 +13,7 @@ import { roleToClerk } from './lib/clerkRoles'
 import { fail } from './lib/errors'
 import { removeBand } from './lib/ownership'
 import { successor } from './lib/membership'
+import { PERSONAL, loadHome } from './lib/home'
 import { withNames } from './lib/users'
 
 export const list = query({
@@ -35,6 +36,18 @@ export const list = query({
       }),
     )
     return bands.flat().sort((a, b) => a.band.name.localeCompare(b.band.name))
+  },
+})
+
+export const resolve = query({
+  args: { workspace: v.string() },
+  handler: async (ctx, args) => {
+    const identity = await requireIdentity(ctx)
+    if (args.workspace === PERSONAL)
+      return loadHome(ctx, identity.subject, null)
+    const bandId = ctx.db.normalizeId('bands', args.workspace)
+    if (!bandId) return null
+    return loadHome(ctx, identity.subject, bandId)
   },
 })
 

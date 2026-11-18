@@ -22,8 +22,7 @@ export const DEFAULT_LAYERS: LayerSet = {
   notes: false,
 }
 
-type LayeredPart = {
-  kind: 'chart' | 'tab'
+type LayeredContent = {
   chartBody?: string
   strumming?: string
   measures?: Array<TabMeasure>
@@ -41,18 +40,18 @@ function hasLyrics(body: string) {
   })
 }
 
-export function availableLayers(parts: Array<LayeredPart>): Array<Layer> {
+export function availableLayers(items: Array<LayeredContent>): Array<Layer> {
   const found = new Set<Layer>()
-  for (const part of parts) {
-    if (part.kind === 'chart' && part.chartBody) {
-      if (hasLyrics(part.chartBody)) found.add('lyrics')
-      if (chartChords(part.chartBody).length > 0) found.add('chords')
+  for (const item of items) {
+    if (item.chartBody) {
+      if (hasLyrics(item.chartBody)) found.add('lyrics')
+      if (chartChords(item.chartBody).length > 0) found.add('chords')
     }
-    if (part.kind === 'chart' && part.strumming?.trim()) found.add('strumming')
-    if (part.kind === 'tab' && part.measures?.length) {
+    if (item.strumming?.trim()) found.add('strumming')
+    if (item.measures?.length) {
       found.add('tab')
       found.add('notes')
-      if (tabChords(part.measures).length > 0) found.add('chords')
+      if (tabChords(item.measures).length > 0) found.add('chords')
     }
   }
   return LAYERS.filter((layer) => found.has(layer))

@@ -1,10 +1,9 @@
 import { useQuery, useMutation } from 'convex/react'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ListMusicIcon, PlusIcon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { api } from '../../../../convex/_generated/api'
-import type { Id } from '../../../../convex/_generated/dataModel'
+import { api } from '../../convex/_generated/api'
+import type { Id } from '../../convex/_generated/dataModel'
 import { CollectionCard } from '@/components/app/collection-card'
 import { ContextMark } from '@/components/app/context-mark'
 import { EmptyState } from '@/components/app/empty-state'
@@ -22,18 +21,16 @@ import {
 import { Input } from '@/components/ui/input'
 import { messageFor } from '@/lib/errors'
 import { matchesSearch } from '@/lib/search'
-import { useWorkspace } from '@/lib/workspace'
+import { useHome } from '@/lib/home'
+import { useGo } from '@/lib/use-trail'
 import { m } from '@/paraglide/messages'
 
-export const Route = createFileRoute('/_authed/setlists/')({
-  component: SetlistsPage,
-})
-
-function SetlistsPage() {
-  const workspace = useWorkspace()
+export function SetlistsPage() {
+  const home = useHome()
+  const { href } = useGo()
   const setlists = useQuery(
     api.setlists.list,
-    workspace.ready ? { bandId: workspace.bandId } : 'skip',
+    home ? { bandId: home.bandId } : 'skip',
   )
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -48,17 +45,14 @@ function SetlistsPage() {
         title={m.setlists()}
         subtitle={
           <span className="inline-flex items-center gap-2">
-            <ContextMark
-              bandId={workspace.organizationId ? workspace.bandId : null}
-              name={workspace.organizationId ? workspace.label : null}
-            />
-            {workspace.label}
+            <ContextMark bandId={home?.bandId} name={home?.label} />
+            {home?.label}
           </span>
         }
         actions={
           rows.length > 0 ? (
             <HeaderButton
-              isDisabled={!workspace.ready || workspace.role === 'viewer'}
+              isDisabled={!home || home.role === 'viewer'}
               onPress={() => setOpen(true)}
             >
               <PlusIcon />
@@ -70,7 +64,7 @@ function SetlistsPage() {
       <NewSetlistDialog
         isOpen={open}
         onOpenChange={setOpen}
-        bandId={workspace.bandId}
+        bandId={home?.bandId ?? null}
       />
       {setlists === undefined ? null : rows.length === 0 ? (
         <EmptyState
@@ -78,7 +72,7 @@ function SetlistsPage() {
           title={m.noSetlists()}
           description={m.noSetlistsHint()}
           action={
-            workspace.role === 'viewer' ? undefined : (
+            home?.role === 'viewer' ? undefined : (
               <HeaderButton onPress={() => setOpen(true)}>
                 <PlusIcon />
                 {m.setlist()}
@@ -100,8 +94,7 @@ function SetlistsPage() {
               {visible.map((setlist) => (
                 <CollectionCard
                   key={setlist._id}
-                  to="/setlists/$setlistId"
-                  params={{ setlistId: setlist._id }}
+                  href={href({ page: 'setlist', setlistId: setlist._id })}
                   title={setlist.name}
                   leading={
                     <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
@@ -138,7 +131,7 @@ function NewSetlistDialog({
   bandId: Id<'bands'> | null
 }) {
   const create = useMutation(api.setlists.create)
-  const navigate = useNavigate()
+  const { go } = useGo()
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -158,10 +151,7 @@ function NewSetlistDialog({
             .then((setlistId) => {
               onOpenChange(false)
               setName('')
-              return navigate({
-                to: '/setlists/$setlistId',
-                params: { setlistId },
-              })
+              return go({ page: 'setlist', setlistId })
             })
             .catch((error: unknown) => toast.error(messageFor(error)))
             .finally(() => setBusy(false))

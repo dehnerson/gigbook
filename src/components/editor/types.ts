@@ -1,26 +1,26 @@
 import type { Id } from '../../../convex/_generated/dataModel'
 import type { TabMeasure } from '@/lib/music/tab'
-import type { StoredTrack } from '@/lib/tracks'
+import type { StoredPart } from '@/lib/parts'
 
-export type EditorPart = {
-  _id: Id<'parts'>
-  kind: 'chart' | 'tab'
-  label: string
-  trackId?: string
-  chartBody?: string
-  strumming?: string
+export type EditorLine = {
+  _id: Id<'lines'>
+  partId: string
   measures?: Array<TabMeasure>
   rhythmGuessed?: boolean
-  repeat?: number
-  order: number
 }
 
 export type EditorEntry = {
   entryId: string
   repeat?: number
   sectionId: Id<'sections'>
-  section: { _id: Id<'sections'>; name: string; notes?: string }
-  parts: Array<EditorPart>
+  section: {
+    _id: Id<'sections'>
+    name: string
+    notes?: string
+    chartBody?: string
+    strumming?: string
+  }
+  lines: Array<EditorLine>
 }
 
 export type EditorVersion = {
@@ -33,5 +33,5 @@ export type EditorVersion = {
   bpm?: number
   tuning: Array<string>
   suggestedCapo: number
-  tracks?: Array<StoredTrack>
+  parts?: Array<StoredPart>
 }

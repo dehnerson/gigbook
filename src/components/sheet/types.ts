@@ -1,24 +1,25 @@
 import type { Notation } from '@/lib/music/pitch'
 import type { TabMeasure } from '@/lib/music/tab'
+import type { StoredPart } from '@/lib/parts'
 import type { LayerSet } from '@/lib/sheet-layers'
-import type { StoredTrack } from '@/lib/tracks'
 
-export type SheetPart = {
+export type SheetLine = {
   _id: string
-  kind: 'chart' | 'tab'
-  label: string
-  trackId?: string
-  chartBody?: string
-  strumming?: string
+  partId: string
   measures?: Array<TabMeasure>
-  repeat?: number
 }
 
 export type SheetEntry = {
   entryId: string
   repeat?: number
-  section: { _id: string; name: string; notes?: string }
-  parts: Array<SheetPart>
+  section: {
+    _id: string
+    name: string
+    notes?: string
+    chartBody?: string
+    strumming?: string
+  }
+  lines: Array<SheetLine>
 }
 
 export type SheetVersion = {
@@ -29,7 +30,7 @@ export type SheetVersion = {
   bpm?: number
   tuning: Array<string>
   suggestedCapo: number
-  tracks?: Array<StoredTrack>
+  parts?: Array<StoredPart>
 }
 
 export type SheetSong = { title: string; subTitle?: string }

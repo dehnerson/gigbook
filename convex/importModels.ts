@@ -1,25 +1,26 @@
 export const IMPORT_PROMPT = `Convert the source into one guitar version.
 Return JSON with title, artist, concertKey, timeSignature, bpm, tuning, suggestedCapo, tabRelativeToCapo, and sections.
-Each section has name, optional notes, and parts.
-A part is kind "chart" or "tab".
-Chart parts use ChordPro: chords in brackets, for example [Am]hello [G]world.
+A section is one moment in the song, such as Intro, Verse, Chorus or a riff that happens on its own. A chart and a tab of the same moment belong to the same section.
+Each section has name, optional notes, one chord sheet, and lines.
+The chord sheet is chartBody in ChordPro: chords in brackets, for example [Am]hello [G]world. Write it once for the section. Do not duplicate it as a line.
 Transcribe the complete lyrics of every section, line by line, exactly as written. Do not summarize, shorten, translate, or skip repeated verses.
 Place each chord in brackets directly before the syllable where the chord changes, for example [D]Eines weiß ich ge[G]nau.
 When the source prints chords on their own line above the lyrics, attach each chord to the syllable below its position.
 Keep lyric lines that have no chords as plain text lines.
 Lines with only chords, such as intros and interludes, become a line of bracketed chords, for example [D] [G] [D] [Asus4].
-Put strumming patterns in the part's strumming field using D, U, x, and - (for example D-DU-UDU), never in the chart text.
+Put strumming patterns in the section's strumming field using D, U, x, and - (for example D-DU-UDU), never in the chart text.
 Bar grids use lines like | Em | G D |. Repeated bars use |: and :| with the count after, for example |: Em | G D :| x4, and 1. or 2. at the start of a bar for endings.
 Chord symbols are English (B, Bb), never German H.
 concertKey is the sounding key. suggestedCapo is only a display hint.
 If the source says Capo N and prints the easy shapes, keep those shapes and set suggestedCapo to N. Do not transpose them.
 When existing section ids are provided, also return mapping: an array aligned with sections, each value an existing section id or null for a new section.
-Tab parts use measures of beats. A beat is {d, notes} where d is the note length (1 whole, 2 half, 4 quarter, 8 eighth, 16 sixteenth, 32), dot: true makes it dotted, rest: true with empty notes is a rest, and chord is a chord name that starts on that beat.
+A line is a tab for one instrument. part is a short name such as Guitar or Bass. instrument is "guitar" unless the source is clearly a bass tab, then "bass". Standard notation is not a separate line: the tab is the notes.
+A line uses measures of beats. A beat is {d, notes} where d is the note length (1 whole, 2 half, 4 quarter, 8 eighth, 16 sixteenth, 32), dot: true makes it dotted, rest: true with empty notes is a rest, and chord is a chord name that starts on that beat.
 Each note is {s, f} where s is the string (1 is the highest string) and f the fret. t is an optional technique: h hammer-on, p pull-off, b bend (bend is the number of semitones), / slide up, \\ slide down, ~ vibrato.
-Each measure's beats should add up to the time signature. When the source shows no rhythm, use eighth notes and set rhythmGuessed true on the part.
+Each measure's beats should add up to the time signature. When the source shows no rhythm, use eighth notes and set rhythmGuessed true on the line.
 Repeat barlines in a tab: the first repeated measure gets repeat: {start: true}, the last gets repeat: {times: N} where N is how often the passage is played in total. ending: 1 or 2 marks first and second endings.
-When a whole part is played several times in a row, such as "riff x4", write it once and set repeat: 4 on the part.
-Set tabRelativeToCapo true only when the tab fret numbers are written relative to a capo.
+When a whole section is played several times in a row, such as "riff x4" or "chorus x2", write it once and set repeat on the section.
+Set tabRelativeToCapo true only when guitar tab fret numbers are written relative to a capo. Bass frets are never relative to a guitar capo.
 Do not invent frets that are not in the source.
 Do not move notes to a different string.
 Unknown chord text stays as written.`

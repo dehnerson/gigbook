@@ -1,5 +1,5 @@
 import { useQuery, useAction } from 'convex/react'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { ChevronsUpDownIcon, PlusIcon, UsersIcon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -17,6 +17,8 @@ import {
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverTrigger } from '@/components/ui/popover'
 import { messageFor } from '@/lib/errors'
+import { PERSONAL, path, switchPath, workspaceTrail } from '@/lib/space'
+import { useTrail } from '@/lib/use-trail'
 import { useWorkspace } from '@/lib/workspace'
 import { cn } from 'cn'
 import { m } from '@/paraglide/messages'
@@ -27,10 +29,20 @@ const item =
 
 export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
   const workspace = useWorkspace()
+  const trail = useTrail()
   const bands = useQuery(api.bands.list)
   const [open, setOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const navigate = useNavigate()
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
+  const shown =
+    trail.kind === 'workspace' ? trail.workspace : workspace.sessionWorkspace
+  const openWorkspace = (next: string) => {
+    setOpen(false)
+    void navigate({ href: switchPath(pathname, next) })
+  }
 
   return (
     <>
@@ -62,12 +74,9 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
             <li>
               <button
                 type="button"
-                data-active={workspace.organizationId === null}
+                data-active={shown === PERSONAL}
                 className={item}
-                onClick={() => {
-                  void workspace.activate(null)
-                  setOpen(false)
-                }}
+                onClick={() => openWorkspace(PERSONAL)}
               >
                 <ContextMark />
                 <span className="truncate">{m.personal()}</span>
@@ -77,14 +86,9 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
               <li key={row.band._id}>
                 <button
                   type="button"
-                  data-active={
-                    row.band.clerkOrganizationId === workspace.organizationId
-                  }
+                  data-active={shown === row.band._id}
                   className={item}
-                  onClick={() => {
-                    void workspace.activate(row.band.clerkOrganizationId)
-                    setOpen(false)
-                  }}
+                  onClick={() => openWorkspace(row.band._id)}
                 >
                   <ContextMark bandId={row.band._id} name={row.band.name} />
                   <span className="truncate">{row.band.name}</span>
@@ -94,14 +98,16 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
           </ul>
           <div className="space-y-1">
             <Separator />
-            {workspace.organizationId ? (
+            {shown !== PERSONAL ? (
               <>
                 <button
                   type="button"
                   className={item}
                   onClick={() => {
                     setOpen(false)
-                    void navigate({ to: '/members' })
+                    void navigate({
+                      href: path(workspaceTrail(shown), { page: 'members' }),
+                    })
                   }}
                 >
                   <UsersIcon className="size-4" />
@@ -127,7 +133,11 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
       <NewBandDialog
         isOpen={creating}
         onOpenChange={setCreating}
-        onCreated={(organizationId) => workspace.activate(organizationId)}
+        onCreated={(bandId) =>
+          navigate({
+            href: path(workspaceTrail(bandId), { page: 'songs' }),
+          })
+        }
       />
     </>
   )
@@ -140,7 +150,7 @@ function NewBandDialog({
 }: {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
-  onCreated: (organizationId: string) => Promise<void>
+  onCreated: (bandId: string) => Promise<void>
 }) {
   const create = useAction(api.bands.create)
   const [name, setName] = useState('')
@@ -158,7 +168,7 @@ function NewBandDialog({
           if (!name.trim()) return
           setBusy(true)
           create({ name })
-            .then((band) => onCreated(band.organizationId))
+            .then((band) => onCreated(band.bandId))
             .then(() => {
               setName('')
               onOpenChange(false)

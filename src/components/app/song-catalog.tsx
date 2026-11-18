@@ -13,7 +13,10 @@ import { NoMatches, SearchField } from '@/components/app/search-field'
 import { SongRow } from '@/components/app/song-row'
 import type { SongSummary } from '@/components/app/song-row'
 import { matchesSearch } from '@/lib/search'
-import { songSearch } from '@/lib/song-context'
+import { useHome } from '@/lib/home'
+import { built } from '@/lib/built'
+import { path, workspaceTrail } from '@/lib/space'
+import { useTrail } from '@/lib/use-trail'
 import { useWorkspace } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
 import { ButtonGroup } from '@/components/ui/button-group'
@@ -49,7 +52,6 @@ export function SongCatalog({
   subtitle,
   rows,
   marks = false,
-  scoped = false,
   emptyTitle,
   emptyDescription,
 }: {
@@ -57,11 +59,16 @@ export function SongCatalog({
   subtitle?: ReactNode
   rows: Array<CatalogRow> | undefined
   marks?: boolean
-  scoped?: boolean
   emptyTitle: string
   emptyDescription: string
 }) {
-  const workspace = useWorkspace()
+  const trail = useTrail()
+  const session = useWorkspace()
+  const home = useHome()
+  const filing =
+    trail.kind === 'workspace'
+      ? trail
+      : workspaceTrail(session.sessionWorkspace)
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const visible = (rows ?? []).filter((row) =>
@@ -72,9 +79,14 @@ export function SongCatalog({
     ]),
   )
   const songButton = (
-    <HeaderButton isDisabled={!workspace.ready} onPress={() => setOpen(true)}>
+    <HeaderButton
+      isDisabled={trail.kind === 'workspace' && !home}
+      onPress={() => setOpen(true)}
+    >
       <PlusIcon />
-      {m.songIn({ name: workspace.label })}
+      {trail.kind === 'library'
+        ? m.newSong()
+        : m.songIn({ name: home?.label ?? '' })}
     </HeaderButton>
   )
 
@@ -87,7 +99,7 @@ export function SongCatalog({
           rows && rows.length > 0 ? (
             <ButtonGroup>
               {songButton}
-              <HeaderButtonLink to="/import">
+              <HeaderButtonLink {...built(path(filing, { page: 'import' }))}>
                 <FileInputIcon />
               </HeaderButtonLink>
             </ButtonGroup>
@@ -97,7 +109,8 @@ export function SongCatalog({
       <NewSongDialog
         isOpen={open}
         onOpenChange={setOpen}
-        bandId={workspace.bandId ?? undefined}
+        bandId={trail.kind === 'workspace' ? (home?.bandId ?? undefined) : undefined}
+        chooseHome={trail.kind === 'library'}
       />
 
       {rows === undefined ? null : rows.length === 0 ? (
@@ -108,7 +121,7 @@ export function SongCatalog({
           action={
             <ButtonGroup>
               {songButton}
-              <HeaderButtonLink to="/import">
+              <HeaderButtonLink {...built(path(filing, { page: 'import' }))}>
                 <FileInputIcon />
               </HeaderButtonLink>
             </ButtonGroup>
@@ -132,11 +145,7 @@ export function SongCatalog({
                   song={row.song}
                   performers={performersOf(row.versions)}
                   versionCount={row.versions.length}
-                  search={
-                    scoped && workspace.ready
-                      ? songSearch(workspace.bandId)
-                      : songSearch()
-                  }
+                  href={path(trail, { page: 'song', songId: row.song._id })}
                   trailing={
                     marks ? (
                       <span className="flex items-center gap-1">

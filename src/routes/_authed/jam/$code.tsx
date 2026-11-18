@@ -32,7 +32,7 @@ import {
   LayerToggles,
   LayoutToggle,
   TextSizeControl,
-  TracksFilter,
+  PartsFilter,
 } from '@/components/sheet/sheet-controls'
 import { sheetPasses } from '@/components/sheet/passes'
 import {
@@ -64,6 +64,8 @@ import { messageFor } from '@/lib/errors'
 import { useLiveQuery } from '@/lib/live'
 import { displayChord } from '@/lib/music/chords'
 import type { Notation } from '@/lib/music/pitch'
+import { built } from '@/lib/built'
+import { homeKey, path, workspaceTrail } from '@/lib/space'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/jam/$code')({
@@ -75,7 +77,7 @@ export const Route = createFileRoute('/_authed/jam/$code')({
 type MemberView = {
   capo: number
   following: boolean
-  visibleTrackIds: Array<string>
+  visiblePartIds: Array<string>
   personalVersionId?: Id<'versions'>
 }
 
@@ -100,7 +102,7 @@ function JamRoomPage() {
   const isHost = me?.userId === room.hostUserId
   const [capo, setCapo] = useState(me?.capo ?? 0)
   const [visible, setVisible] = useState<Array<string>>(
-    me?.visibleTrackIds ?? [],
+    me?.visiblePartIds ?? [],
   )
   const following = !isHost && (me?.following ?? true)
 
@@ -109,7 +111,7 @@ function JamRoomPage() {
       code,
       capo,
       following: me?.following ?? true,
-      visibleTrackIds: visible,
+      visiblePartIds: visible,
       personalVersionId: me?.personalVersionId,
       ...patch,
     }).catch(fail)
@@ -130,13 +132,8 @@ function JamRoomPage() {
   })
 
   const timeline = (bundle.data?.timeline ?? []) as Array<SheetEntry>
-  const tracks = bundle.data?.version.tracks
-  const { layers, available } = useSheetLayers(
-    prefs.layers,
-    timeline,
-    tracks,
-    visible,
-  )
+  const parts = bundle.data?.version.parts
+  const { layers, available } = useSheetLayers(prefs.layers, timeline, visible)
   const passes = sheetPasses(timeline)
   const entryIds = passes.map((item) => item.id)
   const entryKey = entryIds.join(',')
@@ -188,7 +185,7 @@ function JamRoomPage() {
         layers,
         scale: prefs.scale,
       }}
-      visibleTrackIds={visible}
+      visiblePartIds={visible}
       highlightEntryId={following ? hostEntryId : active}
       layout={prefs.layout}
       versionId={bundle.data.version._id}
@@ -217,7 +214,9 @@ function JamRoomPage() {
             variant="ghost"
             size="icon"
             aria-label={m.back()}
-            to="/jam"
+            {...built(
+              path(workspaceTrail(homeKey(room.bandId)), { page: 'jam' }),
+            )}
           >
             <ArrowLeftIcon />
           </ButtonLink>
@@ -482,13 +481,13 @@ function JamRoomPage() {
           <LayoutToggle layout={prefs.layout} onLayout={prefs.setLayout} />
         ) : null}
         <TextSizeControl scale={prefs.scale} onScale={prefs.setScale} />
-        <TracksFilter
+        <PartsFilter
           timeline={timeline}
-          tracks={tracks}
-          visibleTrackIds={visible}
-          onVisibleTrackIds={(ids) => {
+          parts={parts}
+          visiblePartIds={visible}
+          onVisiblePartIds={(ids) => {
             setVisible(ids)
-            updateMe({ visibleTrackIds: ids })
+            updateMe({ visiblePartIds: ids })
           }}
           iconOnly
         />

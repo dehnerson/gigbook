@@ -1,5 +1,4 @@
 import { convexQuery } from '@convex-dev/react-query'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation } from 'convex/react'
 import { cn } from 'cn'
 import {
@@ -14,8 +13,8 @@ import {
 } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { api } from '../../../../convex/_generated/api'
-import type { Id } from '../../../../convex/_generated/dataModel'
+import { api } from '../../convex/_generated/api'
+import type { Id } from '../../convex/_generated/dataModel'
 import { ContextMark } from '@/components/app/context-mark'
 import { EmptyState } from '@/components/app/empty-state'
 import { Field } from '@/components/app/field'
@@ -29,13 +28,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { PROVIDER_LABELS } from '@/lib/import/models'
 import { messageFor } from '@/lib/errors'
 import { useLiveQuery } from '@/lib/live'
-import { useWorkspace } from '@/lib/workspace'
+import { useHome } from '@/lib/home'
+import { useGo } from '@/lib/use-trail'
 import { m } from '@/paraglide/messages'
-
-export const Route = createFileRoute('/_authed/import/')({
-  loader: ({ context }) => context.load(convexQuery(api.songs.catalog, {})),
-  component: ImportPage,
-})
 
 type Source = 'paste' | 'file' | 'url' | 'youtube'
 
@@ -48,13 +43,13 @@ function youtubeIdOf(value: string) {
   return /^[A-Za-z0-9_-]{11}$/.test(trimmed) ? trimmed : null
 }
 
-function ImportPage() {
+export function ImportPage() {
   const me = useLiveQuery(convexQuery(api.users.me, {}))
   const catalog = useLiveQuery(convexQuery(api.songs.catalog, {}))
-  const workspace = useWorkspace()
+  const home = useHome()
+  const { go } = useGo()
   const create = useMutation(api.importDrafts.create)
   const uploadUrl = useMutation(api.importDrafts.generateUploadUrl)
-  const navigate = useNavigate()
   const fileInput = useRef<HTMLInputElement>(null)
   const [source, setSource] = useState<Source>('paste')
   const [text, setText] = useState('')
@@ -113,7 +108,7 @@ function ImportPage() {
     setBusy(true)
     try {
       const homeBandId =
-        target === 'new' ? (workspace.bandId ?? undefined) : undefined
+        target === 'new' ? (home?.bandId ?? undefined) : undefined
       const targetVersionId =
         target === 'new' ? undefined : (target as Id<'versions'>)
       let draftId: Id<'importDrafts'>
@@ -156,7 +151,7 @@ function ImportPage() {
           homeBandId,
         })
       }
-      await navigate({ to: '/import/$draftId', params: { draftId } })
+      await go({ page: 'draft', draftId })
     } catch (error) {
       toast.error(messageFor(error))
       setBusy(false)
@@ -325,7 +320,7 @@ function ImportPage() {
                 {
                   id: 'new',
                   label: m.newSongFromImport(),
-                  description: workspace.label,
+                  description: home?.label,
                 },
                 ...catalog.data.flatMap((row) =>
                   row.versions
@@ -341,8 +336,8 @@ function ImportPage() {
           </div>
           <ImportTargetMark
             target={target}
-            label={workspace.label}
-            bandId={workspace.bandId}
+            label={home?.label ?? ''}
+            bandId={home?.bandId ?? null}
             catalog={catalog.data}
           />
         </div>

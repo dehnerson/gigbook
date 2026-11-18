@@ -1,6 +1,11 @@
 import { convexQuery } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import {
+  createFileRoute,
+  useNavigate,
+  useParams,
+  useSearch,
+} from '@tanstack/react-router'
 import {
   ArrowLeftIcon,
   SaveIcon,
@@ -24,7 +29,7 @@ import {
   LayerToggles,
   LayoutToggle,
   TextSizeControl,
-  TracksFilter,
+  PartsFilter,
 } from '@/components/sheet/sheet-controls'
 import { sheetPasses } from '@/components/sheet/passes'
 import { ContextMark } from '@/components/app/context-mark'
@@ -47,19 +52,26 @@ import { useNotation } from '@/components/use-notation'
 import { useVersionActions } from '@/components/version-actions'
 import { useWakeLock } from '@/components/use-wake-lock'
 import { useLiveQuery } from '@/lib/live'
+import { built } from '@/lib/built'
+import { homeKey, path, workspaceTrail } from '@/lib/space'
+import { useGo } from '@/lib/use-trail'
 import { previewTabShift } from '@/lib/music/tab'
 import { m } from '@/paraglide/messages'
 
 type PlaySearch = { setlist?: string; index?: number }
 
-export const Route = createFileRoute('/_authed/versions/$versionId/play')({
-  validateSearch: (search: Record<string, unknown>): PlaySearch => ({
+export function playSearch(search: Record<string, unknown>): PlaySearch {
+  return {
     setlist: typeof search.setlist === 'string' ? search.setlist : undefined,
     index:
       search.index !== undefined && Number.isFinite(Number(search.index))
         ? Number(search.index)
         : undefined,
-  }),
+  }
+}
+
+export const Route = createFileRoute('/_authed/versions/$versionId/play')({
+  validateSearch: playSearch,
   loader: ({ context, params }) =>
     context.load(
       convexQuery(api.versions.getBundle, {
@@ -69,10 +81,11 @@ export const Route = createFileRoute('/_authed/versions/$versionId/play')({
   component: PlayPage,
 })
 
-function PlayPage() {
-  const versionId = Route.useParams().versionId as Id<'versions'>
-  const search = Route.useSearch()
+export function PlayPage() {
+  const versionId = useParams({ strict: false }).versionId as Id<'versions'>
+  const search = playSearch(useSearch({ strict: false }))
   const navigate = useNavigate()
+  const { href, trail } = useGo()
   const bundle = useLiveQuery(
     convexQuery(api.versions.getBundle, { versionId }),
   )
@@ -84,12 +97,7 @@ function PlayPage() {
   const [transpose, setTranspose] = useState(0)
   const [trackIds, setTrackIds] = useState<Array<string>>([])
   const prefs = useSheetPrefs('play', 1.3)
-  const { layers, available } = useSheetLayers(
-    prefs.layers,
-    timeline,
-    version.tracks,
-    trackIds,
-  )
+  const { layers, available } = useSheetLayers(prefs.layers, timeline, trackIds)
   const scroll = useAutoscrollState()
   const passes = sheetPasses(timeline)
   const entryIds = passes.map((item) => item.id)
@@ -113,17 +121,18 @@ function PlayPage() {
     const target = entries.at(index)
     if (!target?.version || !search.setlist) return
     void navigate({
-      to: '/versions/$versionId/play',
-      params: { versionId: target.version._id },
-      search: { setlist: search.setlist, index },
+      href: href({
+        page: 'version',
+        versionId: target.version._id,
+        leaf: 'play',
+        search: { setlist: search.setlist, index },
+      }),
     })
     window.scrollTo({ top: 0 })
   }
 
   const measures = timeline.flatMap((entry) =>
-    entry.parts.flatMap((part) =>
-      part.kind === 'tab' ? (part.measures ?? []) : [],
-    ),
+    entry.lines.flatMap((line) => line.measures ?? []),
   )
   const blocked =
     transpose !== 0 && !previewTabShift(measures, transpose).applied
@@ -145,8 +154,14 @@ function PlayPage() {
               variant="ghost"
               size="icon"
               aria-label={m.back()}
-              to="/setlists/$setlistId"
-              params={{ setlistId: search.setlist }}
+              {...built(
+                path(
+                  setlist.data
+                    ? workspaceTrail(homeKey(setlist.data.setlist.bandId))
+                    : trail,
+                  { page: 'setlist', setlistId: search.setlist },
+                ),
+              )}
             >
               <ArrowLeftIcon />
             </ButtonLink>
@@ -155,8 +170,7 @@ function PlayPage() {
               variant="ghost"
               size="icon"
               aria-label={m.back()}
-              to="/versions/$versionId"
-              params={{ versionId }}
+              {...built(href({ page: 'version', versionId }))}
             >
               <ArrowLeftIcon />
             </ButtonLink>
@@ -216,7 +230,7 @@ function PlayPage() {
           timeline={timeline}
           shapes={shapes}
           settings={settings}
-          visibleTrackIds={trackIds}
+          visiblePartIds={trackIds}
           highlightEntryId={active}
           layout={prefs.layout}
           showHeader={false}
@@ -288,11 +302,11 @@ function PlayPage() {
           <LayoutToggle layout={prefs.layout} onLayout={prefs.setLayout} />
         ) : null}
         <TextSizeControl scale={prefs.scale} onScale={prefs.setScale} />
-        <TracksFilter
+        <PartsFilter
           timeline={timeline}
-          tracks={version.tracks}
-          visibleTrackIds={trackIds}
-          onVisibleTrackIds={setTrackIds}
+          parts={version.parts}
+          visiblePartIds={trackIds}
+          onVisiblePartIds={setTrackIds}
           iconOnly
         />
       </StageDock>

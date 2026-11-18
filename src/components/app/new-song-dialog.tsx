@@ -15,21 +15,31 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { messageFor } from '@/lib/errors'
-import { songSearch } from '@/lib/song-context'
+import { HomeSelect } from '@/components/app/home-select'
+import { PERSONAL, bandIdFromPath, path, workspaceTrail } from '@/lib/space'
+import { useGo } from '@/lib/use-trail'
 import { m } from '@/paraglide/messages'
 
 export function NewSongDialog({
   isOpen,
   onOpenChange,
   bandId,
+  chooseHome = false,
 }: {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
   bandId?: Id<'bands'>
+  chooseHome?: boolean
 }) {
   const create = useMutation(api.songs.create)
   const addVersion = useMutation(api.songs.addVersion)
   const navigate = useNavigate()
+  const { go } = useGo()
+  const [choice, setChoice] = useState(PERSONAL)
+  const fileBandId = chooseHome
+    ? (bandIdFromPath(choice) ?? undefined)
+    : bandId
+  const fileTrail = chooseHome ? workspaceTrail(choice) : null
   const [title, setTitle] = useState('')
   const [subTitle, setSubTitle] = useState('')
   const [busy, setBusy] = useState(false)
@@ -49,7 +59,7 @@ export function NewSongDialog({
     useQuery(
       api.songs.similar,
       isOpen && search.title.trim().length >= 2
-        ? { ...search, bandId }
+        ? { ...search, bandId: fileBandId }
         : 'skip',
     ) ?? []
   const matches =
@@ -74,10 +84,15 @@ export function NewSongDialog({
   const finish = (versionId: Id<'versions'>) => {
     onOpenChange(false)
     reset()
-    return navigate({
-      to: '/versions/$versionId/edit',
-      params: { versionId },
-    })
+    if (fileTrail)
+      return navigate({
+        href: path(fileTrail, {
+          page: 'version',
+          versionId,
+          leaf: 'edit',
+        }),
+      })
+    return go({ page: 'version', versionId, leaf: 'edit' })
   }
 
   const run = (action: () => Promise<unknown>) => {
@@ -109,7 +124,7 @@ export function NewSongDialog({
             const created = await create({
               title,
               subTitle,
-              bandId,
+              bandId: fileBandId,
               versionName: m.defaultVersionName(),
             })
             if (created.versionId) await finish(created.versionId)
@@ -122,6 +137,7 @@ export function NewSongDialog({
           })
         }}
       >
+        {chooseHome ? <HomeSelect value={choice} onChange={setChoice} writable /> : null}
         <Field label={m.title()}>
           <Input
             autoFocus
@@ -178,11 +194,14 @@ export function NewSongDialog({
                       onPress={() => {
                         onOpenChange(false)
                         reset()
-                        void navigate({
-                          to: '/songs/$songId',
-                          params: { songId: song._id },
-                          search: songSearch(),
-                        })
+                        void (fileTrail
+                          ? navigate({
+                              href: path(fileTrail, {
+                                page: 'song',
+                                songId: song._id,
+                              }),
+                            })
+                          : go({ page: 'song', songId: song._id }))
                       }}
                     >
                       {m.open()}
@@ -196,7 +215,7 @@ export function NewSongDialog({
                           const added = await addVersion({
                             songId: song._id,
                             versionName: m.newVersionName(),
-                            bandId,
+                            bandId: fileBandId,
                           })
                           await finish(added.versionId)
                         })

@@ -1,10 +1,10 @@
 import { useOrganization } from '@clerk/tanstack-react-start'
-import { createFileRoute } from '@tanstack/react-router'
+import { useNavigate } from '@tanstack/react-router'
 import { useAction, useQuery } from 'convex/react'
 import { EllipsisIcon, UserPlusIcon, UsersIcon, XIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { api } from '../../../convex/_generated/api'
+import { api } from '../../convex/_generated/api'
 import { Chip, initials } from '@/components/app/chip'
 import { ConfirmDialog } from '@/components/app/confirm-dialog'
 import { EmptyState } from '@/components/app/empty-state'
@@ -20,12 +20,9 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { messageFor } from '@/lib/errors'
 import { roleFromClerk, roleName } from '@/lib/roles'
-import { useWorkspace } from '@/lib/workspace'
+import { useHome } from '@/lib/home'
+import { PERSONAL, path, workspaceTrail } from '@/lib/space'
 import { m } from '@/paraglide/messages'
-
-export const Route = createFileRoute('/_authed/members')({
-  component: MembersPage,
-})
 
 type PendingInvite = {
   id: string
@@ -34,11 +31,12 @@ type PendingInvite = {
   revoke: () => Promise<unknown>
 }
 
-function MembersPage() {
-  const workspace = useWorkspace()
+export function MembersPage() {
+  const home = useHome()
+  const navigate = useNavigate()
   const band = useQuery(
     api.bands.get,
-    workspace.bandId ? { bandId: workspace.bandId } : 'skip',
+    home?.bandId ? { bandId: home.bandId } : 'skip',
   )
   const { organization } = useOrganization()
   const invite = useAction(api.bands.invite)
@@ -76,7 +74,7 @@ function MembersPage() {
     }
   }, [organization, band?.members.length])
 
-  if (!workspace.organizationId) {
+  if (!home?.organizationId) {
     return (
       <EmptyState
         icon={UsersIcon}
@@ -206,10 +204,10 @@ function MembersPage() {
           className="mt-6 grid max-w-xl gap-3 border-t pt-4"
           onSubmit={(event) => {
             event.preventDefault()
-            if (!email.trim() || !workspace.bandId) return
+            if (!email.trim() || !home.bandId) return
             setBusy(true)
             invite({
-              bandId: workspace.bandId,
+              bandId: home.bandId,
               email,
               role: inviteRole,
               redirectUrl: `${window.location.origin}/`,
@@ -270,9 +268,11 @@ function MembersPage() {
         description={m.leaveBandHint()}
         confirmLabel={m.leaveBand()}
         onConfirm={async () => {
-          if (!workspace.bandId) return
-          await leave({ bandId: workspace.bandId })
-          await workspace.activate(null)
+          if (!home.bandId) return
+          await leave({ bandId: home.bandId })
+          await navigate({
+            href: path(workspaceTrail(PERSONAL), { page: 'songs' }),
+          })
         }}
       />
       <ConfirmDialog
@@ -282,9 +282,11 @@ function MembersPage() {
         description={m.deleteBandHint()}
         confirmLabel={m.deleteBand()}
         onConfirm={async () => {
-          if (!workspace.bandId) return
-          await removeBand({ bandId: workspace.bandId })
-          await workspace.activate(null)
+          if (!home.bandId) return
+          await removeBand({ bandId: home.bandId })
+          await navigate({
+            href: path(workspaceTrail(PERSONAL), { page: 'songs' }),
+          })
         }}
       />
     </div>

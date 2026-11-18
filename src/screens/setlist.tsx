@@ -1,5 +1,5 @@
 import { convexQuery } from '@convex-dev/react-query'
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { Link, useParams } from '@tanstack/react-router'
 import { useMutation } from 'convex/react'
 import { cn } from 'cn'
 import {
@@ -17,8 +17,8 @@ import {
 } from 'lucide-react'
 import { Suspense, useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { api } from '../../../../convex/_generated/api'
-import type { Id } from '../../../../convex/_generated/dataModel'
+import { api } from '../../convex/_generated/api'
+import type { Id } from '../../convex/_generated/dataModel'
 import { Monogram } from '@/components/app/chip'
 import { ContextMark } from '@/components/app/context-mark'
 import { ConfirmDialog } from '@/components/app/confirm-dialog'
@@ -51,27 +51,19 @@ import { VersionCaption } from '@/components/sheet/song-sheet'
 import { messageFor } from '@/lib/errors'
 import { matchesSearch } from '@/lib/search'
 import { useLiveQuery } from '@/lib/live'
+import { built } from '@/lib/built'
+import { useGo } from '@/lib/use-trail'
 import { m } from '@/paraglide/messages'
 
-export const Route = createFileRoute('/_authed/setlists/$setlistId')({
-  loader: ({ context, params }) =>
-    context.load(
-      convexQuery(api.setlists.get, {
-        setlistId: params.setlistId as Id<'setlists'>,
-      }),
-    ),
-  component: SetlistPage,
-})
-
-function SetlistPage() {
-  const setlistId = Route.useParams().setlistId as Id<'setlists'>
+export function SetlistPage() {
+  const setlistId = useParams({ strict: false }).setlistId as Id<'setlists'>
+  const { href, go } = useGo()
   const query = useLiveQuery(convexQuery(api.setlists.get, { setlistId }))
   const { setlist, entries, canEdit, bandName } = query.data
   const rename = useMutation(api.setlists.rename)
   const remove = useMutation(api.setlists.remove)
   const reorder = useMutation(api.setlists.reorder)
   const removeItem = useMutation(api.setlists.removeItem)
-  const navigate = useNavigate()
   const [picker, setPicker] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [songQuery, setSongQuery] = useState('')
@@ -108,7 +100,7 @@ function SetlistPage() {
     <div>
       <PageHeader
         breadcrumbs={[
-          <Crumb key="setlists" to="/setlists">
+          <Crumb key="setlists" {...built(href({ page: 'setlists' }))}>
             {m.setlists()}
           </Crumb>,
           <span key="name" className="truncate text-foreground">
@@ -131,9 +123,14 @@ function SetlistPage() {
           <>
             {first ? (
               <HeaderButtonLink
-                to="/versions/$versionId/play"
-                params={{ versionId: first.version._id }}
-                search={{ setlist: setlistId, index: 0 }}
+                {...built(
+                  href({
+                    page: 'version',
+                    versionId: first.version._id,
+                    leaf: 'play',
+                    search: { setlist: setlistId, index: 0 },
+                  }),
+                )}
               >
                 <PlayIcon className="fill-current" />
                 {m.playSetlist()}
@@ -174,7 +171,11 @@ function SetlistPage() {
           </>
         }
       />
-      <WorkspaceNotice homeBandId={setlist.bandId} homeName={bandName} />
+      <WorkspaceNotice
+        homeBandId={setlist.bandId}
+        homeName={bandName}
+        dest={{ page: 'setlist', setlistId }}
+      />
 
       {entries.length === 0 ? (
         <EmptyState
@@ -223,8 +224,12 @@ function SetlistPage() {
                   <div className="min-w-0 flex-1">
                     <span className="flex min-w-0 items-center gap-2">
                       <Link
-                        to="/versions/$versionId"
-                        params={{ versionId: entry.version._id }}
+                        {...built(
+                          href({
+                            page: 'version',
+                            versionId: entry.version._id,
+                          }),
+                        )}
                         draggable={false}
                         className="truncate font-medium outline-none after:absolute after:inset-0 after:rounded-2xl focus-visible:after:ring-2 focus-visible:after:ring-ring"
                       >
@@ -266,9 +271,14 @@ function SetlistPage() {
                       variant="ghost"
                       size="icon"
                       aria-label={m.play()}
-                      to="/versions/$versionId/play"
-                      params={{ versionId: entry.version._id }}
-                      search={{ setlist: setlistId, index }}
+                      {...built(
+                        href({
+                          page: 'version',
+                          versionId: entry.version._id,
+                          leaf: 'play',
+                          search: { setlist: setlistId, index },
+                        }),
+                      )}
                     >
                       <PlayIcon className="fill-current" />
                     </ButtonLink>
@@ -357,7 +367,7 @@ function SetlistPage() {
         description={m.deleteSetlistHint()}
         onConfirm={async () => {
           await remove({ setlistId })
-          await navigate({ to: '/setlists' })
+          await go({ page: 'setlists' })
         }}
       />
     </div>

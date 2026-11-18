@@ -11,23 +11,28 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthedRouteRouteImport } from './routes/_authed/route'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
-import { Route as AuthedMembersRouteImport } from './routes/_authed/members'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
 import { Route as LabTabsRouteImport } from './routes/lab/tabs'
 import { Route as SignInIndexRouteImport } from './routes/sign-in/index'
 import { Route as SignInSplatRouteImport } from './routes/sign-in/$'
-import { Route as AuthedImportIndexRouteImport } from './routes/_authed/import/index'
-import { Route as AuthedImportDraftIdRouteImport } from './routes/_authed/import/$draftId'
-import { Route as AuthedJamIndexRouteImport } from './routes/_authed/jam/index'
 import { Route as AuthedJamCodeRouteImport } from './routes/_authed/jam/$code'
-import { Route as AuthedSetlistsIndexRouteImport } from './routes/_authed/setlists/index'
-import { Route as AuthedSetlistsSetlistIdRouteImport } from './routes/_authed/setlists/$setlistId'
 import { Route as AuthedShareTokenRouteImport } from './routes/_authed/share/$token'
-import { Route as AuthedSongsIndexRouteImport } from './routes/_authed/songs/index'
 import { Route as AuthedSongsSongIdRouteImport } from './routes/_authed/songs/$songId'
+import { Route as AuthedWWorkspaceRouteRouteImport } from './routes/_authed/w/$workspace/route'
 import { Route as AuthedVersionsVersionIdIndexRouteImport } from './routes/_authed/versions/$versionId/index'
 import { Route as AuthedVersionsVersionIdEditRouteImport } from './routes/_authed/versions/$versionId/edit'
 import { Route as AuthedVersionsVersionIdPlayRouteImport } from './routes/_authed/versions/$versionId/play'
+import { Route as AuthedWWorkspaceMembersRouteImport } from './routes/_authed/w/$workspace/members'
+import { Route as AuthedWWorkspaceImportIndexRouteImport } from './routes/_authed/w/$workspace/import/index'
+import { Route as AuthedWWorkspaceImportDraftIdRouteImport } from './routes/_authed/w/$workspace/import/$draftId'
+import { Route as AuthedWWorkspaceJamIndexRouteImport } from './routes/_authed/w/$workspace/jam/index'
+import { Route as AuthedWWorkspaceSetlistsIndexRouteImport } from './routes/_authed/w/$workspace/setlists/index'
+import { Route as AuthedWWorkspaceSetlistsSetlistIdRouteImport } from './routes/_authed/w/$workspace/setlists/$setlistId'
+import { Route as AuthedWWorkspaceSongsIndexRouteImport } from './routes/_authed/w/$workspace/songs/index'
+import { Route as AuthedWWorkspaceSongsSongIdRouteImport } from './routes/_authed/w/$workspace/songs/$songId'
+import { Route as AuthedWWorkspaceVersionsVersionIdIndexRouteImport } from './routes/_authed/w/$workspace/versions/$versionId/index'
+import { Route as AuthedWWorkspaceVersionsVersionIdEditRouteImport } from './routes/_authed/w/$workspace/versions/$versionId/edit'
+import { Route as AuthedWWorkspaceVersionsVersionIdPlayRouteImport } from './routes/_authed/w/$workspace/versions/$versionId/play'
 
 const AuthedRouteRoute = AuthedRouteRouteImport.update({
   id: '/_authed',
@@ -36,11 +41,6 @@ const AuthedRouteRoute = AuthedRouteRouteImport.update({
 const AuthedIndexRoute = AuthedIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => AuthedRouteRoute,
-} as any)
-const AuthedMembersRoute = AuthedMembersRouteImport.update({
-  id: '/members',
-  path: '/members',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
 const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
@@ -63,34 +63,9 @@ const SignInSplatRoute = SignInSplatRouteImport.update({
   path: '/sign-in/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthedImportIndexRoute = AuthedImportIndexRouteImport.update({
-  id: '/import/',
-  path: '/import/',
-  getParentRoute: () => AuthedRouteRoute,
-} as any)
-const AuthedImportDraftIdRoute = AuthedImportDraftIdRouteImport.update({
-  id: '/import/$draftId',
-  path: '/import/$draftId',
-  getParentRoute: () => AuthedRouteRoute,
-} as any)
-const AuthedJamIndexRoute = AuthedJamIndexRouteImport.update({
-  id: '/jam/',
-  path: '/jam/',
-  getParentRoute: () => AuthedRouteRoute,
-} as any)
 const AuthedJamCodeRoute = AuthedJamCodeRouteImport.update({
   id: '/jam/$code',
   path: '/jam/$code',
-  getParentRoute: () => AuthedRouteRoute,
-} as any)
-const AuthedSetlistsIndexRoute = AuthedSetlistsIndexRouteImport.update({
-  id: '/setlists/',
-  path: '/setlists/',
-  getParentRoute: () => AuthedRouteRoute,
-} as any)
-const AuthedSetlistsSetlistIdRoute = AuthedSetlistsSetlistIdRouteImport.update({
-  id: '/setlists/$setlistId',
-  path: '/setlists/$setlistId',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
 const AuthedShareTokenRoute = AuthedShareTokenRouteImport.update({
@@ -98,14 +73,14 @@ const AuthedShareTokenRoute = AuthedShareTokenRouteImport.update({
   path: '/share/$token',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
-const AuthedSongsIndexRoute = AuthedSongsIndexRouteImport.update({
-  id: '/songs/',
-  path: '/songs/',
-  getParentRoute: () => AuthedRouteRoute,
-} as any)
 const AuthedSongsSongIdRoute = AuthedSongsSongIdRouteImport.update({
   id: '/songs/$songId',
   path: '/songs/$songId',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
+const AuthedWWorkspaceRouteRoute = AuthedWWorkspaceRouteRouteImport.update({
+  id: '/w/$workspace',
+  path: '/w/$workspace',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
 const AuthedVersionsVersionIdIndexRoute =
@@ -126,131 +101,226 @@ const AuthedVersionsVersionIdPlayRoute =
     path: '/versions/$versionId/play',
     getParentRoute: () => AuthedRouteRoute,
   } as any)
+const AuthedWWorkspaceMembersRoute = AuthedWWorkspaceMembersRouteImport.update({
+  id: '/members',
+  path: '/members',
+  getParentRoute: () => AuthedWWorkspaceRouteRoute,
+} as any)
+const AuthedWWorkspaceImportIndexRoute =
+  AuthedWWorkspaceImportIndexRouteImport.update({
+    id: '/import/',
+    path: '/import/',
+    getParentRoute: () => AuthedWWorkspaceRouteRoute,
+  } as any)
+const AuthedWWorkspaceImportDraftIdRoute =
+  AuthedWWorkspaceImportDraftIdRouteImport.update({
+    id: '/import/$draftId',
+    path: '/import/$draftId',
+    getParentRoute: () => AuthedWWorkspaceRouteRoute,
+  } as any)
+const AuthedWWorkspaceJamIndexRoute =
+  AuthedWWorkspaceJamIndexRouteImport.update({
+    id: '/jam/',
+    path: '/jam/',
+    getParentRoute: () => AuthedWWorkspaceRouteRoute,
+  } as any)
+const AuthedWWorkspaceSetlistsIndexRoute =
+  AuthedWWorkspaceSetlistsIndexRouteImport.update({
+    id: '/setlists/',
+    path: '/setlists/',
+    getParentRoute: () => AuthedWWorkspaceRouteRoute,
+  } as any)
+const AuthedWWorkspaceSetlistsSetlistIdRoute =
+  AuthedWWorkspaceSetlistsSetlistIdRouteImport.update({
+    id: '/setlists/$setlistId',
+    path: '/setlists/$setlistId',
+    getParentRoute: () => AuthedWWorkspaceRouteRoute,
+  } as any)
+const AuthedWWorkspaceSongsIndexRoute =
+  AuthedWWorkspaceSongsIndexRouteImport.update({
+    id: '/songs/',
+    path: '/songs/',
+    getParentRoute: () => AuthedWWorkspaceRouteRoute,
+  } as any)
+const AuthedWWorkspaceSongsSongIdRoute =
+  AuthedWWorkspaceSongsSongIdRouteImport.update({
+    id: '/songs/$songId',
+    path: '/songs/$songId',
+    getParentRoute: () => AuthedWWorkspaceRouteRoute,
+  } as any)
+const AuthedWWorkspaceVersionsVersionIdIndexRoute =
+  AuthedWWorkspaceVersionsVersionIdIndexRouteImport.update({
+    id: '/versions/$versionId/',
+    path: '/versions/$versionId/',
+    getParentRoute: () => AuthedWWorkspaceRouteRoute,
+  } as any)
+const AuthedWWorkspaceVersionsVersionIdEditRoute =
+  AuthedWWorkspaceVersionsVersionIdEditRouteImport.update({
+    id: '/versions/$versionId/edit',
+    path: '/versions/$versionId/edit',
+    getParentRoute: () => AuthedWWorkspaceRouteRoute,
+  } as any)
+const AuthedWWorkspaceVersionsVersionIdPlayRoute =
+  AuthedWWorkspaceVersionsVersionIdPlayRouteImport.update({
+    id: '/versions/$versionId/play',
+    path: '/versions/$versionId/play',
+    getParentRoute: () => AuthedWWorkspaceRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthedIndexRoute
-  '/members': typeof AuthedMembersRoute
   '/settings': typeof AuthedSettingsRoute
   '/lab/tabs': typeof LabTabsRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-in/': typeof SignInIndexRoute
-  '/import/$draftId': typeof AuthedImportDraftIdRoute
+  '/w/$workspace': typeof AuthedWWorkspaceRouteRouteWithChildren
   '/jam/$code': typeof AuthedJamCodeRoute
-  '/setlists/$setlistId': typeof AuthedSetlistsSetlistIdRoute
   '/share/$token': typeof AuthedShareTokenRoute
   '/songs/$songId': typeof AuthedSongsSongIdRoute
-  '/import/': typeof AuthedImportIndexRoute
-  '/jam/': typeof AuthedJamIndexRoute
-  '/setlists/': typeof AuthedSetlistsIndexRoute
-  '/songs/': typeof AuthedSongsIndexRoute
   '/versions/$versionId/edit': typeof AuthedVersionsVersionIdEditRoute
   '/versions/$versionId/play': typeof AuthedVersionsVersionIdPlayRoute
+  '/w/$workspace/members': typeof AuthedWWorkspaceMembersRoute
   '/versions/$versionId/': typeof AuthedVersionsVersionIdIndexRoute
+  '/w/$workspace/import/$draftId': typeof AuthedWWorkspaceImportDraftIdRoute
+  '/w/$workspace/setlists/$setlistId': typeof AuthedWWorkspaceSetlistsSetlistIdRoute
+  '/w/$workspace/songs/$songId': typeof AuthedWWorkspaceSongsSongIdRoute
+  '/w/$workspace/import/': typeof AuthedWWorkspaceImportIndexRoute
+  '/w/$workspace/jam/': typeof AuthedWWorkspaceJamIndexRoute
+  '/w/$workspace/setlists/': typeof AuthedWWorkspaceSetlistsIndexRoute
+  '/w/$workspace/songs/': typeof AuthedWWorkspaceSongsIndexRoute
+  '/w/$workspace/versions/$versionId/edit': typeof AuthedWWorkspaceVersionsVersionIdEditRoute
+  '/w/$workspace/versions/$versionId/play': typeof AuthedWWorkspaceVersionsVersionIdPlayRoute
+  '/w/$workspace/versions/$versionId/': typeof AuthedWWorkspaceVersionsVersionIdIndexRoute
 }
 export interface FileRoutesByTo {
-  '/members': typeof AuthedMembersRoute
   '/settings': typeof AuthedSettingsRoute
   '/lab/tabs': typeof LabTabsRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/': typeof AuthedIndexRoute
   '/sign-in': typeof SignInIndexRoute
-  '/import/$draftId': typeof AuthedImportDraftIdRoute
+  '/w/$workspace': typeof AuthedWWorkspaceRouteRouteWithChildren
   '/jam/$code': typeof AuthedJamCodeRoute
-  '/setlists/$setlistId': typeof AuthedSetlistsSetlistIdRoute
   '/share/$token': typeof AuthedShareTokenRoute
   '/songs/$songId': typeof AuthedSongsSongIdRoute
-  '/import': typeof AuthedImportIndexRoute
-  '/jam': typeof AuthedJamIndexRoute
-  '/setlists': typeof AuthedSetlistsIndexRoute
-  '/songs': typeof AuthedSongsIndexRoute
   '/versions/$versionId/edit': typeof AuthedVersionsVersionIdEditRoute
   '/versions/$versionId/play': typeof AuthedVersionsVersionIdPlayRoute
+  '/w/$workspace/members': typeof AuthedWWorkspaceMembersRoute
   '/versions/$versionId': typeof AuthedVersionsVersionIdIndexRoute
+  '/w/$workspace/import/$draftId': typeof AuthedWWorkspaceImportDraftIdRoute
+  '/w/$workspace/setlists/$setlistId': typeof AuthedWWorkspaceSetlistsSetlistIdRoute
+  '/w/$workspace/songs/$songId': typeof AuthedWWorkspaceSongsSongIdRoute
+  '/w/$workspace/import': typeof AuthedWWorkspaceImportIndexRoute
+  '/w/$workspace/jam': typeof AuthedWWorkspaceJamIndexRoute
+  '/w/$workspace/setlists': typeof AuthedWWorkspaceSetlistsIndexRoute
+  '/w/$workspace/songs': typeof AuthedWWorkspaceSongsIndexRoute
+  '/w/$workspace/versions/$versionId/edit': typeof AuthedWWorkspaceVersionsVersionIdEditRoute
+  '/w/$workspace/versions/$versionId/play': typeof AuthedWWorkspaceVersionsVersionIdPlayRoute
+  '/w/$workspace/versions/$versionId': typeof AuthedWWorkspaceVersionsVersionIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authed': typeof AuthedRouteRouteWithChildren
-  '/_authed/members': typeof AuthedMembersRoute
   '/_authed/settings': typeof AuthedSettingsRoute
   '/lab/tabs': typeof LabTabsRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/_authed/': typeof AuthedIndexRoute
   '/sign-in/': typeof SignInIndexRoute
-  '/_authed/import/$draftId': typeof AuthedImportDraftIdRoute
+  '/_authed/w/$workspace': typeof AuthedWWorkspaceRouteRouteWithChildren
   '/_authed/jam/$code': typeof AuthedJamCodeRoute
-  '/_authed/setlists/$setlistId': typeof AuthedSetlistsSetlistIdRoute
   '/_authed/share/$token': typeof AuthedShareTokenRoute
   '/_authed/songs/$songId': typeof AuthedSongsSongIdRoute
-  '/_authed/import/': typeof AuthedImportIndexRoute
-  '/_authed/jam/': typeof AuthedJamIndexRoute
-  '/_authed/setlists/': typeof AuthedSetlistsIndexRoute
-  '/_authed/songs/': typeof AuthedSongsIndexRoute
   '/_authed/versions/$versionId/edit': typeof AuthedVersionsVersionIdEditRoute
   '/_authed/versions/$versionId/play': typeof AuthedVersionsVersionIdPlayRoute
+  '/_authed/w/$workspace/members': typeof AuthedWWorkspaceMembersRoute
   '/_authed/versions/$versionId/': typeof AuthedVersionsVersionIdIndexRoute
+  '/_authed/w/$workspace/import/$draftId': typeof AuthedWWorkspaceImportDraftIdRoute
+  '/_authed/w/$workspace/setlists/$setlistId': typeof AuthedWWorkspaceSetlistsSetlistIdRoute
+  '/_authed/w/$workspace/songs/$songId': typeof AuthedWWorkspaceSongsSongIdRoute
+  '/_authed/w/$workspace/import/': typeof AuthedWWorkspaceImportIndexRoute
+  '/_authed/w/$workspace/jam/': typeof AuthedWWorkspaceJamIndexRoute
+  '/_authed/w/$workspace/setlists/': typeof AuthedWWorkspaceSetlistsIndexRoute
+  '/_authed/w/$workspace/songs/': typeof AuthedWWorkspaceSongsIndexRoute
+  '/_authed/w/$workspace/versions/$versionId/edit': typeof AuthedWWorkspaceVersionsVersionIdEditRoute
+  '/_authed/w/$workspace/versions/$versionId/play': typeof AuthedWWorkspaceVersionsVersionIdPlayRoute
+  '/_authed/w/$workspace/versions/$versionId/': typeof AuthedWWorkspaceVersionsVersionIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/members'
     | '/settings'
     | '/lab/tabs'
     | '/sign-in/$'
     | '/sign-in/'
-    | '/import/$draftId'
+    | '/w/$workspace'
     | '/jam/$code'
-    | '/setlists/$setlistId'
     | '/share/$token'
     | '/songs/$songId'
-    | '/import/'
-    | '/jam/'
-    | '/setlists/'
-    | '/songs/'
     | '/versions/$versionId/edit'
     | '/versions/$versionId/play'
+    | '/w/$workspace/members'
     | '/versions/$versionId/'
+    | '/w/$workspace/import/$draftId'
+    | '/w/$workspace/setlists/$setlistId'
+    | '/w/$workspace/songs/$songId'
+    | '/w/$workspace/import/'
+    | '/w/$workspace/jam/'
+    | '/w/$workspace/setlists/'
+    | '/w/$workspace/songs/'
+    | '/w/$workspace/versions/$versionId/edit'
+    | '/w/$workspace/versions/$versionId/play'
+    | '/w/$workspace/versions/$versionId/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/members'
     | '/settings'
     | '/lab/tabs'
     | '/sign-in/$'
     | '/'
     | '/sign-in'
-    | '/import/$draftId'
+    | '/w/$workspace'
     | '/jam/$code'
-    | '/setlists/$setlistId'
     | '/share/$token'
     | '/songs/$songId'
-    | '/import'
-    | '/jam'
-    | '/setlists'
-    | '/songs'
     | '/versions/$versionId/edit'
     | '/versions/$versionId/play'
+    | '/w/$workspace/members'
     | '/versions/$versionId'
+    | '/w/$workspace/import/$draftId'
+    | '/w/$workspace/setlists/$setlistId'
+    | '/w/$workspace/songs/$songId'
+    | '/w/$workspace/import'
+    | '/w/$workspace/jam'
+    | '/w/$workspace/setlists'
+    | '/w/$workspace/songs'
+    | '/w/$workspace/versions/$versionId/edit'
+    | '/w/$workspace/versions/$versionId/play'
+    | '/w/$workspace/versions/$versionId'
   id:
     | '__root__'
     | '/_authed'
-    | '/_authed/members'
     | '/_authed/settings'
     | '/lab/tabs'
     | '/sign-in/$'
     | '/_authed/'
     | '/sign-in/'
-    | '/_authed/import/$draftId'
+    | '/_authed/w/$workspace'
     | '/_authed/jam/$code'
-    | '/_authed/setlists/$setlistId'
     | '/_authed/share/$token'
     | '/_authed/songs/$songId'
-    | '/_authed/import/'
-    | '/_authed/jam/'
-    | '/_authed/setlists/'
-    | '/_authed/songs/'
     | '/_authed/versions/$versionId/edit'
     | '/_authed/versions/$versionId/play'
+    | '/_authed/w/$workspace/members'
     | '/_authed/versions/$versionId/'
+    | '/_authed/w/$workspace/import/$draftId'
+    | '/_authed/w/$workspace/setlists/$setlistId'
+    | '/_authed/w/$workspace/songs/$songId'
+    | '/_authed/w/$workspace/import/'
+    | '/_authed/w/$workspace/jam/'
+    | '/_authed/w/$workspace/setlists/'
+    | '/_authed/w/$workspace/songs/'
+    | '/_authed/w/$workspace/versions/$versionId/edit'
+    | '/_authed/w/$workspace/versions/$versionId/play'
+    | '/_authed/w/$workspace/versions/$versionId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -274,13 +344,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AuthedIndexRouteImport
-      parentRoute: typeof AuthedRouteRoute
-    }
-    '/_authed/members': {
-      id: '/_authed/members'
-      path: '/members'
-      fullPath: '/members'
-      preLoaderRoute: typeof AuthedMembersRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
     '/_authed/settings': {
@@ -311,46 +374,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignInSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authed/import/': {
-      id: '/_authed/import/'
-      path: '/import'
-      fullPath: '/import/'
-      preLoaderRoute: typeof AuthedImportIndexRouteImport
-      parentRoute: typeof AuthedRouteRoute
-    }
-    '/_authed/import/$draftId': {
-      id: '/_authed/import/$draftId'
-      path: '/import/$draftId'
-      fullPath: '/import/$draftId'
-      preLoaderRoute: typeof AuthedImportDraftIdRouteImport
-      parentRoute: typeof AuthedRouteRoute
-    }
-    '/_authed/jam/': {
-      id: '/_authed/jam/'
-      path: '/jam'
-      fullPath: '/jam/'
-      preLoaderRoute: typeof AuthedJamIndexRouteImport
-      parentRoute: typeof AuthedRouteRoute
-    }
     '/_authed/jam/$code': {
       id: '/_authed/jam/$code'
       path: '/jam/$code'
       fullPath: '/jam/$code'
       preLoaderRoute: typeof AuthedJamCodeRouteImport
-      parentRoute: typeof AuthedRouteRoute
-    }
-    '/_authed/setlists/': {
-      id: '/_authed/setlists/'
-      path: '/setlists'
-      fullPath: '/setlists/'
-      preLoaderRoute: typeof AuthedSetlistsIndexRouteImport
-      parentRoute: typeof AuthedRouteRoute
-    }
-    '/_authed/setlists/$setlistId': {
-      id: '/_authed/setlists/$setlistId'
-      path: '/setlists/$setlistId'
-      fullPath: '/setlists/$setlistId'
-      preLoaderRoute: typeof AuthedSetlistsSetlistIdRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
     '/_authed/share/$token': {
@@ -360,18 +388,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedShareTokenRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
-    '/_authed/songs/': {
-      id: '/_authed/songs/'
-      path: '/songs'
-      fullPath: '/songs/'
-      preLoaderRoute: typeof AuthedSongsIndexRouteImport
-      parentRoute: typeof AuthedRouteRoute
-    }
     '/_authed/songs/$songId': {
       id: '/_authed/songs/$songId'
       path: '/songs/$songId'
       fullPath: '/songs/$songId'
       preLoaderRoute: typeof AuthedSongsSongIdRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
+    '/_authed/w/$workspace': {
+      id: '/_authed/w/$workspace'
+      path: '/w/$workspace'
+      fullPath: '/w/$workspace'
+      preLoaderRoute: typeof AuthedWWorkspaceRouteRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
     '/_authed/versions/$versionId/': {
@@ -395,40 +423,142 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedVersionsVersionIdPlayRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
+    '/_authed/w/$workspace/members': {
+      id: '/_authed/w/$workspace/members'
+      path: '/members'
+      fullPath: '/w/$workspace/members'
+      preLoaderRoute: typeof AuthedWWorkspaceMembersRouteImport
+      parentRoute: typeof AuthedWWorkspaceRouteRoute
+    }
+    '/_authed/w/$workspace/import/': {
+      id: '/_authed/w/$workspace/import/'
+      path: '/import'
+      fullPath: '/w/$workspace/import/'
+      preLoaderRoute: typeof AuthedWWorkspaceImportIndexRouteImport
+      parentRoute: typeof AuthedWWorkspaceRouteRoute
+    }
+    '/_authed/w/$workspace/import/$draftId': {
+      id: '/_authed/w/$workspace/import/$draftId'
+      path: '/import/$draftId'
+      fullPath: '/w/$workspace/import/$draftId'
+      preLoaderRoute: typeof AuthedWWorkspaceImportDraftIdRouteImport
+      parentRoute: typeof AuthedWWorkspaceRouteRoute
+    }
+    '/_authed/w/$workspace/jam/': {
+      id: '/_authed/w/$workspace/jam/'
+      path: '/jam'
+      fullPath: '/w/$workspace/jam/'
+      preLoaderRoute: typeof AuthedWWorkspaceJamIndexRouteImport
+      parentRoute: typeof AuthedWWorkspaceRouteRoute
+    }
+    '/_authed/w/$workspace/setlists/': {
+      id: '/_authed/w/$workspace/setlists/'
+      path: '/setlists'
+      fullPath: '/w/$workspace/setlists/'
+      preLoaderRoute: typeof AuthedWWorkspaceSetlistsIndexRouteImport
+      parentRoute: typeof AuthedWWorkspaceRouteRoute
+    }
+    '/_authed/w/$workspace/setlists/$setlistId': {
+      id: '/_authed/w/$workspace/setlists/$setlistId'
+      path: '/setlists/$setlistId'
+      fullPath: '/w/$workspace/setlists/$setlistId'
+      preLoaderRoute: typeof AuthedWWorkspaceSetlistsSetlistIdRouteImport
+      parentRoute: typeof AuthedWWorkspaceRouteRoute
+    }
+    '/_authed/w/$workspace/songs/': {
+      id: '/_authed/w/$workspace/songs/'
+      path: '/songs'
+      fullPath: '/w/$workspace/songs/'
+      preLoaderRoute: typeof AuthedWWorkspaceSongsIndexRouteImport
+      parentRoute: typeof AuthedWWorkspaceRouteRoute
+    }
+    '/_authed/w/$workspace/songs/$songId': {
+      id: '/_authed/w/$workspace/songs/$songId'
+      path: '/songs/$songId'
+      fullPath: '/w/$workspace/songs/$songId'
+      preLoaderRoute: typeof AuthedWWorkspaceSongsSongIdRouteImport
+      parentRoute: typeof AuthedWWorkspaceRouteRoute
+    }
+    '/_authed/w/$workspace/versions/$versionId/': {
+      id: '/_authed/w/$workspace/versions/$versionId/'
+      path: '/versions/$versionId'
+      fullPath: '/w/$workspace/versions/$versionId/'
+      preLoaderRoute: typeof AuthedWWorkspaceVersionsVersionIdIndexRouteImport
+      parentRoute: typeof AuthedWWorkspaceRouteRoute
+    }
+    '/_authed/w/$workspace/versions/$versionId/edit': {
+      id: '/_authed/w/$workspace/versions/$versionId/edit'
+      path: '/versions/$versionId/edit'
+      fullPath: '/w/$workspace/versions/$versionId/edit'
+      preLoaderRoute: typeof AuthedWWorkspaceVersionsVersionIdEditRouteImport
+      parentRoute: typeof AuthedWWorkspaceRouteRoute
+    }
+    '/_authed/w/$workspace/versions/$versionId/play': {
+      id: '/_authed/w/$workspace/versions/$versionId/play'
+      path: '/versions/$versionId/play'
+      fullPath: '/w/$workspace/versions/$versionId/play'
+      preLoaderRoute: typeof AuthedWWorkspaceVersionsVersionIdPlayRouteImport
+      parentRoute: typeof AuthedWWorkspaceRouteRoute
+    }
   }
 }
 
+interface AuthedWWorkspaceRouteRouteChildren {
+  AuthedWWorkspaceMembersRoute: typeof AuthedWWorkspaceMembersRoute
+  AuthedWWorkspaceImportDraftIdRoute: typeof AuthedWWorkspaceImportDraftIdRoute
+  AuthedWWorkspaceSetlistsSetlistIdRoute: typeof AuthedWWorkspaceSetlistsSetlistIdRoute
+  AuthedWWorkspaceSongsSongIdRoute: typeof AuthedWWorkspaceSongsSongIdRoute
+  AuthedWWorkspaceImportIndexRoute: typeof AuthedWWorkspaceImportIndexRoute
+  AuthedWWorkspaceJamIndexRoute: typeof AuthedWWorkspaceJamIndexRoute
+  AuthedWWorkspaceSetlistsIndexRoute: typeof AuthedWWorkspaceSetlistsIndexRoute
+  AuthedWWorkspaceSongsIndexRoute: typeof AuthedWWorkspaceSongsIndexRoute
+  AuthedWWorkspaceVersionsVersionIdEditRoute: typeof AuthedWWorkspaceVersionsVersionIdEditRoute
+  AuthedWWorkspaceVersionsVersionIdPlayRoute: typeof AuthedWWorkspaceVersionsVersionIdPlayRoute
+  AuthedWWorkspaceVersionsVersionIdIndexRoute: typeof AuthedWWorkspaceVersionsVersionIdIndexRoute
+}
+
+const AuthedWWorkspaceRouteRouteChildren: AuthedWWorkspaceRouteRouteChildren = {
+  AuthedWWorkspaceMembersRoute: AuthedWWorkspaceMembersRoute,
+  AuthedWWorkspaceImportDraftIdRoute: AuthedWWorkspaceImportDraftIdRoute,
+  AuthedWWorkspaceSetlistsSetlistIdRoute:
+    AuthedWWorkspaceSetlistsSetlistIdRoute,
+  AuthedWWorkspaceSongsSongIdRoute: AuthedWWorkspaceSongsSongIdRoute,
+  AuthedWWorkspaceImportIndexRoute: AuthedWWorkspaceImportIndexRoute,
+  AuthedWWorkspaceJamIndexRoute: AuthedWWorkspaceJamIndexRoute,
+  AuthedWWorkspaceSetlistsIndexRoute: AuthedWWorkspaceSetlistsIndexRoute,
+  AuthedWWorkspaceSongsIndexRoute: AuthedWWorkspaceSongsIndexRoute,
+  AuthedWWorkspaceVersionsVersionIdEditRoute:
+    AuthedWWorkspaceVersionsVersionIdEditRoute,
+  AuthedWWorkspaceVersionsVersionIdPlayRoute:
+    AuthedWWorkspaceVersionsVersionIdPlayRoute,
+  AuthedWWorkspaceVersionsVersionIdIndexRoute:
+    AuthedWWorkspaceVersionsVersionIdIndexRoute,
+}
+
+const AuthedWWorkspaceRouteRouteWithChildren =
+  AuthedWWorkspaceRouteRoute._addFileChildren(
+    AuthedWWorkspaceRouteRouteChildren,
+  )
+
 interface AuthedRouteRouteChildren {
-  AuthedMembersRoute: typeof AuthedMembersRoute
   AuthedSettingsRoute: typeof AuthedSettingsRoute
   AuthedIndexRoute: typeof AuthedIndexRoute
-  AuthedImportDraftIdRoute: typeof AuthedImportDraftIdRoute
+  AuthedWWorkspaceRouteRoute: typeof AuthedWWorkspaceRouteRouteWithChildren
   AuthedJamCodeRoute: typeof AuthedJamCodeRoute
-  AuthedSetlistsSetlistIdRoute: typeof AuthedSetlistsSetlistIdRoute
   AuthedShareTokenRoute: typeof AuthedShareTokenRoute
   AuthedSongsSongIdRoute: typeof AuthedSongsSongIdRoute
-  AuthedImportIndexRoute: typeof AuthedImportIndexRoute
-  AuthedJamIndexRoute: typeof AuthedJamIndexRoute
-  AuthedSetlistsIndexRoute: typeof AuthedSetlistsIndexRoute
-  AuthedSongsIndexRoute: typeof AuthedSongsIndexRoute
   AuthedVersionsVersionIdEditRoute: typeof AuthedVersionsVersionIdEditRoute
   AuthedVersionsVersionIdPlayRoute: typeof AuthedVersionsVersionIdPlayRoute
   AuthedVersionsVersionIdIndexRoute: typeof AuthedVersionsVersionIdIndexRoute
 }
 
 const AuthedRouteRouteChildren: AuthedRouteRouteChildren = {
-  AuthedMembersRoute: AuthedMembersRoute,
   AuthedSettingsRoute: AuthedSettingsRoute,
   AuthedIndexRoute: AuthedIndexRoute,
-  AuthedImportDraftIdRoute: AuthedImportDraftIdRoute,
+  AuthedWWorkspaceRouteRoute: AuthedWWorkspaceRouteRouteWithChildren,
   AuthedJamCodeRoute: AuthedJamCodeRoute,
-  AuthedSetlistsSetlistIdRoute: AuthedSetlistsSetlistIdRoute,
   AuthedShareTokenRoute: AuthedShareTokenRoute,
   AuthedSongsSongIdRoute: AuthedSongsSongIdRoute,
-  AuthedImportIndexRoute: AuthedImportIndexRoute,
-  AuthedJamIndexRoute: AuthedJamIndexRoute,
-  AuthedSetlistsIndexRoute: AuthedSetlistsIndexRoute,
-  AuthedSongsIndexRoute: AuthedSongsIndexRoute,
   AuthedVersionsVersionIdEditRoute: AuthedVersionsVersionIdEditRoute,
   AuthedVersionsVersionIdPlayRoute: AuthedVersionsVersionIdPlayRoute,
   AuthedVersionsVersionIdIndexRoute: AuthedVersionsVersionIdIndexRoute,

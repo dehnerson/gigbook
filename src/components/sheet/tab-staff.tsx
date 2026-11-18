@@ -55,6 +55,7 @@ export function TabStaff({
   bpm,
   settings,
   shapes = NO_SHAPES,
+  followCapo = true,
 }: {
   measures: Array<TabMeasure>
   tuning: Array<string>
@@ -62,10 +63,12 @@ export function TabStaff({
   bpm?: number
   settings: SheetSettings
   shapes?: Array<VersionShape>
+  followCapo?: boolean
 }) {
   const strings = tuning.length > 0 ? tuning : [...STANDARD_TUNING]
   const tuningKey = strings.join(' ')
-  const { capo, transpose, notation } = settings
+  const { transpose, notation } = settings
+  const capo = followCapo ? settings.capo : 0
   const { tab, notes, chords } = settings.layers
   const mine = useQuery(api.chordShapes.mine, { tuning: tuningKey })
   const played = mine ?? NO_SHAPES

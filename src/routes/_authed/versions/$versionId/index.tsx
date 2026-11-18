@@ -1,5 +1,5 @@
 import { convexQuery } from '@convex-dev/react-query'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useParams } from '@tanstack/react-router'
 import {
   EllipsisIcon,
   PencilIcon,
@@ -19,13 +19,14 @@ import {
   HeaderButtonLink,
 } from '@/components/app/page-header'
 import { songCrumbs } from '@/components/app/song-crumbs'
+import { built } from '@/lib/built'
 import {
   ControlBar,
   KeyControls,
   LayerToggles,
   LayoutToggle,
   TextSizeControl,
-  TracksFilter,
+  PartsFilter,
 } from '@/components/sheet/sheet-controls'
 import { sheetPasses } from '@/components/sheet/passes'
 import {
@@ -45,6 +46,7 @@ import { useNotation } from '@/components/use-notation'
 import { useVersionActions } from '@/components/version-actions'
 import { VersionMenu } from '@/components/version-menu'
 import { useLiveQuery } from '@/lib/live'
+import { useGo } from '@/lib/use-trail'
 import { previewTabShift } from '@/lib/music/tab'
 import { m } from '@/paraglide/messages'
 
@@ -58,8 +60,9 @@ export const Route = createFileRoute('/_authed/versions/$versionId/')({
   component: ReadPage,
 })
 
-function ReadPage() {
-  const versionId = Route.useParams().versionId as Id<'versions'>
+export function ReadPage() {
+  const versionId = useParams({ strict: false }).versionId as Id<'versions'>
+  const { href } = useGo()
   const bundle = useLiveQuery(
     convexQuery(api.versions.getBundle, { versionId }),
   )
@@ -80,12 +83,7 @@ function ReadPage() {
   const [transpose, setTranspose] = useState(0)
   const [trackIds, setTrackIds] = useState<Array<string>>([])
   const prefs = useSheetPrefs('read')
-  const { layers, available } = useSheetLayers(
-    prefs.layers,
-    timeline,
-    version.tracks,
-    trackIds,
-  )
+  const { layers, available } = useSheetLayers(prefs.layers, timeline, trackIds)
   const passes = sheetPasses(timeline)
   const { active, move } = useSectionCursor(
     passes.map((item) => item.id),
@@ -96,9 +94,7 @@ function ReadPage() {
     transpose !== 0 &&
     !previewTabShift(
       timeline.flatMap((entry) =>
-        entry.parts.flatMap((part) =>
-          part.kind === 'tab' ? (part.measures ?? []) : [],
-        ),
+        entry.lines.flatMap((line) => line.measures ?? []),
       ),
       transpose,
     ).applied
@@ -118,7 +114,6 @@ function ReadPage() {
           {songCrumbs({
             songId: song._id,
             title: song.title,
-            home: ownerBandId,
           })}
           <span className="truncate text-foreground">{version.name}</span>
         </Breadcrumbs>
@@ -132,8 +127,7 @@ function ReadPage() {
           />
           <HeaderActions>
             <HeaderButtonLink
-              to="/versions/$versionId/play"
-              params={{ versionId }}
+              {...built(href({ page: 'version', versionId, leaf: 'play' }))}
             >
               <PlayIcon className="fill-current" />
               {m.play()}
@@ -141,8 +135,7 @@ function ReadPage() {
             {canEdit ? (
               <HeaderButtonLink
                 variant="outline"
-                to="/versions/$versionId/edit"
-                params={{ versionId }}
+                {...built(href({ page: 'version', versionId, leaf: 'edit' }))}
               >
                 <PencilIcon />
                 <span className="hidden sm:inline">{m.edit()}</span>
@@ -165,7 +158,11 @@ function ReadPage() {
             />
           </HeaderActions>
         </div>
-        <WorkspaceNotice homeBandId={ownerBandId} homeName={ownerName} />
+        <WorkspaceNotice
+          homeBandId={ownerBandId}
+          homeName={ownerName}
+          dest={{ page: 'version', versionId }}
+        />
       </div>
 
       <div className="sticky top-15.25 z-9000 -mx-4 space-y-3 border-b bg-background/85 px-4 py-3 backdrop-blur-lg sm:-mx-8 sm:px-8 lg:top-0">
@@ -207,11 +204,11 @@ function ReadPage() {
               <LayoutToggle layout={prefs.layout} onLayout={prefs.setLayout} />
             ) : null}
             <TextSizeControl scale={prefs.scale} onScale={prefs.setScale} />
-            <TracksFilter
+            <PartsFilter
               timeline={timeline}
-              tracks={version.tracks}
-              visibleTrackIds={trackIds}
-              onVisibleTrackIds={setTrackIds}
+              parts={version.parts}
+              visiblePartIds={trackIds}
+              onVisiblePartIds={setTrackIds}
             />
           </div>
         </ControlBar>
@@ -224,7 +221,7 @@ function ReadPage() {
         timeline={timeline}
         shapes={shapes}
         settings={settings}
-        visibleTrackIds={trackIds}
+        visiblePartIds={trackIds}
         layout={prefs.layout}
         showHeader={false}
         versionId={version._id}

@@ -10,22 +10,19 @@ import {
   SettingsIcon,
 } from 'lucide-react'
 import { WorkspaceSwitcher } from '@/components/app/workspace-switcher'
+import { built } from '@/lib/built'
+import { path, workspaceTrail } from '@/lib/space'
+import { useTrail } from '@/lib/use-trail'
+import { useWorkspace } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
-
-const links = [
-  { to: '/', label: () => m.allSongs(), icon: LibraryBigIcon, exact: true },
-  { to: '/songs', label: () => m.songs(), icon: MusicIcon, exact: true },
-  { to: '/setlists', label: () => m.setlists(), icon: ListMusicIcon },
-  { to: '/jam', label: () => m.jam(), icon: RadioTowerIcon },
-] as const
 
 const hasClerk = Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY)
 
-export function isBarePath(path: string) {
+export function isBarePath(pathname: string) {
   return (
-    path.endsWith('/play') ||
-    /\/jam\/[^/]+$/.test(path) ||
-    path.startsWith('/share/')
+    pathname.endsWith('/play') ||
+    /\/jam\/[^/]+$/.test(pathname) ||
+    pathname.startsWith('/share/')
   )
 }
 
@@ -44,12 +41,45 @@ function Logo({ compact = false }: { compact?: boolean }) {
   )
 }
 
+function navActive(pathname: string, href: string, exact: boolean) {
+  if (exact) return pathname === href
+  return pathname === href || pathname.startsWith(`${href}/`)
+}
+
 const navItem =
   'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors outline-none hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[status=active]:bg-sidebar-accent data-[status=active]:text-foreground [&[data-status=active]>svg]:text-primary'
 
 export function Shell({ children }: { children: React.ReactNode }) {
-  const path = useRouterState({ select: (state) => state.location.pathname })
-  if (isBarePath(path)) return children
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
+  const trail = useTrail()
+  const session = useWorkspace()
+  const nav =
+    trail.kind === 'workspace'
+      ? trail
+      : workspaceTrail(session.sessionWorkspace)
+  const links = [
+    {
+      href: path(nav, { page: 'songs' }),
+      label: m.songs(),
+      icon: MusicIcon,
+      exact: true,
+    },
+    {
+      href: path(nav, { page: 'setlists' }),
+      label: m.setlists(),
+      icon: ListMusicIcon,
+      exact: false,
+    },
+    {
+      href: path(nav, { page: 'jam' }),
+      label: m.jam(),
+      icon: RadioTowerIcon,
+      exact: false,
+    },
+  ]
+  if (isBarePath(pathname)) return children
   return (
     <div className="min-h-screen bg-background text-foreground">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-sidebar-border bg-sidebar px-4 py-5 lg:flex">
@@ -57,20 +87,27 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <Logo />
         </div>
         <nav className="mt-8 flex flex-col gap-1">
-          <Link to="/" activeOptions={{ exact: true }} className={navItem}>
+          <Link
+            to="/"
+            activeOptions={{ exact: true }}
+            className={navItem}
+            data-status={pathname === '/' ? 'active' : undefined}
+          >
             <LibraryBigIcon className="size-4.5" />
             {m.allSongs()}
           </Link>
           {hasClerk ? <WorkspaceSwitcher /> : null}
-          {links.slice(1).map((link) => (
+          {links.map((link) => (
             <Link
-              key={link.to}
-              to={link.to}
-              activeOptions={{ exact: 'exact' in link }}
+              key={link.href}
+              {...built(link.href)}
               className={navItem}
+              data-status={
+                navActive(pathname, link.href, link.exact) ? 'active' : undefined
+              }
             >
               <link.icon className="size-4.5" />
-              {link.label()}
+              {link.label}
             </Link>
           ))}
         </nav>
@@ -109,17 +146,30 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 z-9000 flex min-w-0 justify-around border-t bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg lg:hidden">
+        <Link
+          to="/"
+          activeOptions={{ exact: true }}
+          className={cn(
+            'flex min-w-0 flex-1 flex-col items-center gap-1 px-1 py-2.5 text-center text-[0.7rem] font-medium text-muted-foreground transition-colors data-[status=active]:text-primary',
+          )}
+          data-status={pathname === '/' ? 'active' : undefined}
+        >
+          <LibraryBigIcon className="size-5 shrink-0" />
+          <span className="max-w-full truncate">{m.allSongs()}</span>
+        </Link>
         {links.map((link) => (
           <Link
-            key={link.to}
-            to={link.to}
-            activeOptions={{ exact: 'exact' in link }}
+            key={link.href}
+            {...built(link.href)}
             className={cn(
               'flex min-w-0 flex-1 flex-col items-center gap-1 px-1 py-2.5 text-center text-[0.7rem] font-medium text-muted-foreground transition-colors data-[status=active]:text-primary',
             )}
+            data-status={
+              navActive(pathname, link.href, link.exact) ? 'active' : undefined
+            }
           >
             <link.icon className="size-5 shrink-0" />
-            <span className="max-w-full truncate">{link.label()}</span>
+            <span className="max-w-full truncate">{link.label}</span>
           </Link>
         ))}
       </nav>

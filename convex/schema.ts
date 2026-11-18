@@ -49,6 +49,15 @@ export const tabMeasure = v.object({
   ending: v.optional(v.number()),
 })
 
+export const instrument = v.union(v.literal('guitar'), v.literal('bass'))
+
+export const storedPart = v.object({
+  id: v.string(),
+  name: v.optional(v.string()),
+  instrument,
+  tuning: v.optional(v.array(v.string())),
+})
+
 export const importOutput = v.object({
   title: v.string(),
   artist: v.string(),
@@ -61,15 +70,15 @@ export const importOutput = v.object({
     v.object({
       name: v.string(),
       notes: v.optional(v.string()),
-      parts: v.array(
+      chartBody: v.optional(v.string()),
+      strumming: v.optional(v.string()),
+      repeat: v.optional(v.number()),
+      lines: v.array(
         v.object({
-          kind: v.union(v.literal('chart'), v.literal('tab')),
-          label: v.string(),
-          chartBody: v.optional(v.string()),
-          strumming: v.optional(v.string()),
+          part: v.string(),
+          instrument,
           measures: v.optional(v.array(tabMeasure)),
           rhythmGuessed: v.optional(v.boolean()),
-          repeat: v.optional(v.number()),
         }),
       ),
     }),
@@ -139,7 +148,7 @@ export default defineSchema({
         repeat: v.optional(v.number()),
       }),
     ),
-    tracks: v.optional(v.array(v.object({ id: v.string(), name: v.string() }))),
+    parts: v.optional(v.array(storedPart)),
     parentVersionId: v.optional(v.id('versions')),
     createdBy: v.string(),
     bandId: v.optional(v.id('bands')),
@@ -155,20 +164,16 @@ export default defineSchema({
     versionId: v.id('versions'),
     name: v.string(),
     notes: v.optional(v.string()),
-  }).index('by_version', ['versionId']),
-
-  parts: defineTable({
-    sectionId: v.id('sections'),
-    versionId: v.id('versions'),
-    kind: v.union(v.literal('chart'), v.literal('tab')),
-    label: v.string(),
-    trackId: v.optional(v.string()),
     chartBody: v.optional(v.string()),
     strumming: v.optional(v.string()),
+  }).index('by_version', ['versionId']),
+
+  lines: defineTable({
+    sectionId: v.id('sections'),
+    versionId: v.id('versions'),
+    partId: v.string(),
     measures: v.optional(v.array(tabMeasure)),
     rhythmGuessed: v.optional(v.boolean()),
-    repeat: v.optional(v.number()),
-    order: v.number(),
   })
     .index('by_section', ['sectionId'])
     .index('by_version', ['versionId']),
@@ -228,7 +233,7 @@ export default defineSchema({
     name: v.optional(v.string()),
     capo: v.number(),
     following: v.boolean(),
-    visibleTrackIds: v.array(v.string()),
+    visiblePartIds: v.array(v.string()),
     personalVersionId: v.optional(v.id('versions')),
   })
     .index('by_room', ['roomId'])

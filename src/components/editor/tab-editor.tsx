@@ -72,7 +72,7 @@ import { m } from '@/paraglide/messages'
 import { api } from '../../../convex/_generated/api'
 import { textareaClass } from './chart-editor'
 import { LENGTH_LABELS, TabGrid, noteLabel } from './tab-grid'
-import type { EditorPart } from './types'
+import type { EditorLine } from './types'
 import { useEditor } from './use-editor'
 
 type History = {
@@ -121,14 +121,14 @@ function sameShape(a: Array<TabMeasure>, b: Array<TabMeasure>) {
 }
 
 export function TabEditor({
-  part,
+  line,
   tuning,
   timeSignature,
   bpm,
   notation,
   shapes,
 }: {
-  part: EditorPart
+  line: EditorLine
   tuning: Array<string>
   timeSignature: string
   bpm?: number
@@ -143,14 +143,14 @@ export function TabEditor({
     past: [],
     present: {
       measures:
-        part.measures && part.measures.length > 0
-          ? part.measures
+        line.measures && line.measures.length > 0
+          ? line.measures
           : [emptyBar(timeSignature)],
       cursor: { bar: 0, beat: 0, string: 1 },
     },
     future: [],
   }))
-  const [guessed, setGuessed] = useState(part.rhythmGuessed ?? false)
+  const [guessed, setGuessed] = useState(line.rhythmGuessed ?? false)
   const [textOpen, setTextOpen] = useState(false)
   const gridRef = useRef<HTMLDivElement>(null)
   const chordRef = useRef<HTMLInputElement>(null)
@@ -166,8 +166,8 @@ export function TabEditor({
   const saveTab = useDebounced(
     (next: Array<TabMeasure>, rhythmGuessed: boolean) =>
       void save(() =>
-        mutations.updatePart({
-          partId: part._id,
+        mutations.updateLine({
+          lineId: line._id,
           measures: cleanTabMeasures(next),
           rhythmGuessed,
         }),

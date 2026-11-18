@@ -6,14 +6,8 @@ import { Chip } from '@/components/app/chip'
 import { chartChords } from '@/lib/music/chordpro'
 import { STANDARD_TUNING, stringLabels } from '@/lib/music/diagrams'
 import { tabChords } from '@/lib/music/tab'
+import { allParts, followsCapo, onVisiblePart, partTuning } from '@/lib/parts'
 import type { LayerSet } from '@/lib/sheet-layers'
-import {
-  allTracks,
-  meaningfulLabel,
-  onVisibleTrack,
-  trackOf,
-} from '@/lib/tracks'
-import type { StoredTrack } from '@/lib/tracks'
 import { m } from '@/paraglide/messages'
 import type { Id } from '../../../convex/_generated/dataModel'
 import { ChartPart } from './chart-part'
@@ -22,12 +16,11 @@ import { blockOf, passOf, sheetPasses } from './passes'
 import type { SheetPass } from './passes'
 import { StrumPattern } from './strum-pattern'
 import { TabStaff } from './tab-staff'
-import { trackName } from './tracks'
+import { partName } from './parts'
 import type {
   ChordShapeOverride,
   SheetEntry,
   SheetLayout,
-  SheetPart,
   SheetSettings,
   SheetSong,
   SheetVersion,
@@ -37,31 +30,25 @@ function entryElementId(entryId: string) {
   return `entry-${entryId}`
 }
 
-function partLabel(part: SheetPart, tracks: Array<StoredTrack> | undefined) {
-  const own = meaningfulLabel(part.label)
-  if (own) return own
-  const id = trackOf(part, tracks)
-  const track = allTracks(tracks).find((item) => item.id === id)
-  return track && !track.builtIn ? trackName(track) : ''
+function showsChart(layers: LayerSet) {
+  return layers.lyrics || layers.chords || layers.strumming
 }
 
-function showsPart(part: SheetPart, layers: LayerSet) {
-  if (part.kind === 'tab') return layers.tab || layers.notes
-  return layers.lyrics || layers.chords || layers.strumming
+function showsLine(layers: LayerSet) {
+  return layers.tab || layers.notes
 }
 
 export function versionChords(
   timeline: Array<SheetEntry>,
-  tracks?: Array<StoredTrack>,
-  visibleTrackIds?: Array<string>,
+  visiblePartIds?: Array<string>,
 ) {
   const symbols: Array<string> = []
   for (const entry of timeline) {
-    for (const part of entry.parts) {
-      if (!onVisibleTrack(part, tracks, visibleTrackIds)) continue
-      if (part.kind === 'chart' && part.chartBody)
-        symbols.push(...chartChords(part.chartBody))
-      if (part.kind === 'tab') symbols.push(...tabChords(part.measures ?? []))
+    if (entry.section.chartBody)
+      symbols.push(...chartChords(entry.section.chartBody))
+    for (const line of entry.lines) {
+      if (!onVisiblePart(line.partId, visiblePartIds)) continue
+      symbols.push(...tabChords(line.measures ?? []))
     }
   }
   return [...new Set(symbols)]
@@ -167,7 +154,7 @@ function SectionBlock({
   version,
   settings,
   shapes,
-  visibleTrackIds,
+  visiblePartIds,
   highlighted,
 }: {
   elementId: string
@@ -176,15 +163,18 @@ function SectionBlock({
   version: SheetVersion
   settings: SheetSettings
   shapes: Array<ChordShapeOverride>
-  visibleTrackIds?: Array<string>
+  visiblePartIds?: Array<string>
   highlighted: boolean
 }) {
   const { layers } = settings
-  const parts = entry.parts.filter(
-    (part) =>
-      onVisibleTrack(part, version.tracks, visibleTrackIds) &&
-      showsPart(part, layers),
+  const parts = allParts(version.parts)
+  const lines = entry.lines.filter(
+    (line) => onVisiblePart(line.partId, visiblePartIds) && showsLine(layers),
   )
+  const chart = entry.section.chartBody
+  const strumming = entry.section.strumming
+  const hasChart = Boolean(chart || strumming?.trim())
+  const written = hasChart || entry.lines.length > 0
   return (
     <section
       id={entryElementId(elementId)}
@@ -218,55 +208,41 @@ function SectionBlock({
           {entry.section.notes}
         </p>
       ) : null}
-      {entry.parts.length === 0 ? (
+      {!written ? (
         <p className="text-[0.85em] text-muted-foreground">
           {m.emptySection()}
         </p>
-      ) : parts.length === 0 ? null : (
+      ) : (
         <div className="space-y-5">
-          {parts.map((part) => {
-            const label = partLabel(part, version.tracks)
-            const repeat = part.repeat && part.repeat > 1 ? part.repeat : null
+          {showsChart(layers) && strumming?.trim() && layers.strumming ? (
+            <StrumPattern
+              text={strumming}
+              timeSignature={version.timeSignature}
+            />
+          ) : null}
+          {showsChart(layers) && chart && (layers.lyrics || layers.chords) ? (
+            <ChartPart body={chart} settings={settings} />
+          ) : null}
+          {lines.map((line) => {
+            const part = parts.find((item) => item.id === line.partId)
+            if (!part || !line.measures?.length) return null
+            const label = part.builtIn && !part.name ? '' : partName(part)
             return (
-              <div key={part._id} className="space-y-2.5">
-                {label || repeat ? (
-                  <div className="flex items-baseline gap-2 text-[0.72em] font-semibold">
-                    {label ? (
-                      <span className="tracking-widest text-muted-foreground uppercase">
-                        {label}
-                      </span>
-                    ) : null}
-                    {repeat ? (
-                      <span
-                        className="font-mono text-primary tabular-nums"
-                        aria-label={m.playedTimes({ count: String(repeat) })}
-                      >
-                        ×{repeat}
-                      </span>
-                    ) : null}
+              <div key={line._id} className="space-y-2.5">
+                {label ? (
+                  <div className="text-[0.72em] font-semibold tracking-widest text-muted-foreground uppercase">
+                    {label}
                   </div>
                 ) : null}
-                {part.kind === 'chart' && part.strumming && layers.strumming ? (
-                  <StrumPattern
-                    text={part.strumming}
-                    timeSignature={version.timeSignature}
-                  />
-                ) : null}
-                {part.kind === 'chart' &&
-                part.chartBody &&
-                (layers.lyrics || layers.chords) ? (
-                  <ChartPart body={part.chartBody} settings={settings} />
-                ) : null}
-                {part.kind === 'tab' && part.measures?.length ? (
-                  <TabStaff
-                    measures={part.measures}
-                    tuning={version.tuning}
-                    timeSignature={version.timeSignature}
-                    bpm={version.bpm}
-                    settings={settings}
-                    shapes={shapes}
-                  />
-                ) : null}
+                <TabStaff
+                  measures={line.measures}
+                  tuning={partTuning(part, version.tuning)}
+                  timeSignature={version.timeSignature}
+                  bpm={version.bpm}
+                  settings={settings}
+                  shapes={part.instrument === 'guitar' ? shapes : []}
+                  followCapo={followsCapo(part)}
+                />
               </div>
             )
           })}
@@ -282,7 +258,7 @@ export function SongSheet({
   timeline,
   shapes,
   settings,
-  visibleTrackIds,
+  visiblePartIds,
   highlightEntryId,
   layout = 'expanded',
   showHeader = true,
@@ -296,7 +272,7 @@ export function SongSheet({
   timeline: Array<SheetEntry>
   shapes: Array<ChordShapeOverride>
   settings: SheetSettings
-  visibleTrackIds?: Array<string>
+  visiblePartIds?: Array<string>
   highlightEntryId?: string | null
   layout?: SheetLayout
   showHeader?: boolean
@@ -305,7 +281,7 @@ export function SongSheet({
   mark?: ReactNode
   className?: string
 }) {
-  const symbols = versionChords(timeline, version.tracks, visibleTrackIds)
+  const symbols = versionChords(timeline, visiblePartIds)
   const highlightBlock = highlightEntryId
     ? blockOf(layout)(highlightEntryId)
     : null
@@ -365,7 +341,7 @@ export function SongSheet({
               version={version}
               settings={settings}
               shapes={shapes}
-              visibleTrackIds={visibleTrackIds}
+              visiblePartIds={visiblePartIds}
               highlighted={block.highlighted}
             />
           ))}

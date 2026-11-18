@@ -1,8 +1,7 @@
 import { Link } from '@tanstack/react-router'
+import { built } from '@/lib/built'
 import { ChevronRightIcon } from 'lucide-react'
 import type * as React from 'react'
-import { songSearch } from '@/lib/song-context'
-import type { SongSearch } from '@/lib/song-context'
 import { m } from '@/paraglide/messages'
 import { Chip, Monogram } from './chip'
 import { PerformerLine, performerNames } from './performer-line'
@@ -19,13 +18,13 @@ export function SongRow({
   song,
   performers,
   versionCount,
-  search,
+  href,
   trailing,
 }: {
   song: SongSummary
   performers?: Array<string>
   versionCount?: number
-  search?: SongSearch
+  href: string
   trailing?: React.ReactNode
 }) {
   const subtitle = song.subTitle?.trim()
@@ -36,9 +35,7 @@ export function SongRow({
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2">
           <Link
-            to="/songs/$songId"
-            params={{ songId: song._id }}
-            search={search ?? songSearch()}
+            {...built(href)}
             className="truncate font-medium outline-none after:absolute after:inset-0 after:rounded-xl focus-visible:after:ring-2 focus-visible:after:ring-ring"
           >
             {song.title}

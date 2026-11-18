@@ -22,6 +22,8 @@ import type { ChordShapeOverride } from '@/components/sheet/types'
 import { chartChords } from '@/lib/music/chordpro'
 import { DEFAULT_LAYERS } from '@/lib/sheet-layers'
 import { songCrumbs } from '@/components/app/song-crumbs'
+import { built } from '@/lib/built'
+import { useGo } from '@/lib/use-trail'
 import { m } from '@/paraglide/messages'
 import { useNotation } from './use-notation'
 
@@ -32,7 +34,6 @@ export function VersionEditor({
   shapes,
   versionCount,
   mark,
-  band,
 }: {
   version: EditorVersion
   song: { _id: string; title: string; subTitle?: string }
@@ -40,9 +41,9 @@ export function VersionEditor({
   shapes: Array<ChordShapeOverride>
   versionCount: number
   mark?: ReactNode
-  band?: { id: string; name: string } | null
 }) {
   const notation = useNotation()
+  const { href } = useGo()
   const mutations = useEditorMutations()
   const saver = useSaver()
   const [selected, setSelected] = useState<string>(
@@ -72,11 +73,7 @@ export function VersionEditor({
   const palette = [
     ...new Set(
       timeline.flatMap((entry) =>
-        entry.parts.flatMap((part) =>
-          part.kind === 'chart' && part.chartBody
-            ? chartChords(part.chartBody)
-            : [],
-        ),
+        entry.section.chartBody ? chartChords(entry.section.chartBody) : [],
       ),
     ),
   ]
@@ -90,11 +87,9 @@ export function VersionEditor({
             {songCrumbs({
               songId: song._id,
               title: song.title,
-              home: band ? band.id : null,
             })}
             <Crumb
-              to="/versions/$versionId"
-              params={{ versionId: version._id }}
+              {...built(href({ page: 'version', versionId: version._id }))}
             >
               {version.name}
             </Crumb>
@@ -119,8 +114,7 @@ export function VersionEditor({
                 ]}
               />
               <HeaderButtonLink
-                to="/versions/$versionId"
-                params={{ versionId: version._id }}
+                {...built(href({ page: 'version', versionId: version._id }))}
               >
                 <CheckIcon />
                 {m.done()}
@@ -194,7 +188,6 @@ export function VersionEditor({
                   notation={notation}
                   songTitle={song.title}
                   isOnlyVersion={versionCount <= 1}
-                  bandId={band?.id}
                 />
               )}
             </section>

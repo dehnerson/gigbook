@@ -6,8 +6,7 @@ import {
   parseLayers,
 } from '@/lib/sheet-layers'
 import type { LayerSet } from '@/lib/sheet-layers'
-import { visibleParts } from '@/lib/tracks'
-import type { StoredTrack } from '@/lib/tracks'
+import { onVisiblePart } from '@/lib/parts'
 import type { SheetEntry, SheetLayout } from './types'
 
 export const SCALES = [0.85, 1, 1.15, 1.3, 1.5, 1.75, 2] as const
@@ -53,11 +52,18 @@ export function useSheetPrefs(
 export function useSheetLayers(
   saved: LayerSet,
   timeline: Array<SheetEntry>,
-  tracks: Array<StoredTrack> | undefined,
-  visibleTrackIds?: Array<string>,
+  visiblePartIds?: Array<string>,
 ) {
   const available = availableLayers(
-    visibleParts(timeline, tracks, visibleTrackIds),
+    timeline.flatMap((entry) => [
+      {
+        chartBody: entry.section.chartBody,
+        strumming: entry.section.strumming,
+      },
+      ...entry.lines
+        .filter((line) => onVisiblePart(line.partId, visiblePartIds))
+        .map((line) => ({ measures: line.measures })),
+    ]),
   )
   return { available, layers: effectiveLayers(saved, available) }
 }

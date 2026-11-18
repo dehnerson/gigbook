@@ -1,5 +1,5 @@
 import { convexQuery } from '@convex-dev/react-query'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router'
 import { useMutation } from 'convex/react'
 import { EllipsisIcon, FileMusicIcon, PlayIcon, PlusIcon } from 'lucide-react'
 import { useState } from 'react'
@@ -10,42 +10,38 @@ import { Chip } from '@/components/app/chip'
 import { CollectionCard } from '@/components/app/collection-card'
 import { ContextMark } from '@/components/app/context-mark'
 import { EmptyState } from '@/components/app/empty-state'
+import { HomeSelect } from '@/components/app/home-select'
 import { InlineEdit } from '@/components/app/inline-edit'
 import { PerformerLine } from '@/components/app/performer-line'
 import { PageHeader, SectionTitle } from '@/components/app/page-header'
 import { songCrumbs } from '@/components/app/song-crumbs'
-import { WorkspaceNotice } from '@/components/app/workspace-notice'
 import { Button, ButtonLink } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { useNotation } from '@/components/use-notation'
 import { VersionMenu } from '@/components/version-menu'
-import { songHome, songSearch } from '@/lib/song-context'
 import { messageFor } from '@/lib/errors'
+import { useHome } from '@/lib/home'
 import { useLiveQuery } from '@/lib/live'
-import { useWorkspace } from '@/lib/workspace'
+import { built } from '@/lib/built'
+import { PERSONAL, bandIdFromPath, path, workspaceTrail } from '@/lib/space'
+import { useGo, useTrail } from '@/lib/use-trail'
 import { displayChord } from '@/lib/music/chords'
 import { TUNING_PRESETS } from '@/lib/music/diagrams'
 import type { Notation } from '@/lib/music/pitch'
 import { m } from '@/paraglide/messages'
 
-function songArgs(songId: Id<'songs'>, band?: string) {
-  return {
-    songId,
-    ...(band ? { bandId: band as Id<'bands'> | 'personal' } : {}),
-  }
-}
-
 export const Route = createFileRoute('/_authed/songs/$songId')({
-  validateSearch: (search: Record<string, unknown>) =>
-    songSearch(
-      typeof search.band === 'string' ? songHome(search.band) : undefined,
-    ),
-  loaderDeps: ({ search }) => ({ band: search.band }),
-  loader: ({ context, params, deps }) =>
+  loader: ({ context, params }) =>
     context.load(
-      convexQuery(
-        api.songs.get,
-        songArgs(params.songId as Id<'songs'>, deps.band),
-      ),
+      convexQuery(api.songs.get, {
+        songId: params.songId as Id<'songs'>,
+      }),
     ),
   component: SongPage,
 })
@@ -58,27 +54,51 @@ function tuningLabel(tuning: Array<string>) {
   return tuning.map((note) => note.replace(/\d+$/, '')).join(' ')
 }
 
-function SongPage() {
-  const songId = Route.useParams().songId as Id<'songs'>
-  const { band: bandParam } = Route.useSearch()
-  const home = songHome(bandParam)
-  const workspace = useWorkspace()
+export function SongPage() {
+  const songId = useParams({ strict: false }).songId as Id<'songs'>
+  const trail = useTrail()
+  const home = useHome()
+  const { href } = useGo()
+  const scoped = trail.kind === 'workspace'
   const query = useLiveQuery(
-    convexQuery(api.songs.get, songArgs(songId, bandParam)),
+    convexQuery(api.songs.get, {
+      songId,
+      ...(scoped ? { bandId: bandIdFromPath(trail.workspace) } : {}),
+    }),
   )
   const { song, versions, versionCount, canRename, canAdd, band } = query.data
   const update = useMutation(api.songs.update)
   const addVersion = useMutation(api.songs.addVersion)
-  const navigate = useNavigate()
   const notation = useNotation()
   const [addingVersion, setAddingVersion] = useState(false)
-  const scoped = home !== undefined
-  const fileBandId =
-    home === undefined ? (workspace.bandId ?? undefined) : (home ?? undefined)
-  const allowAdd =
-    home === undefined ? workspace.ready && workspace.role !== 'viewer' : canAdd
-  const homeName = home === null ? m.personal() : band?.name
+  const [pickingHome, setPickingHome] = useState(false)
+  const [choice, setChoice] = useState(PERSONAL)
+  const fileBandId = scoped ? (home?.bandId ?? undefined) : undefined
+  const allowAdd = scoped ? canAdd : true
+  const homeName = scoped
+    ? (home?.label ?? band?.name ?? m.personal())
+    : undefined
 
+  const navigate = useNavigate()
+  const fileVersion = (bandId: Id<'bands'> | undefined, next: typeof trail) => {
+    setAddingVersion(true)
+    addVersion({
+      songId,
+      versionName: m.newVersionName(),
+      ...(bandId ? { bandId } : {}),
+    })
+      .then((added) =>
+        navigate({
+          href: path(next, {
+            page: 'version',
+            versionId: added.versionId,
+            leaf: 'edit',
+          }),
+        }),
+      )
+      .catch((error: unknown) => toast.error(messageFor(error)))
+      .finally(() => setAddingVersion(false))
+  }
   const save = (values: { title?: string; subTitle?: string }) =>
     update({ songId, ...values }).catch((error: unknown) =>
       toast.error(messageFor(error)),
@@ -91,7 +111,6 @@ function SongPage() {
           songId,
           title: song.title,
           linked: false,
-          home,
         })}
         title={
           <InlineEdit
@@ -110,10 +129,6 @@ function SongPage() {
           />
         }
       />
-      {scoped ? (
-        <WorkspaceNotice homeBandId={home} homeName={homeName} />
-      ) : null}
-
       <SectionTitle
         action={
           allowAdd ? (
@@ -122,20 +137,8 @@ function SongPage() {
               variant="outline"
               isDisabled={addingVersion}
               onPress={() => {
-                setAddingVersion(true)
-                addVersion({
-                  songId,
-                  versionName: m.newVersionName(),
-                  ...(fileBandId ? { bandId: fileBandId as Id<'bands'> } : {}),
-                })
-                  .then((added) =>
-                    navigate({
-                      to: '/versions/$versionId/edit',
-                      params: { versionId: added.versionId },
-                    }),
-                  )
-                  .catch((error: unknown) => toast.error(messageFor(error)))
-                  .finally(() => setAddingVersion(false))
+                if (scoped) fileVersion(fileBandId, trail)
+                else setPickingHome(true)
               }}
             >
               <PlusIcon />
@@ -148,7 +151,7 @@ function SongPage() {
           {m.versions()}
           {scoped ? (
             <span className="inline-flex items-center gap-1.5 font-medium tracking-normal text-foreground normal-case">
-              <ContextMark bandId={home} name={homeName} />
+              <ContextMark bandId={home?.bandId} name={homeName} />
               {homeName}
             </span>
           ) : null}
@@ -166,10 +169,37 @@ function SongPage() {
               isOnlyVersion={versionCount === 1}
               notation={notation}
               showHome={!scoped}
+              href={href({ page: 'version', versionId: version._id })}
+              playHref={href({
+                page: 'version',
+                versionId: version._id,
+                leaf: 'play',
+              })}
             />
           ))}
         </ul>
       )}
+      <Dialog isOpen={pickingHome} onOpenChange={setPickingHome}>
+        <DialogHeader>
+          <DialogTitle>{m.chooseHome()}</DialogTitle>
+          <DialogDescription>{m.chooseHomeHint()}</DialogDescription>
+        </DialogHeader>
+        <HomeSelect value={choice} onChange={setChoice} writable />
+        <DialogFooter>
+          <Button variant="outline" onPress={() => setPickingHome(false)}>
+            {m.cancel()}
+          </Button>
+          <Button
+            isDisabled={addingVersion}
+            onPress={() => {
+              setPickingHome(false)
+              fileVersion(bandIdFromPath(choice) ?? undefined, workspaceTrail(choice))
+            }}
+          >
+            {m.addVersion()}
+          </Button>
+        </DialogFooter>
+      </Dialog>
     </div>
   )
 }
@@ -180,6 +210,8 @@ function VersionCard({
   isOnlyVersion,
   notation,
   showHome,
+  href,
+  playHref,
 }: {
   version: Omit<
     Doc<'versions'>,
@@ -194,14 +226,15 @@ function VersionCard({
   isOnlyVersion: boolean
   notation: Notation
   showHome: boolean
+  href: string
+  playHref: string
 }) {
   const tuning = tuningLabel(version.tuning)
   const sections = version.timeline.length
 
   return (
     <CollectionCard
-      to="/versions/$versionId"
-      params={{ versionId: version._id }}
+      href={href}
       title={version.name}
       trailing={showHome ? <ContextMark {...version} /> : null}
       footer={
@@ -225,10 +258,7 @@ function VersionCard({
       }
       actions={
         <>
-          <ButtonLink
-            to="/versions/$versionId/play"
-            params={{ versionId: version._id }}
-          >
+          <ButtonLink {...built(playHref)}>
             <PlayIcon className="fill-current" />
             {m.play()}
           </ButtonLink>

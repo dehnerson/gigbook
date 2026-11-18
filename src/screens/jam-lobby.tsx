@@ -1,24 +1,20 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useNavigate } from '@tanstack/react-router'
 import { useMutation } from 'convex/react'
 import { LogInIcon, RadioIcon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { api } from '../../../../convex/_generated/api'
+import { api } from '../../convex/_generated/api'
 import { PageHeader } from '@/components/app/page-header'
 import { Button } from '@/components/ui/button'
 import { messageFor } from '@/lib/errors'
-import { useWorkspace } from '@/lib/workspace'
+import { useHome } from '@/lib/home'
 import { m } from '@/paraglide/messages'
 import { ContextMark } from '@/components/app/context-mark'
 
-export const Route = createFileRoute('/_authed/jam/')({
-  component: JamLobby,
-})
-
 const CODE_LENGTH = 6
 
-function JamLobby() {
-  const workspace = useWorkspace()
+export function JamLobby() {
+  const home = useHome()
   const create = useMutation(api.jam.create)
   const join = useMutation(api.jam.join)
   const navigate = useNavigate()
@@ -42,20 +38,17 @@ function JamLobby() {
               {m.startJam()}
             </h2>
             <span className="inline-flex items-center gap-2 text-muted-foreground">
-              <ContextMark
-                bandId={workspace.organizationId ? workspace.bandId : null}
-                name={workspace.organizationId ? workspace.label : null}
-              />
-              {workspace.label}
+              <ContextMark bandId={home?.bandId} name={home?.label} />
+              {home?.label}
             </span>
           </div>
           <Button
             size="lg"
             className="mt-auto w-full sm:w-fit"
-            isDisabled={busy !== null || !workspace.ready}
+            isDisabled={busy !== null || !home}
             onPress={() => {
               setBusy('start')
-              create({ bandId: workspace.bandId })
+              create({ bandId: home?.bandId ?? null })
                 .then(enter)
                 .catch(fail)
                 .finally(() => setBusy(null))

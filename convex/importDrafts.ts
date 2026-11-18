@@ -23,11 +23,47 @@ import {
 } from './lib/access'
 import { fail } from './lib/errors'
 import { insertSong, uniqueVersionName } from './lib/songs'
-import { meaningfulLabel } from '../src/lib/tracks'
+import {
+  BASS_TUNING,
+  GUITAR_PART_ID,
+  genericGuitarName,
+} from '../src/lib/parts'
+import type { StoredPart } from '../src/lib/parts'
 import { readAiKey } from './users'
 
 const HOUR = 60 * 60 * 1000
 const LIMIT = 15
+
+function partForLine(
+  parts: Array<StoredPart>,
+  line: { part: string; instrument: 'guitar' | 'bass' },
+) {
+  if (line.instrument === 'guitar' && genericGuitarName(line.part)) {
+    if (!parts.some((part) => part.id === GUITAR_PART_ID))
+      parts.push({ id: GUITAR_PART_ID, instrument: 'guitar' })
+    return GUITAR_PART_ID
+  }
+  const name = line.part.trim().slice(0, 60)
+  const existing = parts.find(
+    (part) =>
+      part.instrument === line.instrument &&
+      (part.name ?? '').toLowerCase() === name.toLowerCase(),
+  )
+  if (existing) return existing.id
+  const id = crypto.randomUUID().slice(0, 8)
+  parts.push({
+    id,
+    instrument: line.instrument,
+    ...(name ? { name } : {}),
+    ...(line.instrument === 'bass' ? { tuning: [...BASS_TUNING] } : {}),
+  })
+  return id
+}
+
+function played(repeat: number | undefined) {
+  if (!repeat || repeat <= 1) return undefined
+  return Math.min(Math.round(repeat), 16)
+}
 
 async function editableTarget(
   ctx: MutationCtx,
@@ -172,45 +208,58 @@ export const save = mutation({
     const version = await editableTarget(ctx, draft.targetVersionId)
     if (version) {
       const timeline = [...version.timeline]
+      const parts: Array<StoredPart> = [...(version.parts ?? [])]
       for (const [index, section] of output.sections.entries()) {
         const mapped = draft.mapping[index]
         let sectionId = mapped ? ctx.db.normalizeId('sections', mapped) : null
-        if (sectionId) {
-          const mappedSection = await ctx.db.get(sectionId)
-          if (mappedSection?.versionId !== version._id) sectionId = null
-        }
+        const mappedSection = sectionId ? await ctx.db.get(sectionId) : null
+        if (!mappedSection || mappedSection.versionId !== version._id)
+          sectionId = null
         if (!sectionId) {
           sectionId = await ctx.db.insert('sections', {
             versionId: version._id,
             name: section.name,
             notes: section.notes,
+            chartBody: section.chartBody,
+            strumming: section.strumming,
           })
-          timeline.push({ entryId: crypto.randomUUID(), sectionId })
+          timeline.push({
+            entryId: crypto.randomUUID(),
+            sectionId,
+            ...(played(section.repeat)
+              ? { repeat: played(section.repeat) }
+              : {}),
+          })
+        } else if (!mappedSection?.chartBody && section.chartBody) {
+          await ctx.db.patch(sectionId, {
+            chartBody: section.chartBody,
+            strumming: mappedSection?.strumming ?? section.strumming,
+          })
         }
-        const existing = await ctx.db
-          .query('parts')
-          .withIndex('by_section', (q) => q.eq('sectionId', sectionId))
-          .collect()
-        let order = existing.length
-        for (const part of section.parts) {
-          await ctx.db.insert('parts', {
+        const taken = new Set(
+          (
+            await ctx.db
+              .query('lines')
+              .withIndex('by_section', (q) => q.eq('sectionId', sectionId))
+              .collect()
+          ).map((line) => line.partId),
+        )
+        for (const line of section.lines) {
+          const partId = partForLine(parts, line)
+          if (taken.has(partId)) continue
+          taken.add(partId)
+          await ctx.db.insert('lines', {
             sectionId,
             versionId: version._id,
-            kind: part.kind,
-            label: meaningfulLabel(part.label),
-            chartBody: part.chartBody,
-            strumming: part.strumming,
-            measures: part.measures,
-            rhythmGuessed: part.rhythmGuessed,
-            repeat: part.repeat,
-            order,
+            partId,
+            measures: line.measures,
+            rhythmGuessed: line.rhythmGuessed,
           })
-          order += 1
         }
       }
       await songOfVersion(ctx, version)
       const artist = version.artist ?? versionArtist(output.artist)
-      await ctx.db.patch(version._id, { timeline, artist })
+      await ctx.db.patch(version._id, { timeline, artist, parts })
       if (draft.storageId) await ctx.storage.delete(draft.storageId)
       await ctx.db.delete(draft._id)
       return { songId: version.songId, versionId: version._id }
@@ -252,30 +301,36 @@ export const save = mutation({
       createdBy: identity.subject,
       ...(draft.homeBandId ? { bandId: draft.homeBandId } : {}),
     })
+    const parts: Array<StoredPart> = []
     const timeline = []
     for (const section of output.sections) {
       const sectionId = await ctx.db.insert('sections', {
         versionId,
         name: section.name,
         notes: section.notes,
+        chartBody: section.chartBody,
+        strumming: section.strumming,
       })
-      timeline.push({ entryId: crypto.randomUUID(), sectionId })
-      for (const [order, part] of section.parts.entries()) {
-        await ctx.db.insert('parts', {
+      timeline.push({
+        entryId: crypto.randomUUID(),
+        sectionId,
+        ...(played(section.repeat) ? { repeat: played(section.repeat) } : {}),
+      })
+      const taken = new Set<string>()
+      for (const line of section.lines) {
+        const partId = partForLine(parts, line)
+        if (taken.has(partId)) continue
+        taken.add(partId)
+        await ctx.db.insert('lines', {
           sectionId,
           versionId,
-          kind: part.kind,
-          label: meaningfulLabel(part.label),
-          chartBody: part.chartBody,
-          strumming: part.strumming,
-          measures: part.measures,
-          rhythmGuessed: part.rhythmGuessed,
-          repeat: part.repeat,
-          order,
+          partId,
+          measures: line.measures,
+          rhythmGuessed: line.rhythmGuessed,
         })
       }
     }
-    await ctx.db.patch(versionId, { timeline })
+    await ctx.db.patch(versionId, { timeline, parts })
     if (draft.storageId) await ctx.storage.delete(draft.storageId)
     await ctx.db.delete(draft._id)
     return { songId, versionId }

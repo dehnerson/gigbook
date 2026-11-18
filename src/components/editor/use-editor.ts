@@ -13,12 +13,13 @@ export function useEditorMutations() {
     reorderTimeline: useMutation(api.versions.reorderTimeline),
     updateSection: useMutation(api.versions.updateSection),
     removeEntry: useMutation(api.versions.removeEntry),
+    addLine: useMutation(api.versions.addLine),
+    updateLine: useMutation(api.versions.updateLine),
+    removeLine: useMutation(api.versions.removeLine),
     addPart: useMutation(api.versions.addPart),
-    updatePart: useMutation(api.versions.updatePart),
+    renamePart: useMutation(api.versions.renamePart),
+    setPartTuning: useMutation(api.versions.setPartTuning),
     removePart: useMutation(api.versions.removePart),
-    addTrack: useMutation(api.versions.addTrack),
-    renameTrack: useMutation(api.versions.renameTrack),
-    removeTrack: useMutation(api.versions.removeTrack),
     removeVersion: useMutation(api.versions.remove),
   }
 }

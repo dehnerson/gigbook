@@ -1,6 +1,6 @@
 import { convexQuery } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useParams } from '@tanstack/react-router'
 import { useMutation } from 'convex/react'
 import type { FunctionReturnType } from 'convex/server'
 import { ConvexError } from 'convex/values'
@@ -15,8 +15,8 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { api } from '../../../../convex/_generated/api'
-import type { Id } from '../../../../convex/_generated/dataModel'
+import { api } from '../../convex/_generated/api'
+import type { Id } from '../../convex/_generated/dataModel'
 import { ConfirmDialog } from '@/components/app/confirm-dialog'
 import { Field } from '@/components/app/field'
 import { ContextMark } from '@/components/app/context-mark'
@@ -30,18 +30,12 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useNotation } from '@/components/use-notation'
 import { messageFor } from '@/lib/errors'
 import { useLiveQuery } from '@/lib/live'
+import { built } from '@/lib/built'
+import { useGo } from '@/lib/use-trail'
+import { genericGuitarName } from '@/lib/parts'
+import type { StoredPart } from '@/lib/parts'
 import { DEFAULT_LAYERS } from '@/lib/sheet-layers'
 import { m } from '@/paraglide/messages'
-
-export const Route = createFileRoute('/_authed/import/$draftId')({
-  loader: ({ context, params }) =>
-    context.load(
-      convexQuery(api.importDrafts.get, {
-        draftId: params.draftId as Id<'importDrafts'>,
-      }),
-    ),
-  component: ReviewPage,
-})
 
 type Draft = FunctionReturnType<typeof api.importDrafts.get>
 type Output = NonNullable<Draft['output']>
@@ -106,33 +100,56 @@ function StatusSteps({ status }: { status: Draft['status'] }) {
   )
 }
 
-function previewTimeline(output: Output): Array<SheetEntry> {
-  return output.sections.map((section, sectionIndex) => ({
-    entryId: `draft-${sectionIndex}`,
-    section: {
-      _id: `draft-section-${sectionIndex}`,
-      name: section.name,
-      notes: section.notes,
-    },
-    parts: section.parts.map((part, partIndex) => ({
-      _id: `draft-${sectionIndex}-${partIndex}`,
-      kind: part.kind,
-      label: part.label,
-      chartBody: part.chartBody,
-      strumming: part.strumming,
-      measures: part.measures,
-      repeat: part.repeat,
-    })),
-  }))
+function previewTimeline(output: Output) {
+  const parts: Array<StoredPart> = []
+  const idFor = (name: string, instrument: StoredPart['instrument']) => {
+    if (instrument === 'guitar' && genericGuitarName(name)) {
+      if (!parts.some((part) => part.id === 'guitar'))
+        parts.push({ id: 'guitar', instrument: 'guitar' })
+      return 'guitar'
+    }
+    const found = parts.find(
+      (part) =>
+        part.instrument === instrument &&
+        (part.name ?? '').toLowerCase() === name.trim().toLowerCase(),
+    )
+    if (found) return found.id
+    const id = `${instrument}-${parts.length}`
+    parts.push({
+      id,
+      instrument,
+      ...(name.trim() ? { name: name.trim() } : {}),
+    })
+    return id
+  }
+  const timeline: Array<SheetEntry> = output.sections.map(
+    (section, sectionIndex) => ({
+      entryId: `draft-${sectionIndex}`,
+      repeat: section.repeat,
+      section: {
+        _id: `draft-section-${sectionIndex}`,
+        name: section.name,
+        notes: section.notes,
+        chartBody: section.chartBody,
+        strumming: section.strumming,
+      },
+      lines: section.lines.map((line, lineIndex) => ({
+        _id: `draft-${sectionIndex}-${lineIndex}`,
+        partId: idFor(line.part, line.instrument),
+        measures: line.measures,
+      })),
+    }),
+  )
+  return { timeline, parts }
 }
 
-function ReviewPage() {
-  const draftId = Route.useParams().draftId as Id<'importDrafts'>
+export function ReviewPage() {
+  const draftId = useParams({ strict: false }).draftId as Id<'importDrafts'>
+  const { href, go } = useGo()
   const draft = useLiveQuery(
     convexQuery(api.importDrafts.get, { draftId }),
   ).data
   const discard = useMutation(api.importDrafts.discard)
-  const navigate = useNavigate()
   const working = draft.status !== 'ready' && draft.status !== 'failed'
   const videoId = draft.youtubeId?.match(/[A-Za-z0-9_-]{11}/)?.[0]
 
@@ -140,7 +157,7 @@ function ReviewPage() {
     <div>
       <PageHeader
         breadcrumbs={[
-          <Crumb key="import" to="/import">
+          <Crumb key="import" {...built(href({ page: 'import' }))}>
             {m.importLabel()}
           </Crumb>,
           <span key="review" className="text-foreground">
@@ -177,9 +194,7 @@ function ReviewPage() {
             <Button
               variant="outline"
               onPress={() =>
-                void discard({ draftId }).then(() =>
-                  navigate({ to: '/import' }),
-                )
+                void discard({ draftId }).then(() => go({ page: 'import' }))
               }
             >
               {m.startOver()}
@@ -227,7 +242,7 @@ function ReadyReview({ draft, output }: { draft: Draft; output: Output }) {
   const updateOutput = useMutation(api.importDrafts.updateOutput)
   const save = useMutation(api.importDrafts.save)
   const discard = useMutation(api.importDrafts.discard)
-  const navigate = useNavigate()
+  const { go } = useGo()
   const notation = useNotation()
   const [title, setTitle] = useState(output.title)
   const [artist, setArtist] = useState(output.artist)
@@ -244,6 +259,7 @@ function ReadyReview({ draft, output }: { draft: Draft; output: Output }) {
     ),
     enabled: Boolean(draft.targetVersionId),
   })
+  const preview = previewTimeline(output)
   const targetTimeline = (target.data?.timeline ?? []) as Array<SheetEntry>
   const targetSections = [
     ...new Map(
@@ -271,9 +287,10 @@ function ReadyReview({ draft, output }: { draft: Draft; output: Output }) {
           ? m.addedAsVersion({ title: duplicate.title })
           : m.importSaved(),
       )
-      await navigate({
-        to: '/versions/$versionId/edit',
-        params: { versionId: saved.versionId },
+      await go({
+        page: 'version',
+        versionId: saved.versionId,
+        leaf: 'edit',
       })
     } catch (error) {
       toast.error(messageFor(error))
@@ -353,7 +370,7 @@ function ReadyReview({ draft, output }: { draft: Draft; output: Output }) {
             isDisabled={busy}
             onPress={() =>
               void discard({ draftId: draft._id }).then(() =>
-                navigate({ to: '/import' }),
+                go({ page: 'import' }),
               )
             }
             className="text-muted-foreground hover:text-destructive"
@@ -385,6 +402,7 @@ function ReadyReview({ draft, output }: { draft: Draft; output: Output }) {
             bpm: output.bpm,
             tuning: output.tuning,
             suggestedCapo: output.suggestedCapo,
+            parts: preview.parts,
           }}
           song={{ title }}
           mark={
@@ -393,7 +411,7 @@ function ReadyReview({ draft, output }: { draft: Draft; output: Output }) {
               name={draft.targetBandName ?? draft.homeBandName}
             />
           }
-          timeline={previewTimeline(output)}
+          timeline={preview.timeline}
           shapes={[]}
           settings={{
             capo: output.suggestedCapo,
