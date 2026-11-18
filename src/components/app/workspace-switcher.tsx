@@ -1,4 +1,4 @@
-import { useQuery, useAction } from 'convex/react'
+import { useConvexAuth, useQuery, useAction } from 'convex/react'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { ChevronsUpDownIcon, PlusIcon, UsersIcon } from 'lucide-react'
 import { useState } from 'react'
@@ -30,7 +30,8 @@ const item =
 export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
   const workspace = useWorkspace()
   const trail = useTrail()
-  const bands = useQuery(api.bands.list)
+  const { isAuthenticated } = useConvexAuth()
+  const bands = useQuery(api.bands.list, isAuthenticated ? {} : 'skip')
   const [open, setOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const navigate = useNavigate()

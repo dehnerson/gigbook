@@ -1,9 +1,10 @@
 import {
+  useAuth,
   useOrganization,
   useOrganizationList,
   useUser,
 } from '@clerk/tanstack-react-start'
-import { useQuery } from 'convex/react'
+import { useConvexAuth, useQuery } from 'convex/react'
 import { createContext, useContext } from 'react'
 import type { ReactNode } from 'react'
 import { api } from '../../convex/_generated/api'
@@ -38,17 +39,34 @@ function personalWorkspace(): Workspace {
 }
 
 export function WorkspaceState({ children }: { children: ReactNode }) {
+  const { isLoaded, isSignedIn } = useAuth()
+  if (!isLoaded || !isSignedIn) {
+    return (
+      <WorkspaceContext value={personalWorkspace()}>{children}</WorkspaceContext>
+    )
+  }
+  return <ActiveWorkspace>{children}</ActiveWorkspace>
+}
+
+function ActiveWorkspace({ children }: { children: ReactNode }) {
+  const { isAuthenticated } = useConvexAuth()
   const { organization, isLoaded: orgLoaded } = useOrganization()
   const { user } = useUser()
   const { setActive, isLoaded: listLoaded } = useOrganizationList()
-  const bands = useQuery(api.bands.list)
+  const bands = useQuery(api.bands.list, isAuthenticated ? {} : 'skip')
   const organizationId = organization?.id ?? null
   const row = bands?.find(
     (item) => item.band.clerkOrganizationId === organizationId,
   )
   const waiting = Boolean(organizationId) && bands !== undefined && !row
   const value: Workspace = {
-    ready: Boolean(orgLoaded && listLoaded && bands !== undefined && !waiting),
+    ready: Boolean(
+      isAuthenticated &&
+        orgLoaded &&
+        listLoaded &&
+        bands !== undefined &&
+        !waiting,
+    ),
     bandId: organizationId ? (row?.band._id ?? null) : null,
     label: organizationId
       ? (row?.band.name ?? organization?.name ?? m.personal())
