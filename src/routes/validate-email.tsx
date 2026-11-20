@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { ValidateEmailScreen } from '@/components/validate-email-screen'
+import { ValidateEmailScreen } from '@/screens/auth/validate-email'
 
 export const Route = createFileRoute('/validate-email')({
   validateSearch: (search: Record<string, unknown>) => ({

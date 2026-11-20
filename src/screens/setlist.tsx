@@ -1,5 +1,6 @@
 import { convexQuery } from '@convex-dev/react-query'
-import { Link, useParams } from '@tanstack/react-router'
+import { useSuspenseQuery } from '@tanstack/react-query'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { useMutation } from 'convex/react'
 import { cn } from 'cn'
 import {
@@ -46,20 +47,63 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { DetailSkeleton } from '@/components/app/route-states'
 import { Skeleton } from '@/components/ui/skeleton'
 import { VersionCaption } from '@/components/sheet/song-sheet'
 import { messageFor } from '@/lib/errors'
 import { matchesSearch } from '@/lib/search'
-import { useLiveQuery } from '@/lib/live'
 import { built } from '@/lib/built'
-import { useGo } from '@/lib/use-trail'
+import { homeKey, path, workspaceTrail } from '@/lib/space'
+import type { Dest, Trail } from '@/lib/space'
+import type { Home } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
 
-export function SetlistPage() {
-  const setlistId = useParams({ strict: false }).setlistId as Id<'setlists'>
-  const { href, go } = useGo()
-  const query = useLiveQuery(convexQuery(api.setlists.get, { setlistId }))
-  const { setlist, entries, canEdit, bandName } = query.data
+export function SetlistPage({
+  setlistId,
+  home,
+  trail,
+}: {
+  setlistId: Id<'setlists'>
+  home: Home
+  trail: Trail
+}) {
+  const href = (dest: Dest) => path(trail, dest)
+  return (
+    <Suspense
+      fallback={
+        <div>
+          <PageHeader
+            breadcrumbs={[
+              <Crumb key="setlists" {...built(href({ page: 'setlists' }))}>
+                {m.setlists()}
+              </Crumb>,
+            ]}
+            title={<Skeleton className="h-9 w-64" />}
+          />
+          <DetailSkeleton />
+        </div>
+      }
+    >
+      <SetlistView setlistId={setlistId} home={home} trail={trail} />
+    </Suspense>
+  )
+}
+
+function SetlistView({
+  setlistId,
+  home,
+  trail,
+}: {
+  setlistId: Id<'setlists'>
+  home: Home
+  trail: Trail
+}) {
+  const navigate = useNavigate()
+  const href = (dest: Dest) => path(trail, dest)
+  const { data } = useSuspenseQuery(
+    convexQuery(api.setlists.get, { setlistId }),
+  )
+  const { setlist, entries, canEdit, bandName } = data
   const rename = useMutation(api.setlists.rename)
   const remove = useMutation(api.setlists.remove)
   const reorder = useMutation(api.setlists.reorder)
@@ -172,9 +216,13 @@ export function SetlistPage() {
         }
       />
       <WorkspaceNotice
+        home={home}
         homeBandId={setlist.bandId}
         homeName={bandName}
-        dest={{ page: 'setlist', setlistId }}
+        href={path(workspaceTrail(homeKey(setlist.bandId)), {
+          page: 'setlist',
+          setlistId,
+        })}
       />
 
       {entries.length === 0 ? (
@@ -367,7 +415,7 @@ export function SetlistPage() {
         description={m.deleteSetlistHint()}
         onConfirm={async () => {
           await remove({ setlistId })
-          await go({ page: 'setlists' })
+          await navigate({ href: href({ page: 'setlists' }) })
         }}
       />
     </div>
@@ -399,10 +447,10 @@ function SongPicker({
   bandId?: Id<'bands'>
   included: Set<string>
 }) {
-  const catalog = useLiveQuery(convexQuery(api.songs.catalog, {}))
+  const { data: catalog } = useSuspenseQuery(convexQuery(api.songs.catalog, {}))
   const addVersion = useMutation(api.setlists.addVersion)
   const [query, setQuery] = useState('')
-  const rows = catalog.data.flatMap((row) => {
+  const rows = catalog.flatMap((row) => {
     const versions = row.versions.filter((version) =>
       matchesSearch(query, [
         row.song.title,

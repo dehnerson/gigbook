@@ -1,5 +1,6 @@
 import { convexQuery } from '@convex-dev/react-query'
-import { useGo } from '@/lib/use-trail'
+import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import {
   CopyIcon,
   FileSymlinkIcon,
@@ -12,8 +13,8 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { api } from '../../convex/_generated/api'
-import type { Id } from '../../convex/_generated/dataModel'
+import { api } from '../../../convex/_generated/api'
+import type { Id } from '../../../convex/_generated/dataModel'
 import { ContextMark } from '@/components/app/context-mark'
 import { DeleteVersionDialog } from '@/components/app/delete-version-dialog'
 import { Button } from '@/components/ui/button'
@@ -33,8 +34,9 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useVersionActions } from '@/components/version-actions'
-import { useLiveQuery } from '@/lib/live'
+import { useVersionActions } from '@/components/version/version-actions'
+import { path } from '@/lib/space'
+import type { Dest, Trail } from '@/lib/space'
 import { cn } from 'cn'
 import { m } from '@/paraglide/messages'
 
@@ -58,6 +60,7 @@ export function VersionMenu({
   isOnlyVersion,
   includeEdit = false,
   redirectToSong = false,
+  trail,
   trigger,
 }: {
   version: VersionTarget
@@ -65,16 +68,18 @@ export function VersionMenu({
   isOnlyVersion: boolean
   includeEdit?: boolean
   redirectToSong?: boolean
+  trail: Trail
   trigger: ReactNode
 }) {
-  const bands = useLiveQuery(convexQuery(api.bands.list, {}))
+  const { data: bands } = useQuery(convexQuery(api.bands.list, {}))
   const actions = useVersionActions()
-  const { go } = useGo()
+  const navigate = useNavigate()
+  const go = (dest: Dest) => navigate({ href: path(trail, dest) })
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [linkAction, setLinkAction] = useState<'rotate' | 'revoke' | null>(null)
   const [place, setPlace] = useState<'copy' | 'move' | null>(null)
   const [choice, setChoice] = useState<string | null>(null)
-  const rows = bands.data
+  const rows = bands ?? []
   const copyHomes = homes(version, rows, 'copy')
   const moveHomes = homes(version, rows, 'move')
   const options = place === 'copy' ? copyHomes : moveHomes
@@ -297,6 +302,7 @@ export function VersionMenu({
         songTitle={songTitle}
         isOnlyVersion={isOnlyVersion}
         redirectToSong={redirectToSong}
+        trail={trail}
       />
     </>
   )

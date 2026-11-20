@@ -1,7 +1,7 @@
 import { getAuthUserId } from '@convex-dev/auth/server'
 import { vGoogleProfile } from '@convex-dev/auth/methods/google/server'
 import { v } from 'convex/values'
-import { components } from './_generated/api'
+import { components, internal } from './_generated/api'
 import type { Id } from './_generated/dataModel'
 import {
   internalMutation,
@@ -13,6 +13,7 @@ import type { MutationCtx, QueryCtx } from './_generated/server'
 import { requireIdentity } from './lib/access'
 import { decryptSecret, encryptSecret } from './lib/crypto'
 import { fail } from './lib/errors'
+import { nameWithinLimit } from './lib/users'
 import { aiProvider } from './schema'
 import { DEFAULT_MODEL, modelById, pickModel } from '../src/lib/import/models'
 import type { AiProvider } from '../src/lib/import/models'
@@ -57,6 +58,7 @@ async function reuseOrCreate(ctx: MutationCtx, profile: OauthProfile) {
       name: existing.name || name || existing.name,
       imageUrl: existing.imageUrl ?? profile.picture,
       oauthEmail: email,
+      googleLinked: true,
     })
     return existing._id
   }
@@ -64,6 +66,7 @@ async function reuseOrCreate(ctx: MutationCtx, profile: OauthProfile) {
     name,
     imageUrl: profile.picture,
     oauthEmail: email,
+    googleLinked: true,
   })
 }
 
@@ -76,23 +79,28 @@ async function rememberOauth(
   const name = profile.name?.trim()
   const user = await ctx.db.get(userId)
   if (!user) return
-  const patch: { name?: string; imageUrl?: string; oauthEmail?: string } = {}
+  const patch: {
+    googleLinked: true
+    name?: string
+    imageUrl?: string
+    oauthEmail?: string
+  } = { googleLinked: true }
   if (name && !user.name) patch.name = name
   if (profile.picture && !user.imageUrl) patch.imageUrl = profile.picture
   if (email) patch.oauthEmail = email
-  if (patch.name || patch.imageUrl || patch.oauthEmail)
-    await ctx.db.patch(userId, patch)
+  await ctx.db.patch(userId, patch)
 }
 
 export const createFromEmailPassword = internalMutation({
   args: {
     method: v.object({
       name: v.literal('emailPassword'),
-      profile: v.object({}),
+      profile: v.object({ name: v.string() }),
     }),
   },
   returns: v.id('users'),
-  handler: async (ctx) => ctx.db.insert('users', { name: '' }),
+  handler: async (ctx, args) =>
+    ctx.db.insert('users', { name: args.method.profile.name }),
 })
 
 export const createFromGoogle = internalMutation({
@@ -103,7 +111,18 @@ export const createFromGoogle = internalMutation({
     }),
   },
   returns: v.id('users'),
-  handler: async (ctx, args) => reuseOrCreate(ctx, args.method.profile),
+  handler: async (ctx, args) => {
+    const profile = args.method.profile
+    const sessionUserId = await getAuthUserId(ctx)
+    if (!sessionUserId) return reuseOrCreate(ctx, profile)
+    const email = verifiedOauthEmail(profile)
+    const owner = email ? await userForVerifiedEmail(ctx, email) : null
+    if (owner && owner._id !== sessionUserId) fail('EMAIL_TAKEN')
+    const user = await ctx.db.get(sessionUserId)
+    if (!user) return reuseOrCreate(ctx, profile)
+    await rememberOauth(ctx, sessionUserId, profile)
+    return sessionUserId
+  },
 })
 
 export const rememberGoogle = internalMutation({
@@ -133,15 +152,22 @@ export const me = query({
       user.aiModel,
       credentials.map((item) => item.provider),
     )
-    const email = await ctx.runQuery(
+    const passwordEmail = await ctx.runQuery(
       components.authEmail.verifiedEmails.getPrimaryEmail,
       { userId },
     )
     return {
       locale: user.locale ?? null,
       notation: user.notation ?? 'en',
-      email: email ?? user.oauthEmail ?? null,
+      email: passwordEmail ?? user.oauthEmail ?? null,
       name: user.name,
+      imageUrl: user.imageUrl ?? null,
+      password: passwordEmail ? { email: passwordEmail } : null,
+      google:
+        user.googleLinked || user.oauthEmail
+          ? { email: user.oauthEmail ?? null }
+          : null,
+      googleLinkNotice: user.googleLinkNotice ?? null,
       aiKeys: credentials.map((item) => ({
         provider: item.provider,
         last4: item.last4,
@@ -170,6 +196,112 @@ export const setPreferences = mutation({
     await ctx.db.patch(user._id, {
       locale: args.locale ?? user.locale,
       notation: args.notation ?? user.notation,
+    })
+  },
+})
+
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024
+
+export const updateProfile = mutation({
+  args: { name: v.string() },
+  handler: async (ctx, args) => {
+    const identity = await requireIdentity(ctx)
+    const user = await userById(ctx, identity.subject)
+    if (!user) fail('NOT_FOUND')
+    const name = args.name.trim()
+    if (!nameWithinLimit(name)) fail('INVALID')
+    await ctx.db.patch(user._id, { name })
+  },
+})
+
+export const generateAvatarUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireIdentity(ctx)
+    return ctx.storage.generateUploadUrl()
+  },
+})
+
+export const setAvatar = mutation({
+  args: { storageId: v.id('_storage') },
+  handler: async (ctx, args) => {
+    const identity = await requireIdentity(ctx)
+    const user = await userById(ctx, identity.subject)
+    if (!user) fail('NOT_FOUND')
+    const meta = await ctx.storage.getMetadata(args.storageId)
+    const type = meta?.contentType ?? ''
+    if (!type.startsWith('image/') || (meta?.size ?? 0) > MAX_AVATAR_BYTES) {
+      await ctx.storage.delete(args.storageId)
+      fail('INVALID')
+    }
+    const imageUrl = await ctx.storage.getUrl(args.storageId)
+    if (!imageUrl) {
+      await ctx.storage.delete(args.storageId)
+      fail('INVALID')
+    }
+    if (user.imageStorageId && user.imageStorageId !== args.storageId)
+      await ctx.storage.delete(user.imageStorageId)
+    await ctx.db.patch(user._id, {
+      imageStorageId: args.storageId,
+      imageUrl,
+    })
+  },
+})
+
+export const clearAvatar = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await requireIdentity(ctx)
+    const user = await userById(ctx, identity.subject)
+    if (!user) return
+    if (user.imageStorageId) await ctx.storage.delete(user.imageStorageId)
+    await ctx.db.patch(user._id, {
+      imageStorageId: undefined,
+      imageUrl: undefined,
+    })
+  },
+})
+
+export const disconnectGoogle = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await requireIdentity(ctx)
+    const user = await userById(ctx, identity.subject)
+    if (!user) fail('NOT_FOUND')
+    const passwordEmail = await ctx.runQuery(
+      components.authEmail.verifiedEmails.getPrimaryEmail,
+      { userId: user._id },
+    )
+    if (!passwordEmail) fail('INVALID')
+    await ctx.runMutation(components.authGoogle.provider.deleteUser, {
+      userId: user._id,
+    })
+    await ctx.db.patch(user._id, {
+      googleLinked: undefined,
+      oauthEmail: undefined,
+      googleLinkNotice: undefined,
+      imageUrl: user.imageStorageId ? user.imageUrl : undefined,
+    })
+  },
+})
+
+export const clearGoogleLinkNotice = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await requireIdentity(ctx)
+    const user = await userById(ctx, identity.subject)
+    if (!user?.googleLinkNotice) return
+    await ctx.db.patch(user._id, { googleLinkNotice: undefined })
+  },
+})
+
+export const deleteAccount = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await requireIdentity(ctx)
+    await ctx.scheduler.runAfter(0, internal.accountCleanup.run, {
+      userId: identity.subject,
+      phase: 'bands',
     })
   },
 })

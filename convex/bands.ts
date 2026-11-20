@@ -2,15 +2,10 @@ import { getAuthUserId } from '@convex-dev/auth/server'
 import { v } from 'convex/values'
 import { internal } from './_generated/api'
 import type { Id } from './_generated/dataModel'
-import {
-  internalMutation,
-  mutation,
-  query,
-} from './_generated/server'
+import { internalMutation, mutation, query } from './_generated/server'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import { membership, requireIdentity } from './lib/access'
 import { fail } from './lib/errors'
-import { PERSONAL, loadHome } from './lib/home'
 import { sendInvite } from './lib/mail'
 import { handBand, successor } from './lib/membership'
 import { removeBand } from './lib/ownership'
@@ -36,7 +31,12 @@ async function ownerOf(ctx: QueryCtx | MutationCtx, bandId: Id<'bands'>) {
 
 async function leaveRow(
   ctx: MutationCtx,
-  row: { _id: Id<'bandMemberships'>; bandId: Id<'bands'>; userId: string; role: string },
+  row: {
+    _id: Id<'bandMemberships'>
+    bandId: Id<'bands'>
+    userId: string
+    role: string
+  },
 ) {
   const others = (
     await ctx.db
@@ -73,18 +73,6 @@ export const list = query({
       }),
     )
     return bands.flat().sort((a, b) => a.band.name.localeCompare(b.band.name))
-  },
-})
-
-export const resolve = query({
-  args: { workspace: v.string() },
-  handler: async (ctx, args) => {
-    const identity = await requireIdentity(ctx)
-    if (args.workspace === PERSONAL)
-      return loadHome(ctx, identity.subject, null)
-    const bandId = ctx.db.normalizeId('bands', args.workspace)
-    if (!bandId) return null
-    return loadHome(ctx, identity.subject, bandId)
   },
 })
 

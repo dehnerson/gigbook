@@ -1,10 +1,23 @@
 import { createFileRoute } from '@tanstack/react-router'
-import {
-  PlayPage,
-  playSearch,
-} from '@/routes/_authed/versions/$versionId/play'
+import type { Id } from '../../../../../../convex/_generated/dataModel'
+import { PlayPage } from '@/screens/version-play'
+import { workspaceTrail } from '@/lib/space'
+import { playSearch } from '@/lib/play-search'
 
-export const Route = createFileRoute('/_authed/$workspace/versions/$versionId/play')({
+export const Route = createFileRoute(
+  '/_authed/$workspace/versions/$versionId/play',
+)({
   validateSearch: playSearch,
-  component: PlayPage,
+  component: WorkspacePlayRoute,
 })
+
+function WorkspacePlayRoute() {
+  const { versionId, workspace } = Route.useParams()
+  return (
+    <PlayPage
+      versionId={versionId as Id<'versions'>}
+      search={Route.useSearch()}
+      trail={workspaceTrail(workspace)}
+    />
+  )
+}

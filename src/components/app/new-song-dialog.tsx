@@ -17,29 +17,28 @@ import { Input } from '@/components/ui/input'
 import { messageFor } from '@/lib/errors'
 import { HomeSelect } from '@/components/app/home-select'
 import { PERSONAL, bandIdFromPath, path, workspaceTrail } from '@/lib/space'
-import { useGo } from '@/lib/use-trail'
+import type { Trail } from '@/lib/space'
 import { m } from '@/paraglide/messages'
 
 export function NewSongDialog({
   isOpen,
   onOpenChange,
   bandId,
+  trail,
   chooseHome = false,
 }: {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
   bandId?: Id<'bands'>
+  trail: Trail
   chooseHome?: boolean
 }) {
   const create = useMutation(api.songs.create)
   const addVersion = useMutation(api.songs.addVersion)
   const navigate = useNavigate()
-  const { go } = useGo()
   const [choice, setChoice] = useState(PERSONAL)
-  const fileBandId = chooseHome
-    ? (bandIdFromPath(choice) ?? undefined)
-    : bandId
-  const fileTrail = chooseHome ? workspaceTrail(choice) : null
+  const fileBandId = chooseHome ? (bandIdFromPath(choice) ?? undefined) : bandId
+  const fileTrail = chooseHome ? workspaceTrail(choice) : trail
   const [title, setTitle] = useState('')
   const [subTitle, setSubTitle] = useState('')
   const [busy, setBusy] = useState(false)
@@ -84,15 +83,13 @@ export function NewSongDialog({
   const finish = (versionId: Id<'versions'>) => {
     onOpenChange(false)
     reset()
-    if (fileTrail)
-      return navigate({
-        href: path(fileTrail, {
-          page: 'version',
-          versionId,
-          leaf: 'edit',
-        }),
-      })
-    return go({ page: 'version', versionId, leaf: 'edit' })
+    return navigate({
+      href: path(fileTrail, {
+        page: 'version',
+        versionId,
+        leaf: 'edit',
+      }),
+    })
   }
 
   const run = (action: () => Promise<unknown>) => {
@@ -137,7 +134,9 @@ export function NewSongDialog({
           })
         }}
       >
-        {chooseHome ? <HomeSelect value={choice} onChange={setChoice} writable /> : null}
+        {chooseHome ? (
+          <HomeSelect value={choice} onChange={setChoice} writable />
+        ) : null}
         <Field label={m.title()}>
           <Input
             autoFocus
@@ -194,14 +193,12 @@ export function NewSongDialog({
                       onPress={() => {
                         onOpenChange(false)
                         reset()
-                        void (fileTrail
-                          ? navigate({
-                              href: path(fileTrail, {
-                                page: 'song',
-                                songId: song._id,
-                              }),
-                            })
-                          : go({ page: 'song', songId: song._id }))
+                        void navigate({
+                          href: path(fileTrail, {
+                            page: 'song',
+                            songId: song._id,
+                          }),
+                        })
                       }}
                     >
                       {m.open()}

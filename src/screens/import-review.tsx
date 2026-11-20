@@ -1,6 +1,6 @@
 import { convexQuery } from '@convex-dev/react-query'
-import { useQuery } from '@tanstack/react-query'
-import { useParams } from '@tanstack/react-router'
+import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import { useMutation } from 'convex/react'
 import type { FunctionReturnType } from 'convex/server'
 import { ConvexError } from 'convex/values'
@@ -13,7 +13,7 @@ import {
   Trash2Icon,
   TriangleAlertIcon,
 } from 'lucide-react'
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
@@ -21,17 +21,18 @@ import { ConfirmDialog } from '@/components/app/confirm-dialog'
 import { Field } from '@/components/app/field'
 import { ContextMark } from '@/components/app/context-mark'
 import { Crumb, PageHeader, SectionTitle } from '@/components/app/page-header'
+import { DetailSkeleton } from '@/components/app/route-states'
+import { Skeleton } from '@/components/ui/skeleton'
 import { SongSheet } from '@/components/sheet/song-sheet'
 import type { SheetEntry } from '@/components/sheet/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import { Skeleton } from '@/components/ui/skeleton'
-import { useNotation } from '@/components/use-notation'
+import { useNotation } from '@/lib/use-notation'
 import { messageFor } from '@/lib/errors'
-import { useLiveQuery } from '@/lib/live'
 import { built } from '@/lib/built'
-import { useGo } from '@/lib/use-trail'
+import { path } from '@/lib/space'
+import type { Dest, Trail } from '@/lib/space'
 import { genericGuitarName } from '@/lib/parts'
 import type { StoredPart } from '@/lib/parts'
 import { DEFAULT_LAYERS } from '@/lib/sheet-layers'
@@ -143,12 +144,47 @@ function previewTimeline(output: Output) {
   return { timeline, parts }
 }
 
-export function ReviewPage() {
-  const draftId = useParams({ strict: false }).draftId as Id<'importDrafts'>
-  const { href, go } = useGo()
-  const draft = useLiveQuery(
+export function ReviewPage({
+  draftId,
+  trail,
+}: {
+  draftId: Id<'importDrafts'>
+  trail: Trail
+}) {
+  const href = (dest: Dest) => path(trail, dest)
+  return (
+    <Suspense
+      fallback={
+        <div>
+          <PageHeader
+            breadcrumbs={[
+              <Crumb key="import" {...built(href({ page: 'import' }))}>
+                {m.importLabel()}
+              </Crumb>,
+            ]}
+            title={<Skeleton className="h-9 w-64" />}
+          />
+          <DetailSkeleton />
+        </div>
+      }
+    >
+      <Review draftId={draftId} trail={trail} />
+    </Suspense>
+  )
+}
+
+function Review({
+  draftId,
+  trail,
+}: {
+  draftId: Id<'importDrafts'>
+  trail: Trail
+}) {
+  const navigate = useNavigate()
+  const href = (dest: Dest) => path(trail, dest)
+  const { data: draft } = useSuspenseQuery(
     convexQuery(api.importDrafts.get, { draftId }),
-  ).data
+  )
   const discard = useMutation(api.importDrafts.discard)
   const working = draft.status !== 'ready' && draft.status !== 'failed'
   const videoId = draft.youtubeId?.match(/[A-Za-z0-9_-]{11}/)?.[0]
@@ -194,7 +230,9 @@ export function ReviewPage() {
             <Button
               variant="outline"
               onPress={() =>
-                void discard({ draftId }).then(() => go({ page: 'import' }))
+                void discard({ draftId }).then(() =>
+                  navigate({ href: href({ page: 'import' }) }),
+                )
               }
             >
               {m.startOver()}
@@ -221,6 +259,7 @@ export function ReviewPage() {
           key={draft.output.title}
           draft={draft}
           output={draft.output}
+          trail={trail}
         />
       ) : working ? (
         <div className="space-y-4 rounded-3xl border bg-card p-6 sm:p-10">
@@ -238,11 +277,20 @@ export function ReviewPage() {
   )
 }
 
-function ReadyReview({ draft, output }: { draft: Draft; output: Output }) {
+function ReadyReview({
+  draft,
+  output,
+  trail,
+}: {
+  draft: Draft
+  output: Output
+  trail: Trail
+}) {
   const updateOutput = useMutation(api.importDrafts.updateOutput)
   const save = useMutation(api.importDrafts.save)
   const discard = useMutation(api.importDrafts.discard)
-  const { go } = useGo()
+  const navigate = useNavigate()
+  const href = (dest: Dest) => path(trail, dest)
   const notation = useNotation()
   const [title, setTitle] = useState(output.title)
   const [artist, setArtist] = useState(output.artist)
@@ -287,10 +335,12 @@ function ReadyReview({ draft, output }: { draft: Draft; output: Output }) {
           ? m.addedAsVersion({ title: duplicate.title })
           : m.importSaved(),
       )
-      await go({
-        page: 'version',
-        versionId: saved.versionId,
-        leaf: 'edit',
+      await navigate({
+        href: href({
+          page: 'version',
+          versionId: saved.versionId,
+          leaf: 'edit',
+        }),
       })
     } catch (error) {
       toast.error(messageFor(error))
@@ -370,7 +420,7 @@ function ReadyReview({ draft, output }: { draft: Draft; output: Output }) {
             isDisabled={busy}
             onPress={() =>
               void discard({ draftId: draft._id }).then(() =>
-                go({ page: 'import' }),
+                navigate({ href: href({ page: 'import' }) }),
               )
             }
             className="text-muted-foreground hover:text-destructive"

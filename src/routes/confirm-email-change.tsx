@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { ConfirmEmailScreen } from '@/components/confirm-email-screen'
+import { ConfirmEmailScreen } from '@/screens/auth/confirm-email'
 
 export const Route = createFileRoute('/confirm-email-change')({
   validateSearch: (search: Record<string, unknown>) => ({

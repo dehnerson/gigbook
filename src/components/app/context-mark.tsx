@@ -1,5 +1,6 @@
 import { cn } from 'cn'
 import { UserRoundIcon } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
 import { m } from '@/paraglide/messages'
 import { hueOf } from './chip'
 
@@ -19,13 +20,7 @@ function letters(name: string) {
   )
 }
 
-export function BandMark({
-  name,
-  className,
-}: {
-  name: string
-  className?: string
-}) {
+function BandMark({ name, className }: { name: string; className?: string }) {
   const hue = hueOf(name)
   return (
     <span
@@ -47,7 +42,7 @@ export function BandMark({
   )
 }
 
-export function PersonalMark({ className }: { className?: string }) {
+function PersonalMark({ className }: { className?: string }) {
   return (
     <span
       role="img"
@@ -79,6 +74,20 @@ export function ContextMark({
   return (
     <span className={cn('inline-flex items-center gap-1', className)}>
       {id && label ? <BandMark name={label} /> : <PersonalMark />}
+    </span>
+  )
+}
+
+export function HomeCaption({
+  home,
+}: {
+  home: { bandId: string | null; label: string | null } | null
+}) {
+  if (!home?.label) return <Skeleton className="h-4 w-24" />
+  return (
+    <span className="inline-flex items-center gap-2">
+      <ContextMark bandId={home.bandId} name={home.label} />
+      {home.label}
     </span>
   )
 }

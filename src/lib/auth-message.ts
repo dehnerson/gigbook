@@ -19,6 +19,8 @@ type AuthFailure =
   | { error: 'ACCESS_DENIED' }
   | { error: 'WRONG_USER' }
   | { error: 'NOT_LOGGED_IN' }
+  | { error: 'HAS_PASSWORD' }
+  | { error: 'INVALID_NAME' }
   | { error: 'OTHER_ERROR'; cause?: unknown }
 
 export function authMessage(error: AuthFailure | null | undefined) {
@@ -58,6 +60,10 @@ export function authMessage(error: AuthFailure | null | undefined) {
       return m.authWrongUser()
     case 'NOT_LOGGED_IN':
       return m.errorUnauthenticated()
+    case 'HAS_PASSWORD':
+      return m.passwordAlreadySet()
+    case 'INVALID_NAME':
+      return m.nameRequired()
     case 'OTHER_ERROR':
       console.error('Sign-in failed:', error.cause)
       return m.authFailed()

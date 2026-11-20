@@ -62,11 +62,35 @@ export function RoutePending() {
         <Skeleton className="h-9 w-72" />
         <Skeleton className="h-4 w-48" />
       </div>
-      <div className="space-y-2">
-        {Array.from({ length: 5 }, (_, index) => (
-          <Skeleton key={index} className="h-16 w-full rounded-xl" />
-        ))}
-      </div>
+      <ListSkeleton />
+    </div>
+  )
+}
+
+export function ListSkeleton({ rows = 5 }: { rows?: number }) {
+  return (
+    <div className="space-y-2" aria-busy>
+      {Array.from({ length: rows }, (_, index) => (
+        <Skeleton key={index} className="h-16 w-full rounded-xl" />
+      ))}
+    </div>
+  )
+}
+
+export function DetailSkeleton() {
+  return (
+    <div className="grid gap-4 md:grid-cols-2" aria-busy>
+      <Skeleton className="h-36 w-full rounded-xl" />
+      <Skeleton className="h-36 w-full rounded-xl" />
+    </div>
+  )
+}
+
+export function SheetSkeleton() {
+  return (
+    <div className="space-y-6" aria-busy>
+      <Skeleton className="h-10 w-2/3" />
+      <Skeleton className="h-[28rem] w-full rounded-xl" />
     </div>
   )
 }

@@ -4,17 +4,16 @@ import { LogInIcon, RadioIcon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '../../convex/_generated/api'
+import { HomeCaption } from '@/components/app/context-mark'
 import { PageHeader } from '@/components/app/page-header'
 import { Button } from '@/components/ui/button'
 import { messageFor } from '@/lib/errors'
-import { useHome } from '@/lib/home'
+import type { Home } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
-import { ContextMark } from '@/components/app/context-mark'
 
 const CODE_LENGTH = 6
 
-export function JamLobby() {
-  const home = useHome()
+export function JamLobby({ home }: { home: Home }) {
   const create = useMutation(api.jam.create)
   const join = useMutation(api.jam.join)
   const navigate = useNavigate()
@@ -38,17 +37,16 @@ export function JamLobby() {
               {m.startJam()}
             </h2>
             <span className="inline-flex items-center gap-2 text-muted-foreground">
-              <ContextMark bandId={home?.bandId} name={home?.label} />
-              {home?.label}
+              <HomeCaption home={home} />
             </span>
           </div>
           <Button
             size="lg"
             className="mt-auto w-full sm:w-fit"
-            isDisabled={busy !== null || !home}
+            isDisabled={busy !== null}
             onPress={() => {
               setBusy('start')
-              create({ bandId: home?.bandId ?? null })
+              create({ bandId: home.bandId })
                 .then(enter)
                 .catch(fail)
                 .finally(() => setBusy(null))

@@ -1,11 +1,8 @@
-import { convexQuery } from '@convex-dev/react-query'
 import { createFileRoute } from '@tanstack/react-router'
-import { api } from '../../../../../convex/_generated/api'
-import { ContextMark } from '@/components/app/context-mark'
+import { HomeCaption } from '@/components/app/context-mark'
 import { SongCatalog } from '@/components/app/song-catalog'
-import { useHome } from '@/lib/home'
-import { bandIdFromPath } from '@/lib/space'
-import { useLiveQuery } from '@/lib/live'
+import { path, workspaceTrail } from '@/lib/space'
+import { useRouteHome } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/$workspace/songs/')({
@@ -14,22 +11,19 @@ export const Route = createFileRoute('/_authed/$workspace/songs/')({
 
 function WorkspaceSongsPage() {
   const { workspace } = Route.useParams()
-  const home = useHome()
-  const catalog = useLiveQuery(
-    convexQuery(api.songs.catalog, { bandId: bandIdFromPath(workspace) }),
-  )
+  const home = useRouteHome()
+  const trail = workspaceTrail(workspace)
   return (
     <SongCatalog
       title={m.songs()}
-      subtitle={
-        <span className="inline-flex items-center gap-2">
-          <ContextMark bandId={home?.bandId} name={home?.label} />
-          {home?.label}
-        </span>
-      }
-      rows={catalog.data}
-      emptyTitle={m.noSongsHere({ name: home?.label ?? '' })}
-      emptyDescription={m.noSongsHereHint({ name: home?.label ?? '' })}
+      subtitle={<HomeCaption home={home} />}
+      scope={{ bandId: home.bandId }}
+      songHref={(songId) => path(trail, { page: 'song', songId })}
+      importHref={path(trail, { page: 'import' })}
+      trail={trail}
+      canCreate={home.role !== null}
+      emptyTitle={m.noSongsHere({ name: home.label ?? '' })}
+      emptyDescription={m.noSongsHint()}
     />
   )
 }

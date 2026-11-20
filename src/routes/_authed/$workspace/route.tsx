@@ -2,10 +2,10 @@ import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { useQuery } from 'convex/react'
 import { useEffect } from 'react'
 import { api } from '../../../../convex/_generated/api'
-import { RouteNotFound, RoutePending } from '@/components/app/route-states'
-import { HomeProvider } from '@/lib/home'
-import { rememberHome } from '@/lib/workspace'
-import { PERSONAL } from '@/lib/space'
+import { RouteNotFound } from '@/components/app/route-states'
+import { HomeProvider, rememberHome } from '@/lib/workspace'
+import type { Home } from '@/lib/workspace'
+import { PERSONAL, bandIdFromPath } from '@/lib/space'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/$workspace')({
@@ -15,28 +15,29 @@ export const Route = createFileRoute('/_authed/$workspace')({
 function WorkspaceFrame() {
   const { workspace } = Route.useParams()
   const personal = workspace === PERSONAL
-  const live = useQuery(api.bands.resolve, personal ? 'skip' : { workspace })
+  const bands = useQuery(api.bands.list)
+  const bandId = bandIdFromPath(workspace)
+  const row = personal
+    ? undefined
+    : bands?.find((item) => item.band._id === bandId)
   useEffect(() => {
-    if (personal || live) rememberHome(workspace)
-  }, [live, personal, workspace])
+    if (personal || row) rememberHome(workspace)
+  }, [personal, row, workspace])
 
-  if (personal) {
-    return (
-      <HomeProvider home={{ bandId: null, label: m.personal(), role: 'owner' }}>
-        <Outlet />
-      </HomeProvider>
-    )
-  }
-  if (live === undefined) return <RoutePending />
-  if (!live) return <RouteNotFound />
+  if (!personal && bands && !row) return <RouteNotFound />
+
+  const home: Home = personal
+    ? { bandId: null, label: m.personal(), role: 'owner' }
+    : row
+      ? {
+          bandId: row.band._id,
+          label: row.band.name,
+          role: row.membership.role,
+        }
+      : { bandId, label: null, role: null }
+
   return (
-    <HomeProvider
-      home={{
-        bandId: live.bandId,
-        label: live.name || m.personal(),
-        role: live.role,
-      }}
-    >
+    <HomeProvider home={home}>
       <Outlet />
     </HomeProvider>
   )

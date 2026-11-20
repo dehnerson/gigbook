@@ -2,10 +2,9 @@ import type { Doc, Id } from '../_generated/dataModel'
 import type { MutationCtx } from '../_generated/server'
 import { cloneVersionTree, deleteSetlist, deleteVersionTree } from './cascade'
 import { uniqueVersionName } from './songs'
+import type { VersionOwner } from './songs'
 
-export type Owner = { userId: string; bandId?: Id<'bands'> }
-
-function sameOwner(version: Doc<'versions'>, owner: Owner) {
+function sameOwner(version: Doc<'versions'>, owner: VersionOwner) {
   if (owner.bandId) return version.bandId === owner.bandId
   return !version.bandId && version.createdBy === owner.userId
 }
@@ -13,7 +12,7 @@ function sameOwner(version: Doc<'versions'>, owner: Owner) {
 async function priorCopy(
   ctx: MutationCtx,
   version: Doc<'versions'>,
-  owner: Owner,
+  owner: VersionOwner,
 ) {
   const rows = await ctx.db
     .query('versions')
@@ -27,7 +26,7 @@ async function priorCopy(
 export async function copyVersion(
   ctx: MutationCtx,
   version: Doc<'versions'>,
-  owner: Owner,
+  owner: VersionOwner,
   fresh = false,
 ) {
   if (!fresh) {
@@ -67,7 +66,7 @@ export async function deleteVersion(
 export async function moveVersion(
   ctx: MutationCtx,
   version: Doc<'versions'>,
-  owner: Owner,
+  owner: VersionOwner,
 ) {
   const versionId = await copyVersion(ctx, version, owner, true)
   await deleteVersion(ctx, version._id)

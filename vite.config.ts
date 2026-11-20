@@ -35,6 +35,7 @@ const config = defineConfig({
       'src/paraglide/**',
       'src/routeTree.gen.ts',
       'src/**/*.test.ts',
+      'convex/lib/commonPasswords.generated.ts',
     ],
     rules: {
       'vite-plus/prefer-vite-plus-imports': 'error',
@@ -149,6 +150,7 @@ const config = defineConfig({
       'convex/_generated/**',
       'src/paraglide/**',
       'src/routeTree.gen.ts',
+      'convex/lib/commonPasswords.generated.ts',
     ],
   },
   resolve: { tsconfigPaths: true },

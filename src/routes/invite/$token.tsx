@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { InviteScreen } from '@/components/invite-screen'
+import { InviteScreen } from '@/screens/auth/invite'
 
 export const Route = createFileRoute('/invite/$token')({
   component: InvitePage,

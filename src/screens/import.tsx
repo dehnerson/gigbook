@@ -1,4 +1,5 @@
 import { convexQuery } from '@convex-dev/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { useMutation } from 'convex/react'
 import { cn } from 'cn'
 import {
@@ -16,6 +17,7 @@ import { toast } from 'sonner'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 import { ContextMark } from '@/components/app/context-mark'
+import { DetailSkeleton } from '@/components/app/route-states'
 import { EmptyState } from '@/components/app/empty-state'
 import { Field } from '@/components/app/field'
 import { HeaderButton, PageHeader } from '@/components/app/page-header'
@@ -27,9 +29,10 @@ import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { PROVIDER_LABELS } from '@/lib/import/models'
 import { messageFor } from '@/lib/errors'
-import { useLiveQuery } from '@/lib/live'
-import { useHome } from '@/lib/home'
-import { useGo } from '@/lib/use-trail'
+import { path } from '@/lib/space'
+import type { Trail } from '@/lib/space'
+import type { Home } from '@/lib/workspace'
+import { useNavigate } from '@tanstack/react-router'
 import { m } from '@/paraglide/messages'
 
 type Source = 'paste' | 'file' | 'url' | 'youtube'
@@ -43,11 +46,10 @@ function youtubeIdOf(value: string) {
   return /^[A-Za-z0-9_-]{11}$/.test(trimmed) ? trimmed : null
 }
 
-export function ImportPage() {
-  const me = useLiveQuery(convexQuery(api.users.me, {}))
-  const catalog = useLiveQuery(convexQuery(api.songs.catalog, {}))
-  const home = useHome()
-  const { go } = useGo()
+export function ImportPage({ home, trail }: { home: Home; trail: Trail }) {
+  const { data: me, isPending } = useQuery(convexQuery(api.users.me, {}))
+  const { data: catalog } = useQuery(convexQuery(api.songs.catalog, {}))
+  const navigate = useNavigate()
   const create = useMutation(api.importDrafts.create)
   const uploadUrl = useMutation(api.importDrafts.generateUploadUrl)
   const fileInput = useRef<HTMLInputElement>(null)
@@ -62,7 +64,15 @@ export function ImportPage() {
   const [target, setTarget] = useState('new')
   const [busy, setBusy] = useState(false)
 
-  const ai = me.data?.ai
+  const songs = catalog ?? []
+  const ai = me?.ai
+  if (isPending)
+    return (
+      <div>
+        <PageHeader title={m.importLabel()} subtitle={m.importHint()} />
+        <DetailSkeleton />
+      </div>
+    )
   if (!ai) {
     return (
       <div>
@@ -108,7 +118,7 @@ export function ImportPage() {
     setBusy(true)
     try {
       const homeBandId =
-        target === 'new' ? (home?.bandId ?? undefined) : undefined
+        target === 'new' ? (home.bandId ?? undefined) : undefined
       const targetVersionId =
         target === 'new' ? undefined : (target as Id<'versions'>)
       let draftId: Id<'importDrafts'>
@@ -151,7 +161,7 @@ export function ImportPage() {
           homeBandId,
         })
       }
-      await go({ page: 'draft', draftId })
+      await navigate({ href: path(trail, { page: 'draft', draftId }) })
     } catch (error) {
       toast.error(messageFor(error))
       setBusy(false)
@@ -320,9 +330,9 @@ export function ImportPage() {
                 {
                   id: 'new',
                   label: m.newSongFromImport(),
-                  description: home?.label,
+                  description: home.label ?? undefined,
                 },
-                ...catalog.data.flatMap((row) =>
+                ...songs.flatMap((row) =>
                   row.versions
                     .filter((version) => version.canEdit)
                     .map((version) => ({
@@ -336,9 +346,9 @@ export function ImportPage() {
           </div>
           <ImportTargetMark
             target={target}
-            label={home?.label ?? ''}
-            bandId={home?.bandId ?? null}
-            catalog={catalog.data}
+            label={home.label ?? ''}
+            bandId={home.bandId}
+            catalog={songs}
           />
         </div>
 

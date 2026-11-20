@@ -10,14 +10,15 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthedRouteRouteImport } from './routes/_authed/route'
+import { Route as ConfirmAddPasswordRouteImport } from './routes/confirm-add-password'
 import { Route as ConfirmEmailChangeRouteImport } from './routes/confirm-email-change'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ValidateEmailRouteImport } from './routes/validate-email'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
 import { Route as AuthedWorkspaceRouteRouteImport } from './routes/_authed/$workspace/route'
+import { Route as AuthedAccountRouteImport } from './routes/_authed/account'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
 import { Route as InviteTokenRouteImport } from './routes/invite/$token'
-import { Route as LabTabsRouteImport } from './routes/lab/tabs'
 import { Route as SignInIndexRouteImport } from './routes/sign-in/index'
 import { Route as SignUpIndexRouteImport } from './routes/sign-up/index'
 import { Route as AuthedWorkspaceMembersRouteImport } from './routes/_authed/$workspace/members'
@@ -40,6 +41,11 @@ import { Route as AuthedWorkspaceVersionsVersionIdPlayRouteImport } from './rout
 
 const AuthedRouteRoute = AuthedRouteRouteImport.update({
   id: '/_authed',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConfirmAddPasswordRoute = ConfirmAddPasswordRouteImport.update({
+  id: '/confirm-add-password',
+  path: '/confirm-add-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConfirmEmailChangeRoute = ConfirmEmailChangeRouteImport.update({
@@ -67,6 +73,11 @@ const AuthedWorkspaceRouteRoute = AuthedWorkspaceRouteRouteImport.update({
   path: '/$workspace',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
+const AuthedAccountRoute = AuthedAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
 const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -75,11 +86,6 @@ const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
 const InviteTokenRoute = InviteTokenRouteImport.update({
   id: '/invite/$token',
   path: '/invite/$token',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LabTabsRoute = LabTabsRouteImport.update({
-  id: '/lab/tabs',
-  path: '/lab/tabs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignInIndexRoute = SignInIndexRouteImport.update({
@@ -192,13 +198,14 @@ const AuthedWorkspaceVersionsVersionIdPlayRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthedIndexRoute
+  '/confirm-add-password': typeof ConfirmAddPasswordRoute
   '/confirm-email-change': typeof ConfirmEmailChangeRoute
   '/reset-password': typeof ResetPasswordRoute
   '/validate-email': typeof ValidateEmailRoute
   '/$workspace': typeof AuthedWorkspaceRouteRouteWithChildren
+  '/account': typeof AuthedAccountRoute
   '/settings': typeof AuthedSettingsRoute
   '/invite/$token': typeof InviteTokenRoute
-  '/lab/tabs': typeof LabTabsRoute
   '/sign-in/': typeof SignInIndexRoute
   '/sign-up/': typeof SignUpIndexRoute
   '/$workspace/members': typeof AuthedWorkspaceMembersRoute
@@ -220,13 +227,14 @@ export interface FileRoutesByFullPath {
   '/$workspace/versions/$versionId/': typeof AuthedWorkspaceVersionsVersionIdIndexRoute
 }
 export interface FileRoutesByTo {
+  '/confirm-add-password': typeof ConfirmAddPasswordRoute
   '/confirm-email-change': typeof ConfirmEmailChangeRoute
   '/reset-password': typeof ResetPasswordRoute
   '/validate-email': typeof ValidateEmailRoute
   '/$workspace': typeof AuthedWorkspaceRouteRouteWithChildren
+  '/account': typeof AuthedAccountRoute
   '/settings': typeof AuthedSettingsRoute
   '/invite/$token': typeof InviteTokenRoute
-  '/lab/tabs': typeof LabTabsRoute
   '/': typeof AuthedIndexRoute
   '/sign-in': typeof SignInIndexRoute
   '/sign-up': typeof SignUpIndexRoute
@@ -251,13 +259,14 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authed': typeof AuthedRouteRouteWithChildren
+  '/confirm-add-password': typeof ConfirmAddPasswordRoute
   '/confirm-email-change': typeof ConfirmEmailChangeRoute
   '/reset-password': typeof ResetPasswordRoute
   '/validate-email': typeof ValidateEmailRoute
   '/_authed/$workspace': typeof AuthedWorkspaceRouteRouteWithChildren
+  '/_authed/account': typeof AuthedAccountRoute
   '/_authed/settings': typeof AuthedSettingsRoute
   '/invite/$token': typeof InviteTokenRoute
-  '/lab/tabs': typeof LabTabsRoute
   '/_authed/': typeof AuthedIndexRoute
   '/sign-in/': typeof SignInIndexRoute
   '/sign-up/': typeof SignUpIndexRoute
@@ -283,13 +292,14 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/confirm-add-password'
     | '/confirm-email-change'
     | '/reset-password'
     | '/validate-email'
     | '/$workspace'
+    | '/account'
     | '/settings'
     | '/invite/$token'
-    | '/lab/tabs'
     | '/sign-in/'
     | '/sign-up/'
     | '/$workspace/members'
@@ -311,13 +321,14 @@ export interface FileRouteTypes {
     | '/$workspace/versions/$versionId/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/confirm-add-password'
     | '/confirm-email-change'
     | '/reset-password'
     | '/validate-email'
     | '/$workspace'
+    | '/account'
     | '/settings'
     | '/invite/$token'
-    | '/lab/tabs'
     | '/'
     | '/sign-in'
     | '/sign-up'
@@ -341,13 +352,14 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_authed'
+    | '/confirm-add-password'
     | '/confirm-email-change'
     | '/reset-password'
     | '/validate-email'
     | '/_authed/$workspace'
+    | '/_authed/account'
     | '/_authed/settings'
     | '/invite/$token'
-    | '/lab/tabs'
     | '/_authed/'
     | '/sign-in/'
     | '/sign-up/'
@@ -372,11 +384,11 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AuthedRouteRoute: typeof AuthedRouteRouteWithChildren
+  ConfirmAddPasswordRoute: typeof ConfirmAddPasswordRoute
   ConfirmEmailChangeRoute: typeof ConfirmEmailChangeRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   ValidateEmailRoute: typeof ValidateEmailRoute
   InviteTokenRoute: typeof InviteTokenRoute
-  LabTabsRoute: typeof LabTabsRoute
   SignInIndexRoute: typeof SignInIndexRoute
   SignUpIndexRoute: typeof SignUpIndexRoute
 }
@@ -388,6 +400,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/confirm-add-password': {
+      id: '/confirm-add-password'
+      path: '/confirm-add-password'
+      fullPath: '/confirm-add-password'
+      preLoaderRoute: typeof ConfirmAddPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/confirm-email-change': {
@@ -425,6 +444,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedWorkspaceRouteRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
+    '/_authed/account': {
+      id: '/_authed/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AuthedAccountRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
     '/_authed/settings': {
       id: '/_authed/settings'
       path: '/settings'
@@ -437,13 +463,6 @@ declare module '@tanstack/react-router' {
       path: '/invite/$token'
       fullPath: '/invite/$token'
       preLoaderRoute: typeof InviteTokenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lab/tabs': {
-      id: '/lab/tabs'
-      path: '/lab/tabs'
-      fullPath: '/lab/tabs'
-      preLoaderRoute: typeof LabTabsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sign-in/': {
@@ -618,6 +637,7 @@ const AuthedWorkspaceRouteRouteWithChildren =
 
 interface AuthedRouteRouteChildren {
   AuthedWorkspaceRouteRoute: typeof AuthedWorkspaceRouteRouteWithChildren
+  AuthedAccountRoute: typeof AuthedAccountRoute
   AuthedSettingsRoute: typeof AuthedSettingsRoute
   AuthedIndexRoute: typeof AuthedIndexRoute
   AuthedJamCodeRoute: typeof AuthedJamCodeRoute
@@ -630,6 +650,7 @@ interface AuthedRouteRouteChildren {
 
 const AuthedRouteRouteChildren: AuthedRouteRouteChildren = {
   AuthedWorkspaceRouteRoute: AuthedWorkspaceRouteRouteWithChildren,
+  AuthedAccountRoute: AuthedAccountRoute,
   AuthedSettingsRoute: AuthedSettingsRoute,
   AuthedIndexRoute: AuthedIndexRoute,
   AuthedJamCodeRoute: AuthedJamCodeRoute,
@@ -646,11 +667,11 @@ const AuthedRouteRouteWithChildren = AuthedRouteRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   AuthedRouteRoute: AuthedRouteRouteWithChildren,
+  ConfirmAddPasswordRoute: ConfirmAddPasswordRoute,
   ConfirmEmailChangeRoute: ConfirmEmailChangeRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   ValidateEmailRoute: ValidateEmailRoute,
   InviteTokenRoute: InviteTokenRoute,
-  LabTabsRoute: LabTabsRoute,
   SignInIndexRoute: SignInIndexRoute,
   SignUpIndexRoute: SignUpIndexRoute,
 }

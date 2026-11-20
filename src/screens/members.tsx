@@ -1,13 +1,17 @@
+import { convexQuery } from '@convex-dev/react-query'
+import { useSuspenseQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
-import { useMutation, useQuery } from 'convex/react'
+import { useMutation } from 'convex/react'
 import { EllipsisIcon, UserPlusIcon, UsersIcon, XIcon } from 'lucide-react'
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '../../convex/_generated/api'
 import { Chip, initials } from '@/components/app/chip'
 import { ConfirmDialog } from '@/components/app/confirm-dialog'
 import { EmptyState } from '@/components/app/empty-state'
 import { PageHeader } from '@/components/app/page-header'
+import { ListSkeleton } from '@/components/app/route-states'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -19,16 +23,41 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { messageFor } from '@/lib/errors'
 import { roleName } from '@/lib/roles'
-import { useHome } from '@/lib/home'
+import type { Home } from '@/lib/workspace'
+import type { Id } from '../../convex/_generated/dataModel'
 import { PERSONAL, path, workspaceTrail } from '@/lib/space'
 import { m } from '@/paraglide/messages'
 
-export function MembersPage() {
-  const home = useHome()
+export function MembersPage({ home }: { home: Home }) {
+  if (!home.bandId)
+    return (
+      <EmptyState
+        icon={UsersIcon}
+        title={m.members()}
+        description={m.membersPersonal()}
+      />
+    )
+  return (
+    <Suspense
+      fallback={
+        <div>
+          <PageHeader
+            title={m.members()}
+            subtitle={home.label ?? <Skeleton className="h-4 w-24" />}
+          />
+          <ListSkeleton />
+        </div>
+      }
+    >
+      <MemberRoster bandId={home.bandId} />
+    </Suspense>
+  )
+}
+
+function MemberRoster({ bandId }: { bandId: Id<'bands'> }) {
   const navigate = useNavigate()
-  const band = useQuery(
-    api.bands.get,
-    home?.bandId ? { bandId: home.bandId } : 'skip',
+  const { data: band } = useSuspenseQuery(
+    convexQuery(api.bands.get, { bandId }),
   )
   const invite = useMutation(api.bands.invite)
   const revoke = useMutation(api.bands.revoke)
@@ -40,17 +69,6 @@ export function MembersPage() {
   const [busy, setBusy] = useState(false)
   const [confirmLeave, setConfirmLeave] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
-
-  if (!home?.bandId) {
-    return (
-      <EmptyState
-        icon={UsersIcon}
-        title={m.members()}
-        description={m.membersPersonal()}
-      />
-    )
-  }
-  if (!band) return null
 
   return (
     <div>
@@ -156,10 +174,10 @@ export function MembersPage() {
           className="mt-6 grid max-w-xl gap-3 border-t pt-4"
           onSubmit={(event) => {
             event.preventDefault()
-            if (!email.trim() || !home.bandId) return
+            if (!email.trim()) return
             setBusy(true)
             invite({
-              bandId: home.bandId,
+              bandId,
               email,
               role: inviteRole,
             })
@@ -218,8 +236,7 @@ export function MembersPage() {
         description={m.leaveBandHint()}
         confirmLabel={m.leaveBand()}
         onConfirm={async () => {
-          if (!home.bandId) return
-          await leave({ bandId: home.bandId })
+          await leave({ bandId })
           await navigate({
             href: path(workspaceTrail(PERSONAL), { page: 'songs' }),
           })
@@ -232,8 +249,7 @@ export function MembersPage() {
         description={m.deleteBandHint()}
         confirmLabel={m.deleteBand()}
         onConfirm={async () => {
-          if (!home.bandId) return
-          await removeBand({ bandId: home.bandId })
+          await removeBand({ bandId })
           await navigate({
             href: path(workspaceTrail(PERSONAL), { page: 'songs' }),
           })

@@ -121,6 +121,10 @@ const steps: Record<
       .withIndex('by_user', (q) => q.eq('userId', user._id))
       .collect()
     for (const credential of credentials) await ctx.db.delete(credential._id)
+    if (user.imageStorageId) await ctx.storage.delete(user.imageStorageId)
+    await ctx.runMutation(components.authGoogle.provider.deleteUser, {
+      userId: user._id,
+    })
     await ctx.runMutation(components.authEmail.verifiedEmails.deleteUser, {
       userId: user._id,
     })

@@ -23,9 +23,10 @@ import { chartChords } from '@/lib/music/chordpro'
 import { DEFAULT_LAYERS } from '@/lib/sheet-layers'
 import { songCrumbs } from '@/components/app/song-crumbs'
 import { built } from '@/lib/built'
-import { useGo } from '@/lib/use-trail'
+import { path } from '@/lib/space'
+import type { Trail } from '@/lib/space'
 import { m } from '@/paraglide/messages'
-import { useNotation } from './use-notation'
+import { useNotation } from '@/lib/use-notation'
 
 export function VersionEditor({
   version,
@@ -34,6 +35,7 @@ export function VersionEditor({
   shapes,
   versionCount,
   mark,
+  trail,
 }: {
   version: EditorVersion
   song: { _id: string; title: string; subTitle?: string }
@@ -41,9 +43,11 @@ export function VersionEditor({
   shapes: Array<ChordShapeOverride>
   versionCount: number
   mark?: ReactNode
+  trail: Trail
 }) {
   const notation = useNotation()
-  const { href } = useGo()
+  const href = (versionId: string) =>
+    path(trail, { page: 'version', versionId })
   const mutations = useEditorMutations()
   const saver = useSaver()
   const [selected, setSelected] = useState<string>(
@@ -85,14 +89,11 @@ export function VersionEditor({
         <div className="space-y-3">
           <Breadcrumbs>
             {songCrumbs({
+              trail,
               songId: song._id,
               title: song.title,
             })}
-            <Crumb
-              {...built(href({ page: 'version', versionId: version._id }))}
-            >
-              {version.name}
-            </Crumb>
+            <Crumb {...built(href(version._id))}>{version.name}</Crumb>
           </Breadcrumbs>
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <SheetHeader
@@ -113,9 +114,7 @@ export function VersionEditor({
                   { id: 'preview', label: m.preview(), icon: EyeIcon },
                 ]}
               />
-              <HeaderButtonLink
-                {...built(href({ page: 'version', versionId: version._id }))}
-              >
+              <HeaderButtonLink {...built(href(version._id))}>
                 <CheckIcon />
                 {m.done()}
               </HeaderButtonLink>
@@ -188,6 +187,7 @@ export function VersionEditor({
                   notation={notation}
                   songTitle={song.title}
                   isOnlyVersion={versionCount <= 1}
+                  trail={trail}
                 />
               )}
             </section>

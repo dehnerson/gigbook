@@ -1,6 +1,6 @@
 import { useCompleteChangeEmail } from '@convex-dev/auth/methods/email-password/react'
-import { api } from '../../convex/_generated/api'
-import { AuthScreen } from '@/components/auth-screen'
+import { api } from '../../../convex/_generated/api'
+import { AuthScreen } from '@/screens/auth/auth-screen'
 import { RoutePending } from '@/components/app/route-states'
 import { authMessage } from '@/lib/auth-message'
 import { m } from '@/paraglide/messages'

@@ -1,7 +1,7 @@
 import { useConvexAuth, useMutation, useQuery } from 'convex/react'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { api } from '../../convex/_generated/api'
-import { AuthScreen } from '@/components/auth-screen'
+import { api } from '../../../convex/_generated/api'
+import { AuthScreen } from '@/screens/auth/auth-screen'
 import { RoutePending } from '@/components/app/route-states'
 import { Button } from '@/components/ui/button'
 import { built } from '@/lib/built'
@@ -10,10 +10,7 @@ import { m } from '@/paraglide/messages'
 
 export function InviteScreen({ token }: { token: string }) {
   const { isAuthenticated, isLoading } = useConvexAuth()
-  const invite = useQuery(
-    api.bands.preview,
-    isLoading ? 'skip' : { token },
-  )
+  const invite = useQuery(api.bands.preview, isLoading ? 'skip' : { token })
   const accept = useMutation(api.bands.accept)
   const navigate = useNavigate()
   const back = `/invite/${token}`

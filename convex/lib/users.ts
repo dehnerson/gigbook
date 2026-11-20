@@ -4,6 +4,14 @@ import type { MutationCtx, QueryCtx } from '../_generated/server'
 
 type Ctx = QueryCtx | MutationCtx
 
+const MAX_NAME = 80
+
+export function nameWithinLimit(value: string) {
+  let length = 0
+  for (const _segment of new Intl.Segmenter().segment(value)) length += 1
+  return length <= MAX_NAME
+}
+
 export async function sessionAddresses(ctx: Ctx, userId: string) {
   const id = ctx.db.normalizeId('users', userId)
   if (!id) return []
@@ -47,7 +55,11 @@ export async function withNames<T extends { userId: string; name?: string }>(
     await Promise.all(
       users.flatMap((user) =>
         user
-          ? [labelFor(ctx, user).then((name) => [user._id as string, name] as const)]
+          ? [
+              labelFor(ctx, user).then(
+                (name) => [user._id as string, name] as const,
+              ),
+            ]
           : [],
       ),
     ),

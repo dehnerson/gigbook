@@ -1,8 +1,10 @@
+import { useNavigate } from '@tanstack/react-router'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
 import { ConfirmDialog } from '@/components/app/confirm-dialog'
-import { useGo } from '@/lib/use-trail'
+import { path } from '@/lib/space'
+import type { Trail } from '@/lib/space'
 import { m } from '@/paraglide/messages'
 
 export function versionDeleteCopy(
@@ -33,6 +35,7 @@ export function DeleteVersionDialog({
   songTitle,
   isOnlyVersion,
   redirectToSong = false,
+  trail,
 }: {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
@@ -41,9 +44,10 @@ export function DeleteVersionDialog({
   songTitle: string
   isOnlyVersion: boolean
   redirectToSong?: boolean
+  trail: Trail
 }) {
   const removeVersion = useMutation(api.versions.remove)
-  const { go } = useGo()
+  const navigate = useNavigate()
   const copy = versionDeleteCopy(versionName, songTitle, isOnlyVersion)
   return (
     <ConfirmDialog
@@ -54,9 +58,12 @@ export function DeleteVersionDialog({
       confirmLabel={isOnlyVersion ? m.deleteSong() : undefined}
       onConfirm={async () => {
         const result = await removeVersion({ versionId })
-        if (result.deletedSong) await go({ page: 'songs' })
+        if (result.deletedSong)
+          await navigate({ href: path(trail, { page: 'songs' }) })
         else if (redirectToSong)
-          await go({ page: 'song', songId: result.songId })
+          await navigate({
+            href: path(trail, { page: 'song', songId: result.songId }),
+          })
       }}
     />
   )

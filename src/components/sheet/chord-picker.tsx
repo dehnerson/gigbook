@@ -2,7 +2,7 @@ import { cn } from 'cn'
 import { useMutation } from 'convex/react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { ChordDiagram } from '@/components/chord-diagram'
+import { ChordDiagram } from '@/components/sheet/chord-diagram'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,

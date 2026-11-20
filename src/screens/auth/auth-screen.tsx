@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import { useLayoutEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { api } from '../../convex/_generated/api'
+import { api } from '../../../convex/_generated/api'
 import { Button } from '@/components/ui/button'
 import { ChordStrip } from '@/components/sheet/chord-strip'
 import { authMessage } from '@/lib/auth-message'
@@ -26,9 +26,6 @@ const FEATURES = [
 ]
 
 export function useReturnTo() {
-  const pathname = useRouterState({
-    select: (state) => state.location.pathname,
-  })
   const redirect = useRouterState({
     select: (state) =>
       safeNext(
@@ -43,7 +40,7 @@ export function useReturnTo() {
       return
     }
     setContinued(safeNext(sessionStorage.getItem(RETURN_KEY)))
-  }, [pathname, redirect])
+  }, [redirect])
   return redirect === '/' ? continued : redirect
 }
 

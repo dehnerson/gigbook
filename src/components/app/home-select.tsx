@@ -1,7 +1,7 @@
 import { convexQuery } from '@convex-dev/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { api } from '../../../convex/_generated/api'
 import { Select } from '@/components/ui/select'
-import { useLiveQuery } from '@/lib/live'
 import { PERSONAL } from '@/lib/space'
 import { m } from '@/paraglide/messages'
 
@@ -14,10 +14,10 @@ export function HomeSelect({
   onChange: (value: string) => void
   writable?: boolean
 }) {
-  const bands = useLiveQuery(convexQuery(api.bands.list, {}))
+  const { data: bands } = useQuery(convexQuery(api.bands.list, {}))
   const options = [
     { id: PERSONAL, label: m.personal() },
-    ...bands.data.flatMap((row) =>
+    ...(bands ?? []).flatMap((row) =>
       writable && row.membership.role === 'viewer'
         ? []
         : [

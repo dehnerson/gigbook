@@ -1,22 +1,25 @@
-import { convexQuery } from '@convex-dev/react-query'
 import { createFileRoute } from '@tanstack/react-router'
-import { api } from '../../../convex/_generated/api'
 import { SongCatalog } from '@/components/app/song-catalog'
-import { useLiveQuery } from '@/lib/live'
+import { libraryTrail, path, workspaceTrail } from '@/lib/space'
+import { useWorkspace } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
 
-export const Route = createFileRoute('/_authed/')({
+export const Route = createFileRoute('/_authed/')({
   component: LibraryPage,
 })
 
 function LibraryPage() {
-  const catalog = useLiveQuery(convexQuery(api.songs.catalog, {}))
+  const { sessionWorkspace } = useWorkspace()
+  const trail = libraryTrail()
   return (
     <SongCatalog
-      title={m.allSongs()}
+      title={m.library()}
       subtitle={m.allSongsHint()}
-      rows={catalog.data}
       marks
+      songHref={(songId) => path(trail, { page: 'song', songId })}
+      importHref={path(workspaceTrail(sessionWorkspace), { page: 'import' })}
+      trail={trail}
+      chooseHome
       emptyTitle={m.noSongs()}
       emptyDescription={m.noSongsHint()}
     />

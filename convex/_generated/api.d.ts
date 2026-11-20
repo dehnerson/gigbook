@@ -25,13 +25,14 @@ import type * as lib_home from "../lib/home.js";
 import type * as lib_mail from "../lib/mail.js";
 import type * as lib_membership from "../lib/membership.js";
 import type * as lib_ownership from "../lib/ownership.js";
+import type * as lib_password from "../lib/password.js";
 import type * as lib_songs from "../lib/songs.js";
+import type * as lib_ticket from "../lib/ticket.js";
 import type * as lib_users from "../lib/users.js";
 import type * as setlists from "../setlists.js";
 import type * as songs from "../songs.js";
 import type * as users from "../users.js";
 import type * as versions from "../versions.js";
-import type * as wipe from "../wipe.js";
 
 import type {
   ApiFromModules,
@@ -57,13 +58,14 @@ declare const fullApi: ApiFromModules<{
   "lib/mail": typeof lib_mail;
   "lib/membership": typeof lib_membership;
   "lib/ownership": typeof lib_ownership;
+  "lib/password": typeof lib_password;
   "lib/songs": typeof lib_songs;
+  "lib/ticket": typeof lib_ticket;
   "lib/users": typeof lib_users;
   setlists: typeof setlists;
   songs: typeof songs;
   users: typeof users;
   versions: typeof versions;
-  wipe: typeof wipe;
 }>;
 
 /**

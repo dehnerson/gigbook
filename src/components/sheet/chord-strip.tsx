@@ -1,7 +1,7 @@
 import { cn } from 'cn'
 import { useQuery } from 'convex/react'
 import { useState } from 'react'
-import { ChordDiagram } from '@/components/chord-diagram'
+import { ChordDiagram } from '@/components/sheet/chord-diagram'
 import { resolveChord, tuningKey } from '@/lib/music/shapes'
 import type { PersonalShape, ResolvedChord } from '@/lib/music/shapes'
 import { m } from '@/paraglide/messages'

@@ -1,5 +1,4 @@
-import { useAuthActions } from '@convex-dev/auth/react'
-import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
+import { Link, useRouterState } from '@tanstack/react-router'
 import { cn } from 'cn'
 import {
   GuitarIcon,
@@ -7,18 +6,16 @@ import {
   ListMusicIcon,
   MusicIcon,
   RadioTowerIcon,
-  SettingsIcon,
-  LogOutIcon,
 } from 'lucide-react'
+import { UserMenu } from '@/components/app/user-menu'
 import { WorkspaceSwitcher } from '@/components/app/workspace-switcher'
 import { built } from '@/lib/built'
 import { path, workspaceTrail } from '@/lib/space'
 import { useTrail } from '@/lib/use-trail'
 import { useWorkspace } from '@/lib/workspace'
-import { Button } from '@/components/ui/button'
 import { m } from '@/paraglide/messages'
 
-export function isBarePath(pathname: string) {
+function isBarePath(pathname: string) {
   return (
     pathname.endsWith('/play') ||
     /\/jam\/[^/]+$/.test(pathname) ||
@@ -94,7 +91,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             data-status={pathname === '/' ? 'active' : undefined}
           >
             <LibraryBigIcon className="size-4.5" />
-            {m.allSongs()}
+            {m.library()}
           </Link>
           <WorkspaceSwitcher />
           {links.map((link) => (
@@ -103,7 +100,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
               {...built(link.href)}
               className={navItem}
               data-status={
-                navActive(pathname, link.href, link.exact) ? 'active' : undefined
+                navActive(pathname, link.href, link.exact)
+                  ? 'active'
+                  : undefined
               }
             >
               <link.icon className="size-4.5" />
@@ -111,12 +110,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </Link>
           ))}
         </nav>
-        <div className="mt-auto flex flex-col gap-1 border-t border-sidebar-border pt-4">
-          <Link to="/settings" className={navItem}>
-            <SettingsIcon className="size-4.5" />
-            {m.settings()}
-          </Link>
-          <SignOutButton />
+        <div className="mt-auto border-t border-sidebar-border pt-4">
+          <UserMenu placement="top start" />
         </div>
       </aside>
 
@@ -124,14 +119,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <Logo />
         <div className="flex items-center gap-2">
           <WorkspaceSwitcher compact />
-          <Link
-            to="/settings"
-            aria-label={m.settings()}
-            className="grid size-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground data-[status=active]:text-primary"
-          >
-            <SettingsIcon className="size-5" />
-          </Link>
-          <SignOutButton compact />
+          <UserMenu compact placement="bottom end" />
         </div>
       </header>
 
@@ -170,23 +158,5 @@ export function Shell({ children }: { children: React.ReactNode }) {
         ))}
       </nav>
     </div>
-  )
-}
-
-function SignOutButton({ compact = false }: { compact?: boolean }) {
-  const { signOut } = useAuthActions()
-  const navigate = useNavigate()
-  return (
-    <Button
-      variant="ghost"
-      size={compact ? 'icon' : 'default'}
-      aria-label={m.signOut()}
-      className={compact ? undefined : 'justify-start px-3'}
-      onPress={() => {
-        void signOut().then(() => navigate({ href: '/sign-in' }))
-      }}
-    >
-      {compact ? <LogOutIcon /> : m.signOut()}
-    </Button>
   )
 }
