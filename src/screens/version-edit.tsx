@@ -12,31 +12,31 @@ import { ButtonLink } from '@/components/ui/button'
 import { VersionEditor } from '@/components/version/version-editor'
 import { built } from '@/lib/built'
 import { path } from '@/lib/space'
-import type { Trail } from '@/lib/space'
+import type { Workspace } from '@/lib/space'
 import { m } from '@/paraglide/messages'
 
 export function EditPage({
   versionId,
-  trail,
+  workspace,
 }: {
   versionId: Id<'versions'>
-  trail: Trail
+  workspace: Workspace | null
 }) {
   return (
     <Suspense fallback={<SheetSkeleton />}>
-      <EditView versionId={versionId} trail={trail} />
+      <EditView versionId={versionId} workspace={workspace} />
     </Suspense>
   )
 }
 
 function EditView({
   versionId,
-  trail,
+  workspace,
 }: {
   versionId: Id<'versions'>
-  trail: Trail
+  workspace: Workspace | null
 }) {
-  const readHref = path(trail, { page: 'version', versionId })
+  const readHref = path(workspace, { page: 'version', versionId })
   const bundle = useSuspenseQuery(
     convexQuery(api.versions.getBundle, { versionId }),
   )
@@ -57,7 +57,7 @@ function EditView({
       timeline={bundle.data.timeline as Array<EditorEntry>}
       shapes={bundle.data.shapes}
       versionCount={bundle.data.versionCount}
-      trail={trail}
+      workspace={workspace}
       mark={
         <ContextMark
           bandId={bundle.data.ownerBandId}

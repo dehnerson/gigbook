@@ -1,21 +1,20 @@
 import { describe, expect, test } from 'vite-plus/test'
-import { path, switchPath, workspaceTrail, libraryTrail } from './space'
+import { path, switchPath, workspace } from './space'
 
 describe('path', () => {
-  test('keeps the library trail on the song and the version', () => {
-    const trail = libraryTrail()
-    expect(path(trail, { page: 'songs' })).toBe('/')
-    expect(path(trail, { page: 'song', songId: 's1' })).toBe('/songs/s1')
-    expect(path(trail, { page: 'version', versionId: 'v1', leaf: 'play' })).toBe(
+  test('keeps the library on the song and the version', () => {
+    expect(path(null, { page: 'songs' })).toBe('/')
+    expect(path(null, { page: 'song', songId: 's1' })).toBe('/songs/s1')
+    expect(path(null, { page: 'version', versionId: 'v1', leaf: 'play' })).toBe(
       '/versions/v1/play',
     )
   })
 
-  test('keeps the workspace trail through play', () => {
-    const trail = workspaceTrail('acme')
-    expect(path(trail, { page: 'song', songId: 's1' })).toBe('/acme/songs/s1')
+  test('keeps the workspace through play', () => {
+    const acme = workspace('acme')
+    expect(path(acme, { page: 'song', songId: 's1' })).toBe('/acme/songs/s1')
     expect(
-      path(trail, {
+      path(acme, {
         page: 'version',
         versionId: 'v1',
         leaf: 'play',

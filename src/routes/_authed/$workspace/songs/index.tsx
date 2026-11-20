@@ -1,8 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { HomeCaption } from '@/components/app/context-mark'
 import { SongCatalog } from '@/components/app/song-catalog'
-import { path, workspaceTrail } from '@/lib/space'
-import { useRouteHome } from '@/lib/workspace'
+import { useRouteWorkspace } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/$workspace/songs/')({
@@ -10,19 +9,13 @@ export const Route = createFileRoute('/_authed/$workspace/songs/')({
 })
 
 function WorkspaceSongsPage() {
-  const { workspace } = Route.useParams()
-  const home = useRouteHome()
-  const trail = workspaceTrail(workspace)
+  const workspace = useRouteWorkspace()
   return (
     <SongCatalog
       title={m.songs()}
-      subtitle={<HomeCaption home={home} />}
-      scope={{ bandId: home.bandId }}
-      songHref={(songId) => path(trail, { page: 'song', songId })}
-      importHref={path(trail, { page: 'import' })}
-      trail={trail}
-      canCreate={home.role !== null}
-      emptyTitle={m.noSongsHere({ name: home.label ?? '' })}
+      subtitle={<HomeCaption workspace={workspace} />}
+      workspace={workspace}
+      emptyTitle={m.noSongsHere({ name: workspace.label ?? '' })}
       emptyDescription={m.noSongsHint()}
     />
   )

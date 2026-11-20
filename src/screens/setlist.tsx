@@ -53,21 +53,18 @@ import { VersionCaption } from '@/components/sheet/song-sheet'
 import { messageFor } from '@/lib/errors'
 import { matchesSearch } from '@/lib/search'
 import { built } from '@/lib/built'
-import { homeKey, path, workspaceTrail } from '@/lib/space'
-import type { Dest, Trail } from '@/lib/space'
-import type { Home } from '@/lib/workspace'
+import { path, workspaceOf } from '@/lib/space'
+import type { Dest, Workspace } from '@/lib/space'
 import { m } from '@/paraglide/messages'
 
 export function SetlistPage({
   setlistId,
-  home,
-  trail,
+  workspace,
 }: {
   setlistId: Id<'setlists'>
-  home: Home
-  trail: Trail
+  workspace: Workspace
 }) {
-  const href = (dest: Dest) => path(trail, dest)
+  const href = (dest: Dest) => path(workspace, dest)
   return (
     <Suspense
       fallback={
@@ -84,22 +81,20 @@ export function SetlistPage({
         </div>
       }
     >
-      <SetlistView setlistId={setlistId} home={home} trail={trail} />
+      <SetlistView setlistId={setlistId} workspace={workspace} />
     </Suspense>
   )
 }
 
 function SetlistView({
   setlistId,
-  home,
-  trail,
+  workspace,
 }: {
   setlistId: Id<'setlists'>
-  home: Home
-  trail: Trail
+  workspace: Workspace
 }) {
   const navigate = useNavigate()
-  const href = (dest: Dest) => path(trail, dest)
+  const href = (dest: Dest) => path(workspace, dest)
   const { data } = useSuspenseQuery(
     convexQuery(api.setlists.get, { setlistId }),
   )
@@ -216,10 +211,10 @@ function SetlistView({
         }
       />
       <WorkspaceNotice
-        home={home}
+        workspace={workspace}
         homeBandId={setlist.bandId}
         homeName={bandName}
-        href={path(workspaceTrail(homeKey(setlist.bandId)), {
+        href={path(workspaceOf(setlist.bandId), {
           page: 'setlist',
           setlistId,
         })}

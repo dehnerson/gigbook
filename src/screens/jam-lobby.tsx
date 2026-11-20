@@ -8,12 +8,12 @@ import { HomeCaption } from '@/components/app/context-mark'
 import { PageHeader } from '@/components/app/page-header'
 import { Button } from '@/components/ui/button'
 import { messageFor } from '@/lib/errors'
-import type { Home } from '@/lib/workspace'
+import type { Workspace } from '@/lib/space'
 import { m } from '@/paraglide/messages'
 
 const CODE_LENGTH = 6
 
-export function JamLobby({ home }: { home: Home }) {
+export function JamLobby({ workspace }: { workspace: Workspace }) {
   const create = useMutation(api.jam.create)
   const join = useMutation(api.jam.join)
   const navigate = useNavigate()
@@ -37,7 +37,7 @@ export function JamLobby({ home }: { home: Home }) {
               {m.startJam()}
             </h2>
             <span className="inline-flex items-center gap-2 text-muted-foreground">
-              <HomeCaption home={home} />
+              <HomeCaption workspace={workspace} />
             </span>
           </div>
           <Button
@@ -46,7 +46,7 @@ export function JamLobby({ home }: { home: Home }) {
             isDisabled={busy !== null}
             onPress={() => {
               setBusy('start')
-              create({ bandId: home.bandId })
+              create({ bandId: workspace.bandId })
                 .then(enter)
                 .catch(fail)
                 .finally(() => setBusy(null))

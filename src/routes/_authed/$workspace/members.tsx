@@ -1,18 +1,18 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { MembersPage } from '@/screens/members'
-import { PERSONAL, path, workspaceTrail } from '@/lib/space'
-import { useRouteHome } from '@/lib/workspace'
+import { PERSONAL, path, workspace } from '@/lib/space'
+import { useRouteWorkspace } from '@/lib/workspace'
 
 export const Route = createFileRoute('/_authed/$workspace/members')({
   beforeLoad: ({ params }) => {
     if (params.workspace === PERSONAL)
       throw redirect({
-        href: path(workspaceTrail(PERSONAL), { page: 'members' }),
+        href: path(workspace(PERSONAL), { page: 'members' }),
       })
   },
   component: WorkspaceMembersRoute,
 })
 
 function WorkspaceMembersRoute() {
-  return <MembersPage home={useRouteHome()} />
+  return <MembersPage workspace={useRouteWorkspace()} />
 }

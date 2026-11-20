@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import type { Id } from '../../../../../../convex/_generated/dataModel'
 import { EditPage } from '@/screens/version-edit'
-import { workspaceTrail } from '@/lib/space'
+import { useRouteWorkspace } from '@/lib/workspace'
 
 export const Route = createFileRoute(
   '/_authed/$workspace/versions/$versionId/edit',
@@ -10,11 +10,11 @@ export const Route = createFileRoute(
 })
 
 function WorkspaceEditRoute() {
-  const { versionId, workspace } = Route.useParams()
+  const { versionId } = Route.useParams()
   return (
     <EditPage
       versionId={versionId as Id<'versions'>}
-      trail={workspaceTrail(workspace)}
+      workspace={useRouteWorkspace()}
     />
   )
 }

@@ -48,8 +48,8 @@ import { useNotation } from '@/lib/use-notation'
 import { useVersionActions } from '@/components/version/version-actions'
 import { useWakeLock } from '@/lib/use-wake-lock'
 import { built } from '@/lib/built'
-import { homeKey, path, workspaceTrail } from '@/lib/space'
-import type { Dest, Trail } from '@/lib/space'
+import { path, workspaceOf } from '@/lib/space'
+import type { Dest, Workspace } from '@/lib/space'
 import type { PlaySearch } from '@/lib/play-search'
 import { previewTabShift } from '@/lib/music/tab'
 import { m } from '@/paraglide/messages'
@@ -57,11 +57,11 @@ import { m } from '@/paraglide/messages'
 export function PlayPage({
   versionId,
   search,
-  trail,
+  workspace,
 }: {
   versionId: Id<'versions'>
   search: PlaySearch
-  trail: Trail
+  workspace: Workspace | null
 }) {
   return (
     <Suspense
@@ -71,7 +71,7 @@ export function PlayPage({
         </div>
       }
     >
-      <PlayView versionId={versionId} search={search} trail={trail} />
+      <PlayView versionId={versionId} search={search} workspace={workspace} />
     </Suspense>
   )
 }
@@ -79,14 +79,14 @@ export function PlayPage({
 function PlayView({
   versionId,
   search,
-  trail,
+  workspace,
 }: {
   versionId: Id<'versions'>
   search: PlaySearch
-  trail: Trail
+  workspace: Workspace | null
 }) {
   const navigate = useNavigate()
-  const href = (dest: Dest) => path(trail, dest)
+  const href = (dest: Dest) => path(workspace, dest)
   const bundle = useSuspenseQuery(
     convexQuery(api.versions.getBundle, { versionId }),
   )
@@ -158,8 +158,8 @@ function PlayView({
               {...built(
                 path(
                   setlist.data
-                    ? workspaceTrail(homeKey(setlist.data.setlist.bandId))
-                    : trail,
+                    ? workspaceOf(setlist.data.setlist.bandId)
+                    : workspace,
                   { page: 'setlist', setlistId: search.setlist },
                 ),
               )}

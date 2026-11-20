@@ -36,7 +36,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useVersionActions } from '@/components/version/version-actions'
 import { path } from '@/lib/space'
-import type { Dest, Trail } from '@/lib/space'
+import type { Dest, Workspace } from '@/lib/space'
 import { cn } from 'cn'
 import { m } from '@/paraglide/messages'
 
@@ -60,7 +60,7 @@ export function VersionMenu({
   isOnlyVersion,
   includeEdit = false,
   redirectToSong = false,
-  trail,
+  workspace,
   trigger,
 }: {
   version: VersionTarget
@@ -68,13 +68,13 @@ export function VersionMenu({
   isOnlyVersion: boolean
   includeEdit?: boolean
   redirectToSong?: boolean
-  trail: Trail
+  workspace: Workspace | null
   trigger: ReactNode
 }) {
   const { data: bands } = useQuery(convexQuery(api.bands.list, {}))
   const actions = useVersionActions()
   const navigate = useNavigate()
-  const go = (dest: Dest) => navigate({ href: path(trail, dest) })
+  const go = (dest: Dest) => navigate({ href: path(workspace, dest) })
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [linkAction, setLinkAction] = useState<'rotate' | 'revoke' | null>(null)
   const [place, setPlace] = useState<'copy' | 'move' | null>(null)
@@ -302,7 +302,7 @@ export function VersionMenu({
         songTitle={songTitle}
         isOnlyVersion={isOnlyVersion}
         redirectToSong={redirectToSong}
-        trail={trail}
+        workspace={workspace}
       />
     </>
   )

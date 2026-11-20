@@ -17,9 +17,8 @@ import {
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverTrigger } from '@/components/ui/popover'
 import { messageFor } from '@/lib/errors'
-import { PERSONAL, path, switchPath, workspaceTrail } from '@/lib/space'
-import { useTrail } from '@/lib/use-trail'
-import { useWorkspace } from '@/lib/workspace'
+import { PERSONAL, path, switchPath, workspace } from '@/lib/space'
+import { usePlace, useWorkspace } from '@/lib/workspace'
 import { cn } from 'cn'
 import { m } from '@/paraglide/messages'
 import { Separator } from '../ui/separator'
@@ -28,8 +27,8 @@ const item =
   'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium text-muted-foreground outline-none hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[active=true]:bg-sidebar-accent data-[active=true]:text-foreground'
 
 export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
-  const workspace = useWorkspace()
-  const trail = useTrail()
+  const session = useWorkspace()
+  const here = usePlace()
   const { isAuthenticated } = useConvexAuth()
   const bands = useQuery(api.bands.list, isAuthenticated ? {} : 'skip')
   const [open, setOpen] = useState(false)
@@ -38,8 +37,7 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
-  const shown =
-    trail.kind === 'workspace' ? trail.workspace : workspace.sessionWorkspace
+  const shown = here?.key ?? session.key
   const openWorkspace = (next: string) => {
     setOpen(false)
     void navigate({ href: switchPath(pathname, next) })
@@ -51,17 +49,17 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
         <Button
           variant="ghost"
           size={compact ? 'icon' : 'default'}
-          aria-label={workspace.label}
+          aria-label={session.label ?? m.personal()}
           className={cn(!compact && 'h-auto w-full justify-start px-3 py-2')}
         >
           <ContextMark
-            bandId={workspace.bandId}
-            name={workspace.bandId ? workspace.label : null}
+            bandId={session.bandId}
+            name={session.bandId ? session.label : null}
           />
           {compact ? null : (
             <>
               <span className="min-w-0 flex-1 truncate text-left">
-                {workspace.label}
+                {session.label}
               </span>
               <ChevronsUpDownIcon className="size-4 text-muted-foreground" />
             </>
@@ -107,7 +105,7 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
                   onClick={() => {
                     setOpen(false)
                     void navigate({
-                      href: path(workspaceTrail(shown), { page: 'members' }),
+                      href: path(workspace(shown), { page: 'members' }),
                     })
                   }}
                 >
@@ -136,7 +134,7 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
         onOpenChange={setCreating}
         onCreated={(bandId) =>
           navigate({
-            href: path(workspaceTrail(bandId), { page: 'songs' }),
+            href: path(workspace(bandId), { page: 'songs' }),
           })
         }
       />

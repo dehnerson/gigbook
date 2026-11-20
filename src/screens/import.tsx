@@ -30,8 +30,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { PROVIDER_LABELS } from '@/lib/import/models'
 import { messageFor } from '@/lib/errors'
 import { path } from '@/lib/space'
-import type { Trail } from '@/lib/space'
-import type { Home } from '@/lib/workspace'
+import type { Workspace } from '@/lib/space'
 import { useNavigate } from '@tanstack/react-router'
 import { m } from '@/paraglide/messages'
 
@@ -46,7 +45,7 @@ function youtubeIdOf(value: string) {
   return /^[A-Za-z0-9_-]{11}$/.test(trimmed) ? trimmed : null
 }
 
-export function ImportPage({ home, trail }: { home: Home; trail: Trail }) {
+export function ImportPage({ workspace }: { workspace: Workspace }) {
   const { data: me, isPending } = useQuery(convexQuery(api.users.me, {}))
   const { data: catalog } = useQuery(convexQuery(api.songs.catalog, {}))
   const navigate = useNavigate()
@@ -118,7 +117,7 @@ export function ImportPage({ home, trail }: { home: Home; trail: Trail }) {
     setBusy(true)
     try {
       const homeBandId =
-        target === 'new' ? (home.bandId ?? undefined) : undefined
+        target === 'new' ? (workspace.bandId ?? undefined) : undefined
       const targetVersionId =
         target === 'new' ? undefined : (target as Id<'versions'>)
       let draftId: Id<'importDrafts'>
@@ -161,7 +160,7 @@ export function ImportPage({ home, trail }: { home: Home; trail: Trail }) {
           homeBandId,
         })
       }
-      await navigate({ href: path(trail, { page: 'draft', draftId }) })
+      await navigate({ href: path(workspace, { page: 'draft', draftId }) })
     } catch (error) {
       toast.error(messageFor(error))
       setBusy(false)
@@ -330,7 +329,7 @@ export function ImportPage({ home, trail }: { home: Home; trail: Trail }) {
                 {
                   id: 'new',
                   label: m.newSongFromImport(),
-                  description: home.label ?? undefined,
+                  description: workspace.label ?? undefined,
                 },
                 ...songs.flatMap((row) =>
                   row.versions
@@ -346,8 +345,8 @@ export function ImportPage({ home, trail }: { home: Home; trail: Trail }) {
           </div>
           <ImportTargetMark
             target={target}
-            label={home.label ?? ''}
-            bandId={home.bandId}
+            label={workspace.label ?? ''}
+            bandId={workspace.bandId}
             catalog={songs}
           />
         </div>

@@ -4,7 +4,7 @@ import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
 import { ConfirmDialog } from '@/components/app/confirm-dialog'
 import { path } from '@/lib/space'
-import type { Trail } from '@/lib/space'
+import type { Workspace } from '@/lib/space'
 import { m } from '@/paraglide/messages'
 
 export function versionDeleteCopy(
@@ -35,7 +35,7 @@ export function DeleteVersionDialog({
   songTitle,
   isOnlyVersion,
   redirectToSong = false,
-  trail,
+  workspace,
 }: {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
@@ -44,7 +44,7 @@ export function DeleteVersionDialog({
   songTitle: string
   isOnlyVersion: boolean
   redirectToSong?: boolean
-  trail: Trail
+  workspace: Workspace | null
 }) {
   const removeVersion = useMutation(api.versions.remove)
   const navigate = useNavigate()
@@ -59,10 +59,10 @@ export function DeleteVersionDialog({
       onConfirm={async () => {
         const result = await removeVersion({ versionId })
         if (result.deletedSong)
-          await navigate({ href: path(trail, { page: 'songs' }) })
+          await navigate({ href: path(workspace, { page: 'songs' }) })
         else if (redirectToSong)
           await navigate({
-            href: path(trail, { page: 'song', songId: result.songId }),
+            href: path(workspace, { page: 'song', songId: result.songId }),
           })
       }}
     />

@@ -10,9 +10,8 @@ import {
 import { UserMenu } from '@/components/app/user-menu'
 import { WorkspaceSwitcher } from '@/components/app/workspace-switcher'
 import { built } from '@/lib/built'
-import { path, workspaceTrail } from '@/lib/space'
-import { useTrail } from '@/lib/use-trail'
-import { useWorkspace } from '@/lib/workspace'
+import { path } from '@/lib/space'
+import { usePlace, useWorkspace } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
 
 function isBarePath(pathname: string) {
@@ -50,12 +49,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
-  const trail = useTrail()
-  const session = useWorkspace()
-  const nav =
-    trail.kind === 'workspace'
-      ? trail
-      : workspaceTrail(session.sessionWorkspace)
+  const nav = usePlace() ?? useWorkspace()
   const links = [
     {
       href: path(nav, { page: 'songs' }),

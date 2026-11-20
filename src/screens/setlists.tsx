@@ -5,7 +5,6 @@ import { ListMusicIcon, PlusIcon } from 'lucide-react'
 import { Suspense, useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '../../convex/_generated/api'
-import type { Id } from '../../convex/_generated/dataModel'
 import { CollectionCard } from '@/components/app/collection-card'
 import { HomeCaption } from '@/components/app/context-mark'
 import { EmptyState } from '@/components/app/empty-state'
@@ -25,20 +24,19 @@ import { Input } from '@/components/ui/input'
 import { messageFor } from '@/lib/errors'
 import { matchesSearch } from '@/lib/search'
 import { path } from '@/lib/space'
-import type { Dest, Trail } from '@/lib/space'
-import type { Home } from '@/lib/workspace'
+import type { Dest, Workspace } from '@/lib/space'
 import { useNavigate } from '@tanstack/react-router'
 import { m } from '@/paraglide/messages'
 
-export function SetlistsPage({ home, trail }: { home: Home; trail: Trail }) {
+export function SetlistsPage({ workspace }: { workspace: Workspace }) {
   const [open, setOpen] = useState(false)
-  const canCreate = home.role === 'owner' || home.role === 'editor'
+  const canCreate = workspace.role === 'owner' || workspace.role === 'editor'
 
   return (
     <div>
       <PageHeader
         title={m.setlists()}
-        subtitle={<HomeCaption home={home} />}
+        subtitle={<HomeCaption workspace={workspace} />}
         actions={
           canCreate ? (
             <HeaderButton onPress={() => setOpen(true)}>
@@ -51,20 +49,19 @@ export function SetlistsPage({ home, trail }: { home: Home; trail: Trail }) {
       <NewSetlistDialog
         isOpen={open}
         onOpenChange={setOpen}
-        bandId={home.bandId}
-        trail={trail}
+        workspace={workspace}
       />
       <Suspense fallback={<ListSkeleton />}>
-        <SetlistList home={home} trail={trail} />
+        <SetlistList workspace={workspace} />
       </Suspense>
     </div>
   )
 }
 
-function SetlistList({ home, trail }: { home: Home; trail: Trail }) {
-  const href = (dest: Dest) => path(trail, dest)
+function SetlistList({ workspace }: { workspace: Workspace }) {
+  const href = (dest: Dest) => path(workspace, dest)
   const { data: rows } = useSuspenseQuery(
-    convexQuery(api.setlists.list, { bandId: home.bandId }),
+    convexQuery(api.setlists.list, { bandId: workspace.bandId }),
   )
   const [query, setQuery] = useState('')
   const visible = rows.filter((setlist) =>
@@ -121,13 +118,11 @@ function SetlistList({ home, trail }: { home: Home; trail: Trail }) {
 function NewSetlistDialog({
   isOpen,
   onOpenChange,
-  bandId,
-  trail,
+  workspace,
 }: {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
-  bandId: Id<'bands'> | null
-  trail: Trail
+  workspace: Workspace
 }) {
   const create = useMutation(api.setlists.create)
   const navigate = useNavigate()
@@ -146,12 +141,12 @@ function NewSetlistDialog({
           event.preventDefault()
           if (!name.trim()) return
           setBusy(true)
-          create({ name, bandId: bandId ?? undefined })
+          create({ name, bandId: workspace.bandId ?? undefined })
             .then((setlistId) => {
               onOpenChange(false)
               setName('')
               return navigate({
-                href: path(trail, { page: 'setlist', setlistId }),
+                href: path(workspace, { page: 'setlist', setlistId }),
               })
             })
             .catch((error: unknown) => toast.error(messageFor(error)))

@@ -16,29 +16,27 @@ import {
 import { Input } from '@/components/ui/input'
 import { messageFor } from '@/lib/errors'
 import { HomeSelect } from '@/components/app/home-select'
-import { PERSONAL, bandIdFromPath, path, workspaceTrail } from '@/lib/space'
-import type { Trail } from '@/lib/space'
+import { path, workspace } from '@/lib/space'
+import type { Workspace } from '@/lib/space'
 import { m } from '@/paraglide/messages'
 
 export function NewSongDialog({
   isOpen,
   onOpenChange,
-  bandId,
-  trail,
-  chooseHome = false,
+  fileIn,
+  choose = false,
 }: {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
-  bandId?: Id<'bands'>
-  trail: Trail
-  chooseHome?: boolean
+  fileIn: Workspace
+  choose?: boolean
 }) {
   const create = useMutation(api.songs.create)
   const addVersion = useMutation(api.songs.addVersion)
   const navigate = useNavigate()
-  const [choice, setChoice] = useState(PERSONAL)
-  const fileBandId = chooseHome ? (bandIdFromPath(choice) ?? undefined) : bandId
-  const fileTrail = chooseHome ? workspaceTrail(choice) : trail
+  const [choice, setChoice] = useState(fileIn.key)
+  const target = choose ? workspace(choice) : fileIn
+  const fileBandId = target.bandId ?? undefined
   const [title, setTitle] = useState('')
   const [subTitle, setSubTitle] = useState('')
   const [busy, setBusy] = useState(false)
@@ -84,7 +82,7 @@ export function NewSongDialog({
     onOpenChange(false)
     reset()
     return navigate({
-      href: path(fileTrail, {
+      href: path(target, {
         page: 'version',
         versionId,
         leaf: 'edit',
@@ -134,7 +132,7 @@ export function NewSongDialog({
           })
         }}
       >
-        {chooseHome ? (
+        {choose ? (
           <HomeSelect value={choice} onChange={setChoice} writable />
         ) : null}
         <Field label={m.title()}>
@@ -194,7 +192,7 @@ export function NewSongDialog({
                         onOpenChange(false)
                         reset()
                         void navigate({
-                          href: path(fileTrail, {
+                          href: path(target, {
                             page: 'song',
                             songId: song._id,
                           }),

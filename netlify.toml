@@ -4,8 +4,9 @@ publish = ".output/public"
 
 [build.environment]
 NODE_VERSION = "24"
+NITRO_PRESET = "node-server"
 
 [[redirects]]
-  from = "/*"
-  to = "/_shell.html"
-  status = 200
+from = "/*"
+to = "/_shell.html"
+status = 200

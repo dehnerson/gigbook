@@ -1,48 +1,46 @@
 import { useConvexAuth, useQuery } from 'convex/react'
+import { useRouterState } from '@tanstack/react-router'
 import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { api } from '../../convex/_generated/api'
-import type { Id } from '../../convex/_generated/dataModel'
-import { PERSONAL } from '@/lib/space'
+import { PERSONAL, placeFromPath, workspace } from '@/lib/space'
+import type { Workspace } from '@/lib/space'
 import { m } from '@/paraglide/messages'
 
-/**
- * The workspace in the URL. Null outside a `/$workspace` route.
- * `bandId` is known on the first render. `label` and `role` stay null
- * until the band list matches that id.
- */
-export type Home = {
-  bandId: Id<'bands'> | null
-  label: string | null
-  role: 'owner' | 'editor' | 'viewer' | null
-}
+const RouteContext = createContext<Workspace | null>(null)
 
-const HomeContext = createContext<Home | null>(null)
-
-export function HomeProvider({
-  home,
+export function RouteWorkspace({
+  workspace: value,
   children,
 }: {
-  home: Home
+  workspace: Workspace
   children: ReactNode
 }) {
-  return <HomeContext value={home}>{children}</HomeContext>
+  return <RouteContext value={value}>{children}</RouteContext>
 }
 
-/** The workspace route's home. Throws on a page that has no workspace in the URL. */
-export function useRouteHome() {
-  const home = useContext(HomeContext)
-  if (!home)
-    throw new Error('useRouteHome must be used inside a workspace route')
-  return home
+/** The workspace in the URL. Throws outside a `/$workspace` route. */
+export function useRouteWorkspace() {
+  const value = useContext(RouteContext)
+  if (!value)
+    throw new Error('useRouteWorkspace must be used inside a workspace route')
+  return value
+}
+
+/** The workspace named by the current URL, or null on a library URL. */
+export function usePlace() {
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
+  return placeFromPath(pathname)
 }
 
 /** The workspace remembered for navigation when the URL does not name one. */
 const LAST_HOME = 'gigbook.home'
 const listeners = new Set<() => void>()
 
-export function rememberHome(workspace: string) {
-  localStorage.setItem(LAST_HOME, workspace)
+export function rememberHome(key: string) {
+  localStorage.setItem(LAST_HOME, key)
   for (const listener of listeners) listener()
 }
 
@@ -52,55 +50,41 @@ function readHome() {
 }
 
 function useRememberedHome() {
-  const [workspace, setWorkspace] = useState(PERSONAL)
+  const [key, setKey] = useState(PERSONAL)
   useEffect(() => {
-    const read = () => setWorkspace(readHome())
+    const read = () => setKey(readHome())
     read()
     listeners.add(read)
     return () => {
       listeners.delete(read)
     }
   }, [])
-  return workspace
+  return key
 }
-
-export type Workspace = {
-  ready: boolean
-  bandId: Id<'bands'> | null
-  label: string
-  role: 'owner' | 'editor' | 'viewer'
-  sessionWorkspace: string
-}
-
-const WorkspaceContext = createContext<Workspace | null>(null)
 
 function personalWorkspace(): Workspace {
-  return {
-    ready: true,
-    bandId: null,
-    label: m.personal(),
-    role: 'owner',
-    sessionWorkspace: PERSONAL,
-  }
+  return workspace(PERSONAL, { label: m.personal(), role: 'owner' })
 }
 
+const SessionContext = createContext<Workspace | null>(null)
+
 export function WorkspaceState({ children }: { children: ReactNode }) {
-  const { isAuthenticated, isLoading } = useConvexAuth()
+  const { isAuthenticated } = useConvexAuth()
   const remembered = useRememberedHome()
   const bands = useQuery(api.bands.list, isAuthenticated ? {} : 'skip')
   const row = bands?.find((item) => item.band._id === remembered)
   const value: Workspace = !isAuthenticated
-    ? { ...personalWorkspace(), ready: !isLoading }
-    : {
-        ready: !isLoading && bands !== undefined,
-        bandId: row?.band._id ?? null,
-        label: row?.band.name ?? m.personal(),
-        role: row?.membership.role ?? 'owner',
-        sessionWorkspace: row ? row.band._id : PERSONAL,
-      }
-  return <WorkspaceContext value={value}>{children}</WorkspaceContext>
+    ? personalWorkspace()
+    : row
+      ? workspace(row.band._id, {
+          label: row.band.name,
+          role: row.membership.role,
+        })
+      : personalWorkspace()
+  return <SessionContext value={value}>{children}</SessionContext>
 }
 
+/** The remembered workspace. Shell and library filing use this when the URL has none. */
 export function useWorkspace() {
-  return useContext(WorkspaceContext) ?? personalWorkspace()
+  return useContext(SessionContext) ?? personalWorkspace()
 }

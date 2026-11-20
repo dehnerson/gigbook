@@ -65,7 +65,7 @@ import { messageFor } from '@/lib/errors'
 import { displayChord } from '@/lib/music/chords'
 import type { Notation } from '@/lib/music/pitch'
 import { built } from '@/lib/built'
-import { homeKey, path, workspaceTrail } from '@/lib/space'
+import { path, workspaceOf } from '@/lib/space'
 import { m } from '@/paraglide/messages'
 
 type MemberView = {
@@ -218,9 +218,7 @@ function JamRoom({ code }: { code: string }) {
             variant="ghost"
             size="icon"
             aria-label={m.back()}
-            {...built(
-              path(workspaceTrail(homeKey(room.bandId)), { page: 'jam' }),
-            )}
+            {...built(path(workspaceOf(room.bandId), { page: 'jam' }))}
           >
             <ArrowLeftIcon />
           </ButtonLink>

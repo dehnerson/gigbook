@@ -2,17 +2,39 @@ import type { Id } from '../../convex/_generated/dataModel'
 
 export const PERSONAL = 'personal'
 
-export function homeKey(bandId?: string | null) {
-  return bandId || PERSONAL
+export type Role = 'owner' | 'editor' | 'viewer'
+
+/**
+ * One workspace. `key` is the URL segment (`personal` or a band id) and the
+ * only identity. `bandId` is null for personal. `label` and `role` stay null
+ * until the band list matches that key.
+ */
+export type Workspace = {
+  key: string
+  bandId: Id<'bands'> | null
+  label: string | null
+  role: Role | null
 }
 
-export function bandIdFromPath(workspace: string): Id<'bands'> | null {
-  return workspace === PERSONAL ? null : (workspace as Id<'bands'>)
+export function workspace(
+  key: string,
+  meta?: { label?: string | null; role?: Role | null },
+): Workspace {
+  return {
+    key,
+    bandId: key === PERSONAL ? null : (key as Id<'bands'>),
+    label: meta?.label ?? null,
+    role: meta?.role ?? null,
+  }
 }
 
-export type Trail =
-  | { kind: 'library' }
-  | { kind: 'workspace'; workspace: string }
+/** The workspace that owns a document. A missing band is personal. */
+export function workspaceOf(
+  bandId?: string | null,
+  meta?: { label?: string | null; role?: Role | null },
+): Workspace {
+  return workspace(bandId || PERSONAL, meta)
+}
 
 export type Leaf = 'read' | 'edit' | 'play'
 
@@ -33,15 +55,7 @@ export type Dest =
   | { page: 'draft'; draftId: string }
   | { page: 'members' }
 
-export function libraryTrail(): Trail {
-  return { kind: 'library' }
-}
-
-export function workspaceTrail(workspace: string): Trail {
-  return { kind: 'workspace', workspace }
-}
-
-/** First segments that are pages, never a home. */
+/** First segments that are pages, never a workspace. */
 const APP_ROOTS = new Set([
   'songs',
   'versions',
@@ -57,23 +71,17 @@ const APP_ROOTS = new Set([
   'lab',
 ])
 
-export function trailFromPath(pathname: string): Trail {
+/** The workspace named by the URL, or null on a library URL. */
+export function placeFromPath(pathname: string): Workspace | null {
   const first = pathname.split('/').filter(Boolean)[0]
-  if (!first || APP_ROOTS.has(first)) return libraryTrail()
-  return workspaceTrail(decodeURIComponent(first))
+  if (!first || APP_ROOTS.has(first)) return null
+  return workspace(decodeURIComponent(first))
 }
 
-function workspaceRoot(trail: Trail) {
-  if (trail.kind === 'library') return null
-  return `/${trail.workspace}`
-}
-
-function rooted(trail: Trail, suffix: string) {
-  return `${workspaceRoot(trail) ?? `/${PERSONAL}`}${suffix}`
-}
-
-export function path(trail: Trail, dest: Dest) {
-  const root = workspaceRoot(trail)
+/** `null` is the library, whose song and version URLs have no workspace. */
+export function path(at: Workspace | null, dest: Dest) {
+  const root = at ? `/${at.key}` : null
+  const rooted = (suffix: string) => `${root ?? `/${PERSONAL}`}${suffix}`
   switch (dest.page) {
     case 'library':
       return '/'
@@ -95,19 +103,18 @@ export function path(trail: Trail, dest: Dest) {
       return `${base}${query}`
     }
     case 'setlists':
-      return rooted(trail, '/setlists')
+      return rooted('/setlists')
     case 'setlist':
-      return rooted(trail, `/setlists/${dest.setlistId}`)
+      return rooted(`/setlists/${dest.setlistId}`)
     case 'jam':
-      return rooted(trail, '/jam')
+      return rooted('/jam')
     case 'import':
-      return rooted(trail, '/import')
+      return rooted('/import')
     case 'draft':
-      return rooted(trail, `/import/${dest.draftId}`)
+      return rooted(`/import/${dest.draftId}`)
     case 'members':
-      if (trail.kind === 'workspace' && trail.workspace === PERSONAL)
-        return `/${PERSONAL}/songs`
-      return rooted(trail, '/members')
+      if (at?.key === PERSONAL) return `/${PERSONAL}/songs`
+      return rooted('/members')
     default: {
       const unreachable: never = dest
       return unreachable
@@ -116,22 +123,20 @@ export function path(trail: Trail, dest: Dest) {
 }
 
 /** Where the workspace switcher lands. Song ids travel. Documents do not. */
-export function switchPath(pathname: string, workspace: string) {
-  const trail = workspaceTrail(workspace)
+export function switchPath(pathname: string, key: string) {
+  const at = workspace(key)
   const parts = pathname.split('/').filter(Boolean)
-  const rest =
-    parts[0] && !APP_ROOTS.has(parts[0]) ? parts.slice(1) : parts
+  const rest = parts[0] && !APP_ROOTS.has(parts[0]) ? parts.slice(1) : parts
   const section = rest[0]
   const id = rest[1]
-  if (section === 'songs' && id)
-    return path(trail, { page: 'song', songId: id })
-  if (section === 'setlists') return path(trail, { page: 'setlists' })
-  if (section === 'jam') return path(trail, { page: 'jam' })
-  if (section === 'import') return path(trail, { page: 'import' })
-  if (section === 'members') return path(trail, { page: 'members' })
-  return path(trail, { page: 'songs' })
+  if (section === 'songs' && id) return path(at, { page: 'song', songId: id })
+  if (section === 'setlists') return path(at, { page: 'setlists' })
+  if (section === 'jam') return path(at, { page: 'jam' })
+  if (section === 'import') return path(at, { page: 'import' })
+  if (section === 'members') return path(at, { page: 'members' })
+  return path(at, { page: 'songs' })
 }
 
 export function libraryVersionPath(versionId: string) {
-  return path(libraryTrail(), { page: 'version', versionId })
+  return path(null, { page: 'version', versionId })
 }

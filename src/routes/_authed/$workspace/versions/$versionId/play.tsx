@@ -1,8 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
 import type { Id } from '../../../../../../convex/_generated/dataModel'
 import { PlayPage } from '@/screens/version-play'
-import { workspaceTrail } from '@/lib/space'
 import { playSearch } from '@/lib/play-search'
+import { useRouteWorkspace } from '@/lib/workspace'
 
 export const Route = createFileRoute(
   '/_authed/$workspace/versions/$versionId/play',
@@ -12,12 +12,12 @@ export const Route = createFileRoute(
 })
 
 function WorkspacePlayRoute() {
-  const { versionId, workspace } = Route.useParams()
+  const { versionId } = Route.useParams()
   return (
     <PlayPage
       versionId={versionId as Id<'versions'>}
       search={Route.useSearch()}
-      trail={workspaceTrail(workspace)}
+      workspace={useRouteWorkspace()}
     />
   )
 }

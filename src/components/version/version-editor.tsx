@@ -24,7 +24,7 @@ import { DEFAULT_LAYERS } from '@/lib/sheet-layers'
 import { songCrumbs } from '@/components/app/song-crumbs'
 import { built } from '@/lib/built'
 import { path } from '@/lib/space'
-import type { Trail } from '@/lib/space'
+import type { Workspace } from '@/lib/space'
 import { m } from '@/paraglide/messages'
 import { useNotation } from '@/lib/use-notation'
 
@@ -35,7 +35,7 @@ export function VersionEditor({
   shapes,
   versionCount,
   mark,
-  trail,
+  workspace,
 }: {
   version: EditorVersion
   song: { _id: string; title: string; subTitle?: string }
@@ -43,11 +43,11 @@ export function VersionEditor({
   shapes: Array<ChordShapeOverride>
   versionCount: number
   mark?: ReactNode
-  trail: Trail
+  workspace: Workspace | null
 }) {
   const notation = useNotation()
   const href = (versionId: string) =>
-    path(trail, { page: 'version', versionId })
+    path(workspace, { page: 'version', versionId })
   const mutations = useEditorMutations()
   const saver = useSaver()
   const [selected, setSelected] = useState<string>(
@@ -89,7 +89,7 @@ export function VersionEditor({
         <div className="space-y-3">
           <Breadcrumbs>
             {songCrumbs({
-              trail,
+              workspace,
               songId: song._id,
               title: song.title,
             })}
@@ -187,7 +187,7 @@ export function VersionEditor({
                   notation={notation}
                   songTitle={song.title}
                   isOnlyVersion={versionCount <= 1}
-                  trail={trail}
+                  workspace={workspace}
                 />
               )}
             </section>

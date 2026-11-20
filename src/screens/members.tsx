@@ -23,13 +23,13 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { messageFor } from '@/lib/errors'
 import { roleName } from '@/lib/roles'
-import type { Home } from '@/lib/workspace'
+import type { Workspace } from '@/lib/space'
 import type { Id } from '../../convex/_generated/dataModel'
-import { PERSONAL, path, workspaceTrail } from '@/lib/space'
+import { PERSONAL, path, workspace as workspaceOfKey } from '@/lib/space'
 import { m } from '@/paraglide/messages'
 
-export function MembersPage({ home }: { home: Home }) {
-  if (!home.bandId)
+export function MembersPage({ workspace }: { workspace: Workspace }) {
+  if (!workspace.bandId)
     return (
       <EmptyState
         icon={UsersIcon}
@@ -43,13 +43,13 @@ export function MembersPage({ home }: { home: Home }) {
         <div>
           <PageHeader
             title={m.members()}
-            subtitle={home.label ?? <Skeleton className="h-4 w-24" />}
+            subtitle={workspace.label ?? <Skeleton className="h-4 w-24" />}
           />
           <ListSkeleton />
         </div>
       }
     >
-      <MemberRoster bandId={home.bandId} />
+      <MemberRoster bandId={workspace.bandId} />
     </Suspense>
   )
 }
@@ -238,7 +238,7 @@ function MemberRoster({ bandId }: { bandId: Id<'bands'> }) {
         onConfirm={async () => {
           await leave({ bandId })
           await navigate({
-            href: path(workspaceTrail(PERSONAL), { page: 'songs' }),
+            href: path(workspaceOfKey(PERSONAL), { page: 'songs' }),
           })
         }}
       />
@@ -251,7 +251,7 @@ function MemberRoster({ bandId }: { bandId: Id<'bands'> }) {
         onConfirm={async () => {
           await removeBand({ bandId })
           await navigate({
-            href: path(workspaceTrail(PERSONAL), { page: 'songs' }),
+            href: path(workspaceOfKey(PERSONAL), { page: 'songs' }),
           })
         }}
       />

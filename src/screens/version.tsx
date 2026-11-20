@@ -47,43 +47,34 @@ import { usePersonalCapo } from '@/lib/use-capo'
 import { useNotation } from '@/lib/use-notation'
 import { useVersionActions } from '@/components/version/version-actions'
 import { VersionMenu } from '@/components/version/version-menu'
-import { homeKey, path, workspaceTrail } from '@/lib/space'
-import type { Dest, Trail } from '@/lib/space'
-import type { Home } from '@/lib/workspace'
+import { path, workspaceOf } from '@/lib/space'
+import type { Dest, Workspace } from '@/lib/space'
 import { previewTabShift } from '@/lib/music/tab'
 import { m } from '@/paraglide/messages'
 
 export function ReadPage({
   versionId,
-  home,
-  trail,
+  workspace,
 }: {
   versionId: Id<'versions'>
-  home: Home | null
-  trail: Trail
+  workspace: Workspace | null
 }) {
   return (
-    <Suspense fallback={<SheetFrame trail={trail} />}>
-      <ReadView versionId={versionId} home={home} trail={trail} />
+    <Suspense fallback={<SheetFrame workspace={workspace} />}>
+      <ReadView versionId={versionId} workspace={workspace} />
     </Suspense>
   )
 }
 
-function SheetFrame({ trail }: { trail: Trail }) {
-  const href = (dest: Dest) => path(trail, dest)
+function SheetFrame({ workspace }: { workspace: Workspace | null }) {
+  const href = (dest: Dest) => path(workspace, dest)
   return (
     <div className="space-y-6">
       <Breadcrumbs>
         <Crumb
-          {...built(
-            href(
-              trail.kind === 'workspace'
-                ? { page: 'songs' }
-                : { page: 'library' },
-            ),
-          )}
+          {...built(href(workspace ? { page: 'songs' } : { page: 'library' }))}
         >
-          {trail.kind === 'workspace' ? m.songs() : m.allSongs()}
+          {workspace ? m.songs() : m.allSongs()}
         </Crumb>
       </Breadcrumbs>
       <SheetSkeleton />
@@ -93,14 +84,12 @@ function SheetFrame({ trail }: { trail: Trail }) {
 
 function ReadView({
   versionId,
-  home,
-  trail,
+  workspace,
 }: {
   versionId: Id<'versions'>
-  home: Home | null
-  trail: Trail
+  workspace: Workspace | null
 }) {
-  const href = (dest: Dest) => path(trail, dest)
+  const href = (dest: Dest) => path(workspace, dest)
   const bundle = useSuspenseQuery(
     convexQuery(api.versions.getBundle, { versionId }),
   )
@@ -150,7 +139,7 @@ function ReadView({
       <div className="space-y-3">
         <Breadcrumbs>
           {songCrumbs({
-            trail,
+            workspace,
             songId: song._id,
             title: song.title,
           })}
@@ -184,7 +173,7 @@ function ReadView({
               version={{ ...version, canEdit, ownerBandId, shared }}
               songTitle={song.title}
               isOnlyVersion={versionCount <= 1}
-              trail={trail}
+              workspace={workspace}
               redirectToSong
               trigger={
                 <HeaderButton
@@ -199,10 +188,10 @@ function ReadView({
           </HeaderActions>
         </div>
         <WorkspaceNotice
-          home={home}
+          workspace={workspace}
           homeBandId={ownerBandId}
           homeName={ownerName}
-          href={path(workspaceTrail(homeKey(ownerBandId)), {
+          href={path(workspaceOf(ownerBandId), {
             page: 'version',
             versionId,
           })}

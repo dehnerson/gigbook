@@ -2,22 +2,22 @@ import type { ReactNode } from 'react'
 import { Crumb } from '@/components/app/page-header'
 import { built } from '@/lib/built'
 import { path } from '@/lib/space'
-import type { Trail } from '@/lib/space'
+import type { Workspace } from '@/lib/space'
 import { m } from '@/paraglide/messages'
 
 export function songCrumbs({
-  trail,
+  workspace,
   songId,
   title,
   linked = true,
 }: {
-  trail: Trail
+  workspace: Workspace | null
   songId: string
   title: string
   linked?: boolean
 }): Array<ReactNode> {
   const song = linked ? (
-    <Crumb key="song" {...built(path(trail, { page: 'song', songId }))}>
+    <Crumb key="song" {...built(path(workspace, { page: 'song', songId }))}>
       {title}
     </Crumb>
   ) : (
@@ -26,12 +26,12 @@ export function songCrumbs({
     </span>
   )
   return [
-    trail.kind === 'workspace' ? (
-      <Crumb key="songs" {...built(path(trail, { page: 'songs' }))}>
+    workspace ? (
+      <Crumb key="songs" {...built(path(workspace, { page: 'songs' }))}>
         {m.songs()}
       </Crumb>
     ) : (
-      <Crumb key="library" {...built(path(trail, { page: 'library' }))}>
+      <Crumb key="library" {...built(path(null, { page: 'library' }))}>
         {m.allSongs()}
       </Crumb>
     ),

@@ -32,7 +32,7 @@ import { useNotation } from '@/lib/use-notation'
 import { messageFor } from '@/lib/errors'
 import { built } from '@/lib/built'
 import { path } from '@/lib/space'
-import type { Dest, Trail } from '@/lib/space'
+import type { Dest, Workspace } from '@/lib/space'
 import { genericGuitarName } from '@/lib/parts'
 import type { StoredPart } from '@/lib/parts'
 import { DEFAULT_LAYERS } from '@/lib/sheet-layers'
@@ -146,12 +146,12 @@ function previewTimeline(output: Output) {
 
 export function ReviewPage({
   draftId,
-  trail,
+  workspace,
 }: {
   draftId: Id<'importDrafts'>
-  trail: Trail
+  workspace: Workspace
 }) {
-  const href = (dest: Dest) => path(trail, dest)
+  const href = (dest: Dest) => path(workspace, dest)
   return (
     <Suspense
       fallback={
@@ -168,20 +168,20 @@ export function ReviewPage({
         </div>
       }
     >
-      <Review draftId={draftId} trail={trail} />
+      <Review draftId={draftId} workspace={workspace} />
     </Suspense>
   )
 }
 
 function Review({
   draftId,
-  trail,
+  workspace,
 }: {
   draftId: Id<'importDrafts'>
-  trail: Trail
+  workspace: Workspace
 }) {
   const navigate = useNavigate()
-  const href = (dest: Dest) => path(trail, dest)
+  const href = (dest: Dest) => path(workspace, dest)
   const { data: draft } = useSuspenseQuery(
     convexQuery(api.importDrafts.get, { draftId }),
   )
@@ -259,7 +259,7 @@ function Review({
           key={draft.output.title}
           draft={draft}
           output={draft.output}
-          trail={trail}
+          workspace={workspace}
         />
       ) : working ? (
         <div className="space-y-4 rounded-3xl border bg-card p-6 sm:p-10">
@@ -280,17 +280,17 @@ function Review({
 function ReadyReview({
   draft,
   output,
-  trail,
+  workspace,
 }: {
   draft: Draft
   output: Output
-  trail: Trail
+  workspace: Workspace
 }) {
   const updateOutput = useMutation(api.importDrafts.updateOutput)
   const save = useMutation(api.importDrafts.save)
   const discard = useMutation(api.importDrafts.discard)
   const navigate = useNavigate()
-  const href = (dest: Dest) => path(trail, dest)
+  const href = (dest: Dest) => path(workspace, dest)
   const notation = useNotation()
   const [title, setTitle] = useState(output.title)
   const [artist, setArtist] = useState(output.artist)

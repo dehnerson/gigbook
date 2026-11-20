@@ -29,10 +29,9 @@ import { useNotation } from '@/lib/use-notation'
 import { VersionMenu } from '@/components/version/version-menu'
 import { messageFor } from '@/lib/errors'
 import { useSuspenseQuery } from '@tanstack/react-query'
-import type { Home } from '@/lib/workspace'
 import { built } from '@/lib/built'
-import { PERSONAL, bandIdFromPath, path, workspaceTrail } from '@/lib/space'
-import type { Dest, Trail } from '@/lib/space'
+import { PERSONAL, path, workspace as workspaceOfKey } from '@/lib/space'
+import type { Dest, Workspace } from '@/lib/space'
 import { displayChord } from '@/lib/music/chords'
 import { TUNING_PRESETS } from '@/lib/music/diagrams'
 import type { Notation } from '@/lib/music/pitch'
@@ -48,14 +47,12 @@ function tuningLabel(tuning: Array<string>) {
 
 export function SongPage({
   songId,
-  home,
-  trail,
+  workspace,
 }: {
   songId: Id<'songs'>
-  home: Home | null
-  trail: Trail
+  workspace: Workspace | null
 }) {
-  const href = (dest: Dest) => path(trail, dest)
+  const href = (dest: Dest) => path(workspace, dest)
   return (
     <Suspense
       fallback={
@@ -65,14 +62,10 @@ export function SongPage({
               <Crumb
                 key="back"
                 {...built(
-                  href(
-                    trail.kind === 'workspace'
-                      ? { page: 'songs' }
-                      : { page: 'library' },
-                  ),
+                  href(workspace ? { page: 'songs' } : { page: 'library' }),
                 )}
               >
-                {trail.kind === 'workspace' ? m.songs() : m.allSongs()}
+                {workspace ? m.songs() : m.allSongs()}
               </Crumb>,
             ]}
             title={<Skeleton className="h-9 w-64" />}
@@ -81,26 +74,24 @@ export function SongPage({
         </div>
       }
     >
-      <SongView songId={songId} home={home} trail={trail} />
+      <SongView songId={songId} workspace={workspace} />
     </Suspense>
   )
 }
 
 function SongView({
   songId,
-  home,
-  trail,
+  workspace,
 }: {
   songId: Id<'songs'>
-  home: Home | null
-  trail: Trail
+  workspace: Workspace | null
 }) {
-  const href = (dest: Dest) => path(trail, dest)
-  const scoped = home !== null
+  const href = (dest: Dest) => path(workspace, dest)
+  const scoped = workspace !== null
   const { data } = useSuspenseQuery(
     convexQuery(api.songs.get, {
       songId,
-      ...(home ? { bandId: home.bandId } : {}),
+      ...(workspace ? { bandId: workspace.bandId } : {}),
     }),
   )
   const { song, versions, versionCount, canRename, canAdd, band } = data
@@ -110,23 +101,22 @@ function SongView({
   const [addingVersion, setAddingVersion] = useState(false)
   const [pickingHome, setPickingHome] = useState(false)
   const [choice, setChoice] = useState(PERSONAL)
-  const fileBandId = scoped ? (home.bandId ?? undefined) : undefined
   const allowAdd = scoped ? canAdd : true
   const homeName = scoped
-    ? (home.label ?? band?.name ?? m.personal())
+    ? (workspace.label ?? band?.name ?? m.personal())
     : undefined
 
   const navigate = useNavigate()
-  const fileVersion = (bandId: Id<'bands'> | undefined, next: typeof trail) => {
+  const fileVersion = (into: Workspace) => {
     setAddingVersion(true)
     addVersion({
       songId,
       versionName: m.newVersionName(),
-      ...(bandId ? { bandId } : {}),
+      ...(into.bandId ? { bandId: into.bandId } : {}),
     })
       .then((added) =>
         navigate({
-          href: path(next, {
+          href: path(into, {
             page: 'version',
             versionId: added.versionId,
             leaf: 'edit',
@@ -145,7 +135,7 @@ function SongView({
     <div>
       <PageHeader
         breadcrumbs={songCrumbs({
-          trail,
+          workspace,
           songId,
           title: song.title,
           linked: false,
@@ -175,7 +165,7 @@ function SongView({
               variant="outline"
               isDisabled={addingVersion}
               onPress={() => {
-                if (scoped) fileVersion(fileBandId, trail)
+                if (scoped) fileVersion(workspace)
                 else setPickingHome(true)
               }}
             >
@@ -189,7 +179,7 @@ function SongView({
           {m.versions()}
           {scoped ? (
             <span className="inline-flex items-center gap-1.5 font-medium tracking-normal text-foreground normal-case">
-              <ContextMark bandId={home.bandId} name={homeName} />
+              <ContextMark bandId={workspace.bandId} name={homeName} />
               {homeName}
             </span>
           ) : null}
@@ -205,7 +195,7 @@ function SongView({
               version={version}
               songTitle={song.title}
               isOnlyVersion={versionCount === 1}
-              trail={trail}
+              workspace={workspace}
               notation={notation}
               showHome={!scoped}
               href={href({ page: 'version', versionId: version._id })}
@@ -232,10 +222,7 @@ function SongView({
             isDisabled={addingVersion}
             onPress={() => {
               setPickingHome(false)
-              fileVersion(
-                bandIdFromPath(choice) ?? undefined,
-                workspaceTrail(choice),
-              )
+              fileVersion(workspaceOfKey(choice))
             }}
           >
             {m.addVersion()}
@@ -250,7 +237,7 @@ function VersionCard({
   version,
   songTitle,
   isOnlyVersion,
-  trail,
+  workspace,
   notation,
   showHome,
   href,
@@ -267,7 +254,7 @@ function VersionCard({
   }
   songTitle: string
   isOnlyVersion: boolean
-  trail: Trail
+  workspace: Workspace | null
   notation: Notation
   showHome: boolean
   href: string
@@ -310,7 +297,7 @@ function VersionCard({
             version={version}
             songTitle={songTitle}
             isOnlyVersion={isOnlyVersion}
-            trail={trail}
+            workspace={workspace}
             includeEdit
             trigger={
               <Button

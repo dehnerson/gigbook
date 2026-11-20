@@ -4,7 +4,6 @@ import { FileInputIcon, LibraryIcon, PlusIcon } from 'lucide-react'
 import { Suspense, useState } from 'react'
 import type { ReactNode } from 'react'
 import { api } from '../../../convex/_generated/api'
-import type { Id } from '../../../convex/_generated/dataModel'
 import { ContextMark } from '@/components/app/context-mark'
 import { EmptyState } from '@/components/app/empty-state'
 import { NewSongDialog } from '@/components/app/new-song-dialog'
@@ -18,7 +17,8 @@ import { ListSkeleton } from '@/components/app/route-states'
 import { SongRow } from '@/components/app/song-row'
 import { matchesSearch } from '@/lib/search'
 import { built } from '@/lib/built'
-import type { Trail } from '@/lib/space'
+import { path, workspaceOf } from '@/lib/space'
+import type { Workspace } from '@/lib/space'
 import { m } from '@/paraglide/messages'
 import { ButtonGroup } from '@/components/ui/button-group'
 
@@ -49,26 +49,21 @@ export function SongCatalog({
   marks = false,
   emptyTitle,
   emptyDescription,
-  scope,
-  songHref,
-  importHref,
-  trail,
-  chooseHome = false,
-  canCreate = true,
+  workspace,
+  fileIn,
 }: {
   title: string
   subtitle?: ReactNode
   marks?: boolean
   emptyTitle: string
   emptyDescription: string
-  /** Omit to list every song. `bandId: null` is the personal workspace. */
-  scope?: { bandId: Id<'bands'> | null }
-  songHref: (songId: string) => string
-  importHref: string
-  trail: Trail
-  chooseHome?: boolean
-  canCreate?: boolean
+  /** Null lists every song. */
+  workspace: Workspace | null
+  /** Where a library import is filed. */
+  fileIn?: Workspace
 }) {
+  const filing = workspace ?? fileIn ?? workspaceOf(null)
+  const canCreate = workspace === null || workspace.role !== null
   const [open, setOpen] = useState(false)
   const actions = (
     <ButtonGroup>
@@ -76,7 +71,7 @@ export function SongCatalog({
         <PlusIcon />
         {m.song()}
       </HeaderButton>
-      <HeaderButtonLink {...built(importHref)}>
+      <HeaderButtonLink {...built(path(filing, { page: 'import' }))}>
         <FileInputIcon />
       </HeaderButtonLink>
     </ButtonGroup>
@@ -88,15 +83,14 @@ export function SongCatalog({
       <NewSongDialog
         isOpen={open}
         onOpenChange={setOpen}
-        bandId={scope ? (scope.bandId ?? undefined) : undefined}
-        trail={trail}
-        chooseHome={chooseHome}
+        fileIn={filing}
+        choose={workspace === null}
       />
       <Suspense fallback={<ListSkeleton />}>
         <CatalogRows
-          scope={scope}
+          workspace={workspace}
           marks={marks}
-          songHref={songHref}
+          songHref={(songId) => path(workspace, { page: 'song', songId })}
           emptyTitle={emptyTitle}
           emptyDescription={emptyDescription}
           actions={actions}
@@ -107,14 +101,14 @@ export function SongCatalog({
 }
 
 function CatalogRows({
-  scope,
+  workspace,
   marks,
   songHref,
   emptyTitle,
   emptyDescription,
   actions,
 }: {
-  scope?: { bandId: Id<'bands'> | null }
+  workspace: Workspace | null
   marks: boolean
   songHref: (songId: string) => string
   emptyTitle: string
@@ -122,7 +116,10 @@ function CatalogRows({
   actions: ReactNode
 }) {
   const { data: rows } = useSuspenseQuery(
-    convexQuery(api.songs.catalog, scope ? { bandId: scope.bandId } : {}),
+    convexQuery(
+      api.songs.catalog,
+      workspace ? { bandId: workspace.bandId } : {},
+    ),
   )
   const [query, setQuery] = useState('')
   const visible = rows.filter((row) =>

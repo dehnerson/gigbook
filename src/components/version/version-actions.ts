@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
 import { messageFor } from '@/lib/errors'
-import { PERSONAL, homeKey, path, workspaceTrail } from '@/lib/space'
+import { PERSONAL, path, workspace, workspaceOf } from '@/lib/space'
 import { m } from '@/paraglide/messages'
 
 async function copyShareLink(token: string) {
@@ -30,7 +30,7 @@ export function useVersionActions() {
     leaf: 'read' | 'edit' = 'read',
   ) =>
     navigate({
-      href: path(workspaceTrail(homeKey(home)), {
+      href: path(workspaceOf(home), {
         page: 'version',
         versionId,
         leaf,
@@ -97,7 +97,7 @@ export function useVersionActions() {
           toast.success(m.addedAsVersion({ title: forked.joinedSong }))
         else toast.success(m.copiedToLibrary())
         await navigate({
-          href: path(workspaceTrail(PERSONAL), {
+          href: path(workspace(PERSONAL), {
             page: 'song',
             songId: forked.songId,
           }),
