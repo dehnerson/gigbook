@@ -22,6 +22,9 @@ describe('safeNext', () => {
   test('keeps in-app paths', () => {
     expect(safeNext('/share/abc-def_g')).toBe('/share/abc-def_g')
     expect(safeNext('/songs/id?band=1#top')).toBe('/songs/id?band=1#top')
+    expect(safeNext('/sign-in?redirect=%2Fpersonal%2Fsongs')).toBe(
+      '/personal/songs',
+    )
   })
 
   test('rejects off-site targets', () => {

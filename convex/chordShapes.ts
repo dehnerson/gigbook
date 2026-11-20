@@ -2,6 +2,7 @@ import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
 import type { MutationCtx } from './_generated/server'
 import type { Id } from './_generated/dataModel'
+import { getAuthUserId } from '@convex-dev/auth/server'
 import { canEditVersion, requireIdentity } from './lib/access'
 import { fail } from './lib/errors'
 
@@ -65,12 +66,12 @@ async function myShape(
 export const mine = query({
   args: { tuning: v.string() },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) return []
+    const userId = await getAuthUserId(ctx)
+    if (!userId) return []
     const shapes = await ctx.db
       .query('userChordShapes')
       .withIndex('by_user_tuning_symbol', (q) =>
-        q.eq('userId', identity.subject).eq('tuning', args.tuning),
+        q.eq('userId', userId).eq('tuning', args.tuning),
       )
       .collect()
     return shapes.map(({ symbol, frets, fingers }) => ({

@@ -41,19 +41,35 @@ export function workspaceTrail(workspace: string): Trail {
   return { kind: 'workspace', workspace }
 }
 
+/** First segments that are pages, never a home. */
+const APP_ROOTS = new Set([
+  'songs',
+  'versions',
+  'settings',
+  'share',
+  'jam',
+  'sign-in',
+  'sign-up',
+  'validate-email',
+  'reset-password',
+  'confirm-email-change',
+  'invite',
+  'lab',
+])
+
 export function trailFromPath(pathname: string): Trail {
-  const match = /^\/w\/([^/]+)/.exec(pathname)
-  if (!match?.[1]) return libraryTrail()
-  return workspaceTrail(decodeURIComponent(match[1]))
+  const first = pathname.split('/').filter(Boolean)[0]
+  if (!first || APP_ROOTS.has(first)) return libraryTrail()
+  return workspaceTrail(decodeURIComponent(first))
 }
 
 function workspaceRoot(trail: Trail) {
   if (trail.kind === 'library') return null
-  return `/w/${trail.workspace}`
+  return `/${trail.workspace}`
 }
 
 function rooted(trail: Trail, suffix: string) {
-  return `${workspaceRoot(trail) ?? `/w/${PERSONAL}`}${suffix}`
+  return `${workspaceRoot(trail) ?? `/${PERSONAL}`}${suffix}`
 }
 
 export function path(trail: Trail, dest: Dest) {
@@ -90,7 +106,7 @@ export function path(trail: Trail, dest: Dest) {
       return rooted(trail, `/import/${dest.draftId}`)
     case 'members':
       if (trail.kind === 'workspace' && trail.workspace === PERSONAL)
-        return `/w/${PERSONAL}/songs`
+        return `/${PERSONAL}/songs`
       return rooted(trail, '/members')
     default: {
       const unreachable: never = dest
@@ -103,7 +119,8 @@ export function path(trail: Trail, dest: Dest) {
 export function switchPath(pathname: string, workspace: string) {
   const trail = workspaceTrail(workspace)
   const parts = pathname.split('/').filter(Boolean)
-  const rest = parts[0] === 'w' ? parts.slice(2) : parts
+  const rest =
+    parts[0] && !APP_ROOTS.has(parts[0]) ? parts.slice(1) : parts
   const section = rest[0]
   const id = rest[1]
   if (section === 'songs' && id)

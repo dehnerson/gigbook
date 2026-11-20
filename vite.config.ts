@@ -160,7 +160,7 @@ const config = defineConfig({
     }),
     devtools(),
     tailwindcss(),
-    tanstackStart(),
+    tanstackStart({ spa: { enabled: true } }),
     viteReact(),
     alphaTab(),
     nitro(),

@@ -9,10 +9,9 @@
  */
 
 import type * as accountCleanup from "../accountCleanup.js";
+import type * as auth from "../auth.js";
 import type * as bands from "../bands.js";
 import type * as chordShapes from "../chordShapes.js";
-import type * as clerkSync from "../clerkSync.js";
-import type * as http from "../http.js";
 import type * as importAction from "../importAction.js";
 import type * as importDrafts from "../importDrafts.js";
 import type * as importModels from "../importModels.js";
@@ -20,11 +19,10 @@ import type * as jam from "../jam.js";
 import type * as lib_access from "../lib/access.js";
 import type * as lib_ai from "../lib/ai.js";
 import type * as lib_cascade from "../lib/cascade.js";
-import type * as lib_clerkApi from "../lib/clerkApi.js";
-import type * as lib_clerkRoles from "../lib/clerkRoles.js";
 import type * as lib_crypto from "../lib/crypto.js";
 import type * as lib_errors from "../lib/errors.js";
 import type * as lib_home from "../lib/home.js";
+import type * as lib_mail from "../lib/mail.js";
 import type * as lib_membership from "../lib/membership.js";
 import type * as lib_ownership from "../lib/ownership.js";
 import type * as lib_songs from "../lib/songs.js";
@@ -43,10 +41,9 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   accountCleanup: typeof accountCleanup;
+  auth: typeof auth;
   bands: typeof bands;
   chordShapes: typeof chordShapes;
-  clerkSync: typeof clerkSync;
-  http: typeof http;
   importAction: typeof importAction;
   importDrafts: typeof importDrafts;
   importModels: typeof importModels;
@@ -54,11 +51,10 @@ declare const fullApi: ApiFromModules<{
   "lib/access": typeof lib_access;
   "lib/ai": typeof lib_ai;
   "lib/cascade": typeof lib_cascade;
-  "lib/clerkApi": typeof lib_clerkApi;
-  "lib/clerkRoles": typeof lib_clerkRoles;
   "lib/crypto": typeof lib_crypto;
   "lib/errors": typeof lib_errors;
   "lib/home": typeof lib_home;
+  "lib/mail": typeof lib_mail;
   "lib/membership": typeof lib_membership;
   "lib/ownership": typeof lib_ownership;
   "lib/songs": typeof lib_songs;
@@ -96,4 +92,10 @@ export declare const internal: FilterApi<
   FunctionReference<any, "internal">
 >;
 
-export declare const components: {};
+export declare const components: {
+  auth: import("@convex-dev/auth/_generated/component.js").ComponentApi<"auth">;
+  authPassword: import("@convex-dev/auth/components/password/_generated/component.js").ComponentApi<"authPassword">;
+  authEmail: import("@convex-dev/auth/components/email/_generated/component.js").ComponentApi<"authEmail">;
+  resend: import("@convex-dev/resend/_generated/component.js").ComponentApi<"resend">;
+  authGoogle: import("@convex-dev/auth/components/google/_generated/component.js").ComponentApi<"authGoogle">;
+};

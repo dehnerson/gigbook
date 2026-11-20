@@ -1,14 +1,14 @@
+import { ConvexAuthProvider } from '@convex-dev/auth/react'
 import { ConvexQueryClient } from '@convex-dev/react-query'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createRouter as createTanStackRouter } from '@tanstack/react-router'
-import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
-import { ConvexProvider, ConvexReactClient } from 'convex/react'
+import { ConvexReactClient } from 'convex/react'
+import { api } from '../convex/_generated/api'
 import {
   RouteError,
   RouteNotFound,
   RoutePending,
 } from '@/components/app/route-states'
-import { createLoad } from '@/lib/load'
 import { routeTree } from './routeTree.gen'
 
 const convexUrl = import.meta.env.VITE_CONVEX_URL
@@ -29,7 +29,6 @@ export function getRouter() {
     },
   })
   convexQueryClient.connect(queryClient)
-  const load = createLoad(queryClient)
 
   const router = createTanStackRouter({
     routeTree,
@@ -40,16 +39,22 @@ export function getRouter() {
     defaultErrorComponent: ({ error }) => <RouteError error={error} />,
     defaultPendingComponent: RoutePending,
     defaultPendingMs: 300,
-    context: { queryClient, convexClient, convexQueryClient, load },
+    context: { queryClient, convexClient, convexQueryClient },
     Wrap: ({ children }) => (
       <QueryClientProvider client={queryClient}>
-        <ConvexProvider client={convexQueryClient.convexClient}>
+        <ConvexAuthProvider
+          client={convexClient}
+          api={{
+            refreshSession: api.auth.refreshSession,
+            signOut: api.auth.signOut,
+            isAuthenticated: api.auth.isAuthenticated,
+          }}
+        >
           {children}
-        </ConvexProvider>
+        </ConvexAuthProvider>
       </QueryClientProvider>
     ),
   })
-  setupRouterSsrQueryIntegration({ router, queryClient })
   return router
 }
 

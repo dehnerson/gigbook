@@ -65,7 +65,7 @@ export const run = internalAction({
       })
       const { model, apiKey } = await ctx.runQuery(
         internal.users.internalReadAi,
-        { clerkUserId: draft.ownerId },
+        { userId: draft.ownerId },
       )
       const parts: Exclude<UserContent, string> = []
       let knownIds: Array<string> = []

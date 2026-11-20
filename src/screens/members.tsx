@@ -1,8 +1,7 @@
-import { useOrganization } from '@clerk/tanstack-react-start'
 import { useNavigate } from '@tanstack/react-router'
-import { useAction, useQuery } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 import { EllipsisIcon, UserPlusIcon, UsersIcon, XIcon } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '../../convex/_generated/api'
 import { Chip, initials } from '@/components/app/chip'
@@ -19,17 +18,10 @@ import {
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { messageFor } from '@/lib/errors'
-import { roleFromClerk, roleName } from '@/lib/roles'
+import { roleName } from '@/lib/roles'
 import { useHome } from '@/lib/home'
 import { PERSONAL, path, workspaceTrail } from '@/lib/space'
 import { m } from '@/paraglide/messages'
-
-type PendingInvite = {
-  id: string
-  emailAddress: string
-  role: string
-  revoke: () => Promise<unknown>
-}
 
 export function MembersPage() {
   const home = useHome()
@@ -38,43 +30,18 @@ export function MembersPage() {
     api.bands.get,
     home?.bandId ? { bandId: home.bandId } : 'skip',
   )
-  const { organization } = useOrganization()
-  const invite = useAction(api.bands.invite)
-  const removeMember = useAction(api.bands.removeMember)
-  const leave = useAction(api.bands.leave)
-  const removeBand = useAction(api.bands.remove)
-  const [pending, setPending] = useState<Array<PendingInvite>>([])
+  const invite = useMutation(api.bands.invite)
+  const revoke = useMutation(api.bands.revoke)
+  const removeMember = useMutation(api.bands.removeMember)
+  const leave = useMutation(api.bands.leave)
+  const removeBand = useMutation(api.bands.remove)
   const [email, setEmail] = useState('')
   const [inviteRole, setInviteRole] = useState<'editor' | 'viewer'>('viewer')
   const [busy, setBusy] = useState(false)
   const [confirmLeave, setConfirmLeave] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
-  useEffect(() => {
-    if (!organization) return
-    let current = true
-    void organization
-      .getInvitations({ status: ['pending'] })
-      .then((result) => {
-        if (!current) return
-        setPending(
-          result.data.map((item) => ({
-            id: item.id,
-            emailAddress: item.emailAddress,
-            role: item.role,
-            revoke: () => item.revoke(),
-          })),
-        )
-      })
-      .catch(() => {
-        if (current) setPending([])
-      })
-    return () => {
-      current = false
-    }
-  }, [organization, band?.members.length])
-
-  if (!home?.organizationId) {
+  if (!home?.bandId) {
     return (
       <EmptyState
         icon={UsersIcon}
@@ -84,20 +51,6 @@ export function MembersPage() {
     )
   }
   if (!band) return null
-
-  const refreshInvites = () => {
-    if (!organization) return
-    void organization.getInvitations({ status: ['pending'] }).then((result) => {
-      setPending(
-        result.data.map((item) => ({
-          id: item.id,
-          emailAddress: item.emailAddress,
-          role: item.role,
-          revoke: () => item.revoke(),
-        })),
-      )
-    })
-  }
 
   return (
     <div>
@@ -163,31 +116,30 @@ export function MembersPage() {
             ) : null}
           </li>
         ))}
-        {pending.map((item) => (
+        {band.invites.map((item) => (
           <li
-            key={item.id}
+            key={item._id}
             className="flex items-center gap-3 rounded-xl py-1.5"
           >
             <Avatar>
               <AvatarFallback className="text-xs font-semibold">
-                {initials(item.emailAddress)}
+                {initials(item.email)}
               </AvatarFallback>
             </Avatar>
             <span className="min-w-0 flex-1 truncate text-sm font-medium">
-              {item.emailAddress}
+              {item.email}
             </span>
             <Chip>{m.pendingInvite()}</Chip>
-            <Chip>{roleName(roleFromClerk(item.role))}</Chip>
+            <Chip>{roleName(item.role)}</Chip>
             {band.role === 'owner' ? (
               <Button
                 variant="ghost"
                 size="icon-sm"
                 aria-label={m.revokeInvite()}
                 onPress={() =>
-                  void item
-                    .revoke()
-                    .then(refreshInvites)
-                    .catch((error: unknown) => toast.error(messageFor(error)))
+                  void revoke({ invitationId: item._id }).catch(
+                    (error: unknown) => toast.error(messageFor(error)),
+                  )
                 }
               >
                 <XIcon />
@@ -196,7 +148,7 @@ export function MembersPage() {
           </li>
         ))}
       </ul>
-      {band.members.length <= 1 && pending.length === 0 ? (
+      {band.members.length <= 1 && band.invites.length === 0 ? (
         <p className="mt-3 text-sm text-muted-foreground">{m.membersEmpty()}</p>
       ) : null}
       {band.role === 'owner' ? (
@@ -210,12 +162,10 @@ export function MembersPage() {
               bandId: home.bandId,
               email,
               role: inviteRole,
-              redirectUrl: `${window.location.origin}/`,
             })
               .then(() => {
                 setEmail('')
                 toast.success(m.memberInvited())
-                refreshInvites()
               })
               .catch((error: unknown) => toast.error(messageFor(error)))
               .finally(() => setBusy(false))

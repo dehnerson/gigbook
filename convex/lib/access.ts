@@ -1,14 +1,11 @@
-import type {
-  GenericDatabaseReader,
-  GenericDatabaseWriter,
-  UserIdentity,
-} from 'convex/server'
+import { getAuthUserId } from '@convex-dev/auth/server'
+import type { GenericDatabaseReader, GenericDatabaseWriter } from 'convex/server'
 import { fail } from './errors'
 import type { Doc, Id } from '../_generated/dataModel'
 import type { DatabaseReader } from '../_generated/server'
 
 type Db = GenericDatabaseReader<any> | GenericDatabaseWriter<any>
-type Ctx = { db: Db; auth: any }
+type Ctx = { db: Db; auth: any; runQuery: any }
 
 export type Gate = {
   userId: string
@@ -16,11 +13,12 @@ export type Gate = {
 }
 
 export async function requireIdentity(ctx: {
-  auth: { getUserIdentity: () => Promise<UserIdentity | null> }
+  auth: unknown
+  runQuery: unknown
 }) {
-  const identity = await ctx.auth.getUserIdentity()
-  if (!identity) fail('UNAUTHENTICATED')
-  return identity
+  const userId = await getAuthUserId(ctx as never)
+  if (userId === null) fail('UNAUTHENTICATED')
+  return { subject: userId }
 }
 
 export async function membership(db: Db, bandId: string, userId: string) {

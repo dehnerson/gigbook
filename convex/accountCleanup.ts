@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import type { Infer } from 'convex/values'
-import { internal } from './_generated/api'
+import { components, internal } from './_generated/api'
 import type { Doc } from './_generated/dataModel'
 import { internalMutation } from './_generated/server'
 import type { MutationCtx } from './_generated/server'
@@ -24,59 +24,59 @@ type Phase = Infer<typeof phase>
 async function leaveBand(
   ctx: MutationCtx,
   row: Doc<'bandMemberships'>,
-  clerkUserId: string,
+  userId: string,
 ) {
   const others = (
     await ctx.db
       .query('bandMemberships')
       .withIndex('by_band', (q) => q.eq('bandId', row.bandId))
       .collect()
-  ).filter((member) => member.userId !== clerkUserId)
+  ).filter((member) => member.userId !== userId)
   const heir = successor(others)
   if (!heir) return false
-  await handBand(ctx, row.bandId, clerkUserId, heir)
+  await handBand(ctx, row.bandId, userId, heir)
   await ctx.db.delete(row._id)
   return true
 }
 
 const steps: Record<
   Phase,
-  (ctx: MutationCtx, clerkUserId: string) => Promise<Phase | null>
+  (ctx: MutationCtx, userId: string) => Promise<Phase | null>
 > = {
-  bands: async (ctx, clerkUserId) => {
+  bands: async (ctx, userId) => {
     const row = await ctx.db
       .query('bandMemberships')
-      .withIndex('by_user', (q) => q.eq('userId', clerkUserId))
+      .withIndex('by_user', (q) => q.eq('userId', userId))
       .first()
     if (!row) return 'songs'
-    const handed = await leaveBand(ctx, row, clerkUserId)
+    const handed = await leaveBand(ctx, row, userId)
     if (!handed) await removeBand(ctx, row.bandId)
     return 'bands'
   },
-  songs: async (ctx, clerkUserId) => {
+  songs: async (ctx, userId) => {
     const versions = (
       await ctx.db
         .query('versions')
-        .withIndex('by_creator', (q) => q.eq('createdBy', clerkUserId))
+        .withIndex('by_creator', (q) => q.eq('createdBy', userId))
         .collect()
     ).filter((version) => !version.bandId)
     const batch = versions.slice(0, BATCH)
     for (const version of batch) await deleteVersion(ctx, version._id)
     return batch.length === BATCH ? 'songs' : 'setlists'
   },
-  setlists: async (ctx, clerkUserId) => {
+  setlists: async (ctx, userId) => {
     const setlists = await ctx.db
       .query('setlists')
-      .withIndex('by_creator', (q) => q.eq('createdBy', clerkUserId))
+      .withIndex('by_creator', (q) => q.eq('createdBy', userId))
       .filter((q) => q.eq(q.field('bandId'), undefined))
       .take(BATCH)
     for (const setlist of setlists) await deleteSetlist(ctx, setlist._id)
     return setlists.length === BATCH ? 'setlists' : 'jam'
   },
-  jam: async (ctx, clerkUserId) => {
+  jam: async (ctx, userId) => {
     const rooms = await ctx.db
       .query('jamRooms')
-      .withIndex('by_host', (q) => q.eq('hostUserId', clerkUserId))
+      .withIndex('by_host', (q) => q.eq('hostUserId', userId))
       .take(BATCH)
     for (const room of rooms) {
       const members = await ctx.db
@@ -88,17 +88,17 @@ const steps: Record<
     }
     const memberships = await ctx.db
       .query('jamMembers')
-      .withIndex('by_user', (q) => q.eq('userId', clerkUserId))
+      .withIndex('by_user', (q) => q.eq('userId', userId))
       .take(BATCH)
     for (const member of memberships) await ctx.db.delete(member._id)
     return rooms.length === BATCH || memberships.length === BATCH
       ? 'jam'
       : 'drafts'
   },
-  drafts: async (ctx, clerkUserId) => {
+  drafts: async (ctx, userId) => {
     const drafts = await ctx.db
       .query('importDrafts')
-      .withIndex('by_owner', (q) => q.eq('ownerId', clerkUserId))
+      .withIndex('by_owner', (q) => q.eq('ownerId', userId))
       .take(BATCH)
     for (const draft of drafts) {
       if (draft.storageId) await ctx.storage.delete(draft.storageId)
@@ -106,35 +106,36 @@ const steps: Record<
     }
     return drafts.length === BATCH ? 'drafts' : 'user'
   },
-  user: async (ctx, clerkUserId) => {
+  user: async (ctx, userId) => {
     const shapes = await ctx.db
       .query('userChordShapes')
-      .withIndex('by_user', (q) => q.eq('userId', clerkUserId))
+      .withIndex('by_user', (q) => q.eq('userId', userId))
       .take(BATCH)
     for (const shape of shapes) await ctx.db.delete(shape._id)
     if (shapes.length === BATCH) return 'user'
-    const user = await ctx.db
-      .query('users')
-      .withIndex('by_clerk', (q) => q.eq('clerkUserId', clerkUserId))
-      .unique()
+    const id = ctx.db.normalizeId('users', userId)
+    const user = id ? await ctx.db.get(id) : null
     if (!user) return null
     const credentials = await ctx.db
       .query('userAiCredentials')
       .withIndex('by_user', (q) => q.eq('userId', user._id))
       .collect()
     for (const credential of credentials) await ctx.db.delete(credential._id)
+    await ctx.runMutation(components.authEmail.verifiedEmails.deleteUser, {
+      userId: user._id,
+    })
     await ctx.db.delete(user._id)
     return null
   },
 }
 
 export const run = internalMutation({
-  args: { clerkUserId: v.string(), phase },
+  args: { userId: v.string(), phase },
   handler: async (ctx, args) => {
-    const next = await steps[args.phase](ctx, args.clerkUserId)
+    const next = await steps[args.phase](ctx, args.userId)
     if (next)
       await ctx.scheduler.runAfter(0, internal.accountCleanup.run, {
-        clerkUserId: args.clerkUserId,
+        userId: args.userId,
         phase: next,
       })
   },

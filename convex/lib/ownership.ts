@@ -96,6 +96,11 @@ export async function removeBand(ctx: MutationCtx, bandId: Id<'bands'>) {
     .withIndex('by_band', (q) => q.eq('bandId', bandId))
     .collect()
   for (const member of members) await ctx.db.delete(member._id)
+  const invites = await ctx.db
+    .query('invitations')
+    .withIndex('by_band', (q) => q.eq('bandId', bandId))
+    .collect()
+  for (const invite of invites) await ctx.db.delete(invite._id)
   const band = await ctx.db.get(bandId)
   if (band) await ctx.db.delete(bandId)
   return true

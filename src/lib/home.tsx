@@ -6,7 +6,6 @@ export type Home = {
   bandId: Id<'bands'> | null
   label: string
   role: 'owner' | 'editor' | 'viewer'
-  organizationId: string | null
 }
 
 const HomeContext = createContext<Home | null>(null)

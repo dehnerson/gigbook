@@ -72,12 +72,6 @@ export function playSearch(search: Record<string, unknown>): PlaySearch {
 
 export const Route = createFileRoute('/_authed/versions/$versionId/play')({
   validateSearch: playSearch,
-  loader: ({ context, params }) =>
-    context.load(
-      convexQuery(api.versions.getBundle, {
-        versionId: params.versionId as Id<'versions'>,
-      }),
-    ),
   component: PlayPage,
 })
 

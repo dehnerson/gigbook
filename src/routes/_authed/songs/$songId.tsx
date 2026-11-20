@@ -37,12 +37,6 @@ import type { Notation } from '@/lib/music/pitch'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/songs/$songId')({
-  loader: ({ context, params }) =>
-    context.load(
-      convexQuery(api.songs.get, {
-        songId: params.songId as Id<'songs'>,
-      }),
-    ),
   component: SongPage,
 })
 

@@ -1,10 +1,6 @@
+import { convexAuthProvider } from '@convex-dev/auth/server'
 import type { AuthConfig } from 'convex/server'
 
 export default {
-  providers: [
-    {
-      domain: process.env.CLERK_JWT_ISSUER_DOMAIN!,
-      applicationID: 'convex',
-    },
-  ],
+  providers: [convexAuthProvider()],
 } satisfies AuthConfig

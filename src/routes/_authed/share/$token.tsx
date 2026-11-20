@@ -28,8 +28,6 @@ export const Route = createFileRoute('/_authed/share/$token')({
   head: () => ({
     meta: [{ name: 'referrer', content: 'no-referrer' }],
   }),
-  loader: ({ context, params }) =>
-    context.load(convexQuery(api.versions.getByShare, { token: params.token })),
   component: SharePage,
 })
 

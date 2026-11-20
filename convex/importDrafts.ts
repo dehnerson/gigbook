@@ -379,7 +379,7 @@ export const testKey = action({
     const { model, apiKey } = await ctx.runQuery(
       internal.users.internalReadAi,
       {
-        clerkUserId: identity.subject,
+        userId: identity.subject,
         provider: args.provider,
       },
     )

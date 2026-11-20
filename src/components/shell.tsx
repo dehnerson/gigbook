@@ -1,5 +1,5 @@
-import { UserButton } from '@clerk/tanstack-react-start'
-import { Link, useRouterState } from '@tanstack/react-router'
+import { useAuthActions } from '@convex-dev/auth/react'
+import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import { cn } from 'cn'
 import {
   GuitarIcon,
@@ -8,15 +8,15 @@ import {
   MusicIcon,
   RadioTowerIcon,
   SettingsIcon,
+  LogOutIcon,
 } from 'lucide-react'
 import { WorkspaceSwitcher } from '@/components/app/workspace-switcher'
 import { built } from '@/lib/built'
 import { path, workspaceTrail } from '@/lib/space'
 import { useTrail } from '@/lib/use-trail'
 import { useWorkspace } from '@/lib/workspace'
+import { Button } from '@/components/ui/button'
 import { m } from '@/paraglide/messages'
-
-const hasClerk = Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY)
 
 export function isBarePath(pathname: string) {
   return (
@@ -96,7 +96,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <LibraryBigIcon className="size-4.5" />
             {m.allSongs()}
           </Link>
-          {hasClerk ? <WorkspaceSwitcher /> : null}
+          <WorkspaceSwitcher />
           {links.map((link) => (
             <Link
               key={link.href}
@@ -116,18 +116,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <SettingsIcon className="size-4.5" />
             {m.settings()}
           </Link>
-          {hasClerk ? (
-            <div className="flex items-center gap-3 px-3 py-2">
-              <UserButton showName />
-            </div>
-          ) : null}
+          <SignOutButton />
         </div>
       </aside>
 
       <header className="sticky top-0 z-9000 flex items-center justify-between border-b bg-background/80 px-4 py-3 backdrop-blur-lg lg:hidden">
         <Logo />
         <div className="flex items-center gap-2">
-          {hasClerk ? <WorkspaceSwitcher compact /> : null}
+          <WorkspaceSwitcher compact />
           <Link
             to="/settings"
             aria-label={m.settings()}
@@ -135,7 +131,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           >
             <SettingsIcon className="size-5" />
           </Link>
-          {hasClerk ? <UserButton /> : null}
+          <SignOutButton compact />
         </div>
       </header>
 
@@ -174,5 +170,23 @@ export function Shell({ children }: { children: React.ReactNode }) {
         ))}
       </nav>
     </div>
+  )
+}
+
+function SignOutButton({ compact = false }: { compact?: boolean }) {
+  const { signOut } = useAuthActions()
+  const navigate = useNavigate()
+  return (
+    <Button
+      variant="ghost"
+      size={compact ? 'icon' : 'default'}
+      aria-label={m.signOut()}
+      className={compact ? undefined : 'justify-start px-3'}
+      onPress={() => {
+        void signOut().then(() => navigate({ href: '/sign-in' }))
+      }}
+    >
+      {compact ? <LogOutIcon /> : m.signOut()}
+    </Button>
   )
 }

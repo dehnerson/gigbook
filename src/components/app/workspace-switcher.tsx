@@ -1,4 +1,4 @@
-import { useConvexAuth, useQuery, useAction } from 'convex/react'
+import { useConvexAuth, useQuery, useMutation } from 'convex/react'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { ChevronsUpDownIcon, PlusIcon, UsersIcon } from 'lucide-react'
 import { useState } from 'react'
@@ -55,8 +55,8 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
           className={cn(!compact && 'h-auto w-full justify-start px-3 py-2')}
         >
           <ContextMark
-            bandId={workspace.organizationId ? workspace.bandId : null}
-            name={workspace.organizationId ? workspace.label : null}
+            bandId={workspace.bandId}
+            name={workspace.bandId ? workspace.label : null}
           />
           {compact ? null : (
             <>
@@ -153,7 +153,7 @@ function NewBandDialog({
   onOpenChange: (open: boolean) => void
   onCreated: (bandId: string) => Promise<void>
 }) {
-  const create = useAction(api.bands.create)
+  const create = useMutation(api.bands.create)
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
   return (

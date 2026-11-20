@@ -5,8 +5,7 @@ import { SongCatalog } from '@/components/app/song-catalog'
 import { useLiveQuery } from '@/lib/live'
 import { m } from '@/paraglide/messages'
 
-export const Route = createFileRoute('/_authed/')({
-  loader: ({ context }) => context.load(convexQuery(api.songs.catalog, {})),
+export const Route = createFileRoute('/_authed/')({
   component: LibraryPage,
 })
 

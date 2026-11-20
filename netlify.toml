@@ -1,6 +1,11 @@
 [build]
 command = "bunx convex deploy --cmd 'bun run build'"
-publish = "dist"
+publish = ".output/public"
 
 [build.environment]
 NODE_VERSION = "24"
+
+[[redirects]]
+  from = "/*"
+  to = "/_shell.html"
+  status = 200

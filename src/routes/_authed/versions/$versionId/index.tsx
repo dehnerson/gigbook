@@ -51,12 +51,6 @@ import { previewTabShift } from '@/lib/music/tab'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/versions/$versionId/')({
-  loader: ({ context, params }) =>
-    context.load(
-      convexQuery(api.versions.getBundle, {
-        versionId: params.versionId as Id<'versions'>,
-      }),
-    ),
   component: ReadPage,
 })
 

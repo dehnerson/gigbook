@@ -87,16 +87,14 @@ export const importOutput = v.object({
 
 export default defineSchema({
   users: defineTable({
-    clerkUserId: v.string(),
     name: v.string(),
     imageUrl: v.optional(v.string()),
-    email: v.optional(v.string()),
+    /** Verified address from Google. The email component owns password addresses. */
+    oauthEmail: v.optional(v.string()),
     locale: v.optional(v.union(v.literal('en'), v.literal('de'))),
     notation: v.optional(v.union(v.literal('en'), v.literal('de'))),
     aiModel: v.optional(v.string()),
-  })
-    .index('by_clerk', ['clerkUserId'])
-    .index('by_email', ['email']),
+  }),
 
   userAiCredentials: defineTable({
     userId: v.id('users'),
@@ -110,8 +108,18 @@ export default defineSchema({
   bands: defineTable({
     name: v.string(),
     createdBy: v.string(),
-    clerkOrganizationId: v.string(),
-  }).index('by_clerk', ['clerkOrganizationId']),
+  }),
+
+  invitations: defineTable({
+    bandId: v.id('bands'),
+    email: v.string(),
+    role: v.union(v.literal('editor'), v.literal('viewer')),
+    token: v.string(),
+    expiresAt: v.number(),
+  })
+    .index('by_band', ['bandId'])
+    .index('by_token', ['token'])
+    .index('by_band_email', ['bandId', 'email']),
 
   bandMemberships: defineTable({
     bandId: v.id('bands'),

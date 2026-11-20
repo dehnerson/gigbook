@@ -69,8 +69,6 @@ import { homeKey, path, workspaceTrail } from '@/lib/space'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/jam/$code')({
-  loader: ({ context, params }) =>
-    context.load(convexQuery(api.jam.get, { code: params.code })),
   component: JamRoomPage,
 })
 

@@ -14,12 +14,6 @@ import { useGo } from '@/lib/use-trail'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/versions/$versionId/edit')({
-  loader: ({ context, params }) =>
-    context.load(
-      convexQuery(api.versions.getBundle, {
-        versionId: params.versionId as Id<'versions'>,
-      }),
-    ),
   component: EditPage,
 })
 

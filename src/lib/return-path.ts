@@ -8,8 +8,7 @@ function hasControl(path: string) {
   return false
 }
 
-/** Same-origin path only. Anything else becomes the library. */
-export function safeNext(value: unknown) {
+function onePath(value: unknown) {
   if (typeof value !== 'string' || value.length === 0 || value.length > 2048)
     return '/'
   let path = value
@@ -25,6 +24,40 @@ export function safeNext(value: unknown) {
   return path
 }
 
+function authRedirect(path: string) {
+  const bare = path.split('#')[0] ?? path
+  const queryIndex = bare.indexOf('?')
+  const pathname = queryIndex === -1 ? bare : bare.slice(0, queryIndex)
+  if (
+    pathname !== '/sign-in' &&
+    pathname !== '/sign-in/' &&
+    pathname !== '/sign-up' &&
+    pathname !== '/sign-up/'
+  )
+    return null
+  const query = queryIndex === -1 ? '' : bare.slice(queryIndex + 1)
+  return new URLSearchParams(query).get('redirect')
+}
+
+/** Same-origin path only. Anything else becomes the library. */
+export function safeNext(value: unknown) {
+  let path = onePath(value)
+  for (let i = 0; i < 8; i++) {
+    const inner = authRedirect(path)
+    if (inner === null) break
+    path = onePath(inner)
+  }
+  return authRedirect(path) === null ? path : '/'
+}
+
+export function authSearch(search: Record<string, unknown>) {
+  return {
+    redirect: safeNext(search.redirect),
+    code: typeof search.code === 'string' ? search.code : undefined,
+    state: typeof search.state === 'string' ? search.state : undefined,
+  }
+}
+
 export function signInSearch(search: Record<string, unknown>) {
-  return { redirect: safeNext(search.redirect) }
+  return authSearch(search)
 }
