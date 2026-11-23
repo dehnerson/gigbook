@@ -1,4 +1,4 @@
-import { useConvexAuth, useQuery, useMutation } from 'convex/react'
+import { useMutation } from 'convex/react'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { ChevronsUpDownIcon, PlusIcon, UsersIcon } from 'lucide-react'
 import { useState } from 'react'
@@ -17,8 +17,8 @@ import {
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverTrigger } from '@/components/ui/popover'
 import { messageFor } from '@/lib/errors'
-import { PERSONAL, path, switchPath, workspace } from '@/lib/space'
-import { usePlace, useWorkspace } from '@/lib/workspace'
+import { href, PERSONAL, switchHref } from '@/lib/space'
+import { useWorkspace } from '@/lib/workspace'
 import { cn } from 'cn'
 import { m } from '@/paraglide/messages'
 import { Separator } from '../ui/separator'
@@ -27,20 +27,19 @@ const item =
   'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium text-muted-foreground outline-none hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[active=true]:bg-sidebar-accent data-[active=true]:text-foreground'
 
 export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
-  const session = useWorkspace()
-  const here = usePlace()
-  const { isAuthenticated } = useConvexAuth()
-  const bands = useQuery(api.bands.list, isAuthenticated ? {} : 'skip')
+  const { current, all } = useWorkspace()
   const [open, setOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const navigate = useNavigate()
-  const pathname = useRouterState({
-    select: (state) => state.location.pathname,
+  const leaf = useRouterState({
+    select: (state) => state.matches[state.matches.length - 1],
   })
-  const shown = here?.key ?? session.key
+  const shown = current.key
+  const label = current.label ?? (current.bandId ? '' : m.personal())
   const openWorkspace = (next: string) => {
     setOpen(false)
-    void navigate({ href: switchPath(pathname, next) })
+    const params = leaf.params as { songId?: string }
+    void navigate(switchHref(leaf.routeId, { songId: params.songId }, next))
   }
 
   return (
@@ -49,18 +48,16 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
         <Button
           variant="ghost"
           size={compact ? 'icon' : 'default'}
-          aria-label={session.label ?? m.personal()}
+          aria-label={label || m.personal()}
           className={cn(!compact && 'h-auto w-full justify-start px-3 py-2')}
         >
           <ContextMark
-            bandId={session.bandId}
-            name={session.bandId ? session.label : null}
+            bandId={current.bandId}
+            name={current.bandId ? current.label : null}
           />
           {compact ? null : (
             <>
-              <span className="min-w-0 flex-1 truncate text-left">
-                {session.label}
-              </span>
+              <span className="min-w-0 flex-1 truncate text-left">{label}</span>
               <ChevronsUpDownIcon className="size-4 text-muted-foreground" />
             </>
           )}
@@ -70,27 +67,21 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
             {m.workspace()}
           </div>
           <ul className="max-h-64 space-y-0.5 overflow-y-auto">
-            <li>
-              <button
-                type="button"
-                data-active={shown === PERSONAL}
-                className={item}
-                onClick={() => openWorkspace(PERSONAL)}
-              >
-                <ContextMark />
-                <span className="truncate">{m.personal()}</span>
-              </button>
-            </li>
-            {(bands ?? []).map((row) => (
-              <li key={row.band._id}>
+            {all.map((itemWorkspace) => (
+              <li key={itemWorkspace.key}>
                 <button
                   type="button"
-                  data-active={shown === row.band._id}
+                  data-active={shown === itemWorkspace.key}
                   className={item}
-                  onClick={() => openWorkspace(row.band._id)}
+                  onClick={() => openWorkspace(itemWorkspace.key)}
                 >
-                  <ContextMark bandId={row.band._id} name={row.band.name} />
-                  <span className="truncate">{row.band.name}</span>
+                  <ContextMark
+                    bandId={itemWorkspace.bandId}
+                    name={itemWorkspace.bandId ? itemWorkspace.label : null}
+                  />
+                  <span className="truncate">
+                    {itemWorkspace.label ?? m.personal()}
+                  </span>
                 </button>
               </li>
             ))}
@@ -104,9 +95,7 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
                   className={item}
                   onClick={() => {
                     setOpen(false)
-                    void navigate({
-                      href: path(workspace(shown), { page: 'members' }),
-                    })
+                    void navigate(href(shown, { page: 'members' }))
                   }}
                 >
                   <UsersIcon className="size-4" />
@@ -132,11 +121,7 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
       <NewBandDialog
         isOpen={creating}
         onOpenChange={setCreating}
-        onCreated={(bandId) =>
-          navigate({
-            href: path(workspace(bandId), { page: 'songs' }),
-          })
-        }
+        onCreated={(bandId) => navigate(href(bandId, { page: 'songs' }))}
       />
     </>
   )

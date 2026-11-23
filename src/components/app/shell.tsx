@@ -9,9 +9,8 @@ import {
 } from 'lucide-react'
 import { UserMenu } from '@/components/app/user-menu'
 import { WorkspaceSwitcher } from '@/components/app/workspace-switcher'
-import { built } from '@/lib/built'
-import { path } from '@/lib/space'
-import { usePlace, useWorkspace } from '@/lib/workspace'
+import { href } from '@/lib/space'
+import { useWorkspace } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
 
 function isBarePath(pathname: string) {
@@ -37,11 +36,6 @@ function Logo({ compact = false }: { compact?: boolean }) {
   )
 }
 
-function navActive(pathname: string, href: string, exact: boolean) {
-  if (exact) return pathname === href
-  return pathname === href || pathname.startsWith(`${href}/`)
-}
-
 const navItem =
   'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors outline-none hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[status=active]:bg-sidebar-accent data-[status=active]:text-foreground [&[data-status=active]>svg]:text-primary'
 
@@ -49,22 +43,22 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
-  const nav = usePlace() ?? useWorkspace()
+  const { current } = useWorkspace()
   const links = [
     {
-      href: path(nav, { page: 'songs' }),
+      options: href(current.key, { page: 'songs' }),
       label: m.songs(),
       icon: MusicIcon,
       exact: true,
     },
     {
-      href: path(nav, { page: 'setlists' }),
+      options: href(current.key, { page: 'setlists' }),
       label: m.setlists(),
       icon: ListMusicIcon,
       exact: false,
     },
     {
-      href: path(nav, { page: 'jam' }),
+      options: href(current.key, { page: 'jam' }),
       label: m.jam(),
       icon: RadioTowerIcon,
       exact: false,
@@ -90,14 +84,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <WorkspaceSwitcher />
           {links.map((link) => (
             <Link
-              key={link.href}
-              {...built(link.href)}
+              key={link.label}
+              {...link.options}
+              activeOptions={{ exact: link.exact }}
               className={navItem}
-              data-status={
-                navActive(pathname, link.href, link.exact)
-                  ? 'active'
-                  : undefined
-              }
             >
               <link.icon className="size-4.5" />
               {link.label}
@@ -137,14 +127,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </Link>
         {links.map((link) => (
           <Link
-            key={link.href}
-            {...built(link.href)}
+            key={link.label}
+            {...link.options}
+            activeOptions={{ exact: link.exact }}
             className={cn(
               'flex min-w-0 flex-1 flex-col items-center gap-1 px-1 py-2.5 text-center text-[0.7rem] font-medium text-muted-foreground transition-colors data-[status=active]:text-primary',
             )}
-            data-status={
-              navActive(pathname, link.href, link.exact) ? 'active' : undefined
-            }
           >
             <link.icon className="size-5 shrink-0" />
             <span className="max-w-full truncate">{link.label}</span>

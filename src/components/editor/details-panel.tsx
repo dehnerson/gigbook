@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { partName } from '@/components/sheet/parts'
-import type { Workspace } from '@/lib/space'
 import { TUNING_PRESETS } from '@/lib/music/diagrams'
 import { keyOptions, TIME_SIGNATURES } from '@/lib/music/keys'
 import type { Notation } from '@/lib/music/pitch'
@@ -192,14 +191,12 @@ export function DetailsPanel({
   notation,
   songTitle,
   isOnlyVersion,
-  workspace,
 }: {
   version: EditorVersion
   timeline: Array<EditorEntry>
   notation: Notation
   songTitle: string
   isOnlyVersion: boolean
-  workspace: Workspace | null
 }) {
   const { mutations, save } = useEditor()
   const [name, setName] = useState(version.name)
@@ -385,7 +382,6 @@ export function DetailsPanel({
         songTitle={songTitle}
         isOnlyVersion={isOnlyVersion}
         redirectToSong
-        workspace={workspace}
       />
     </div>
   )

@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router'
 import type { LinkProps } from '@tanstack/react-router'
 import { cn } from 'cn'
 import type * as React from 'react'
-import { built } from '@/lib/built'
+import type { PlaceHref } from '@/lib/space'
 
 export function CollectionCard({
   leading,
@@ -20,8 +20,8 @@ export function CollectionCard({
   children?: React.ReactNode
   footer?: React.ReactNode
   actions?: React.ReactNode
-  href: string
-} & Omit<LinkProps, 'href' | 'to' | 'children'>) {
+  href: PlaceHref
+} & Omit<LinkProps, 'href' | 'to' | 'params' | 'search' | 'children'>) {
   return (
     <li className="group relative flex flex-col gap-4 rounded-2xl border bg-card p-5 transition-colors hover:border-foreground/15">
       {leading ? (
@@ -34,7 +34,7 @@ export function CollectionCard({
         <div className="min-w-0">
           <Link
             {...link}
-            {...built(href)}
+            {...href}
             className="block truncate text-lg font-semibold outline-none after:absolute after:inset-0 after:rounded-2xl focus-visible:after:ring-2 focus-visible:after:ring-ring"
           >
             {title}

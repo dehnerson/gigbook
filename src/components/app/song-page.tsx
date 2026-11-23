@@ -4,8 +4,8 @@ import { useMutation } from 'convex/react'
 import { EllipsisIcon, FileMusicIcon, PlayIcon, PlusIcon } from 'lucide-react'
 import { Suspense, useState } from 'react'
 import { toast } from 'sonner'
-import { api } from '../../convex/_generated/api'
-import type { Doc, Id } from '../../convex/_generated/dataModel'
+import { api } from '../../../convex/_generated/api'
+import type { Doc, Id } from '../../../convex/_generated/dataModel'
 import { Chip } from '@/components/app/chip'
 import { CollectionCard } from '@/components/app/collection-card'
 import { ContextMark } from '@/components/app/context-mark'
@@ -29,9 +29,9 @@ import { useNotation } from '@/lib/use-notation'
 import { VersionMenu } from '@/components/version/version-menu'
 import { messageFor } from '@/lib/errors'
 import { useSuspenseQuery } from '@tanstack/react-query'
-import { built } from '@/lib/built'
-import { PERSONAL, path, workspace as workspaceOfKey } from '@/lib/space'
-import type { Dest, Workspace } from '@/lib/space'
+import { href, PERSONAL, workspace as workspaceOfKey } from '@/lib/space'
+import type { PlaceHref, Workspace } from '@/lib/space'
+import { useWorkspace } from '@/lib/workspace'
 import { displayChord } from '@/lib/music/chords'
 import { TUNING_PRESETS } from '@/lib/music/diagrams'
 import type { Notation } from '@/lib/music/pitch'
@@ -45,14 +45,9 @@ function tuningLabel(tuning: Array<string>) {
   return tuning.map((note) => note.replace(/\d+$/, '')).join(' ')
 }
 
-export function SongPage({
-  songId,
-  workspace,
-}: {
-  songId: Id<'songs'>
-  workspace: Workspace | null
-}) {
-  const href = (dest: Dest) => path(workspace, dest)
+export function SongPage({ songId }: { songId: Id<'songs'> }) {
+  const { current, inWorkspace } = useWorkspace()
+  const at = inWorkspace ? current.key : null
   return (
     <Suspense
       fallback={
@@ -61,11 +56,12 @@ export function SongPage({
             breadcrumbs={[
               <Crumb
                 key="back"
-                {...built(
-                  href(workspace ? { page: 'songs' } : { page: 'library' }),
+                {...href(
+                  at,
+                  inWorkspace ? { page: 'songs' } : { page: 'library' },
                 )}
               >
-                {workspace ? m.songs() : m.allSongs()}
+                {inWorkspace ? m.songs() : m.allSongs()}
               </Crumb>,
             ]}
             title={<Skeleton className="h-9 w-64" />}
@@ -74,24 +70,19 @@ export function SongPage({
         </div>
       }
     >
-      <SongView songId={songId} workspace={workspace} />
+      <SongView songId={songId} />
     </Suspense>
   )
 }
 
-function SongView({
-  songId,
-  workspace,
-}: {
-  songId: Id<'songs'>
-  workspace: Workspace | null
-}) {
-  const href = (dest: Dest) => path(workspace, dest)
-  const scoped = workspace !== null
+function SongView({ songId }: { songId: Id<'songs'> }) {
+  const { current, inWorkspace } = useWorkspace()
+  const at = inWorkspace ? current.key : null
+  const scoped = inWorkspace
   const { data } = useSuspenseQuery(
     convexQuery(api.songs.get, {
       songId,
-      ...(workspace ? { bandId: workspace.bandId } : {}),
+      ...(inWorkspace ? { bandId: current.bandId } : {}),
     }),
   )
   const { song, versions, versionCount, canRename, canAdd, band } = data
@@ -103,7 +94,7 @@ function SongView({
   const [choice, setChoice] = useState(PERSONAL)
   const allowAdd = scoped ? canAdd : true
   const homeName = scoped
-    ? (workspace.label ?? band?.name ?? m.personal())
+    ? (current.label ?? band?.name ?? m.personal())
     : undefined
 
   const navigate = useNavigate()
@@ -115,13 +106,13 @@ function SongView({
       ...(into.bandId ? { bandId: into.bandId } : {}),
     })
       .then((added) =>
-        navigate({
-          href: path(into, {
+        navigate(
+          href(into.key, {
             page: 'version',
             versionId: added.versionId,
             leaf: 'edit',
           }),
-        }),
+        ),
       )
       .catch((error: unknown) => toast.error(messageFor(error)))
       .finally(() => setAddingVersion(false))
@@ -135,7 +126,7 @@ function SongView({
     <div>
       <PageHeader
         breadcrumbs={songCrumbs({
-          workspace,
+          at,
           songId,
           title: song.title,
           linked: false,
@@ -165,7 +156,7 @@ function SongView({
               variant="outline"
               isDisabled={addingVersion}
               onPress={() => {
-                if (scoped) fileVersion(workspace)
+                if (scoped) fileVersion(current)
                 else setPickingHome(true)
               }}
             >
@@ -179,7 +170,7 @@ function SongView({
           {m.versions()}
           {scoped ? (
             <span className="inline-flex items-center gap-1.5 font-medium tracking-normal text-foreground normal-case">
-              <ContextMark bandId={workspace.bandId} name={homeName} />
+              <ContextMark bandId={current.bandId} name={homeName} />
               {homeName}
             </span>
           ) : null}
@@ -195,11 +186,10 @@ function SongView({
               version={version}
               songTitle={song.title}
               isOnlyVersion={versionCount === 1}
-              workspace={workspace}
               notation={notation}
               showHome={!scoped}
-              href={href({ page: 'version', versionId: version._id })}
-              playHref={href({
+              href={href(at, { page: 'version', versionId: version._id })}
+              playHref={href(at, {
                 page: 'version',
                 versionId: version._id,
                 leaf: 'play',
@@ -237,10 +227,9 @@ function VersionCard({
   version,
   songTitle,
   isOnlyVersion,
-  workspace,
   notation,
   showHome,
-  href,
+  href: versionHref,
   playHref,
 }: {
   version: Omit<
@@ -254,18 +243,17 @@ function VersionCard({
   }
   songTitle: string
   isOnlyVersion: boolean
-  workspace: Workspace | null
   notation: Notation
   showHome: boolean
-  href: string
-  playHref: string
+  href: PlaceHref
+  playHref: PlaceHref
 }) {
   const tuning = tuningLabel(version.tuning)
   const sections = version.timeline.length
 
   return (
     <CollectionCard
-      href={href}
+      href={versionHref}
       title={version.name}
       trailing={showHome ? <ContextMark {...version} /> : null}
       footer={
@@ -289,7 +277,7 @@ function VersionCard({
       }
       actions={
         <>
-          <ButtonLink {...built(playHref)}>
+          <ButtonLink {...playHref}>
             <PlayIcon className="fill-current" />
             {m.play()}
           </ButtonLink>
@@ -297,7 +285,6 @@ function VersionCard({
             version={version}
             songTitle={songTitle}
             isOnlyVersion={isOnlyVersion}
-            workspace={workspace}
             includeEdit
             trigger={
               <Button

@@ -1,37 +1,79 @@
 import { describe, expect, test } from 'vite-plus/test'
-import { path, switchPath, workspace } from './space'
+import { href, switchHref } from './space'
 
-describe('path', () => {
+describe('href', () => {
   test('keeps the library on the song and the version', () => {
-    expect(path(null, { page: 'songs' })).toBe('/')
-    expect(path(null, { page: 'song', songId: 's1' })).toBe('/songs/s1')
-    expect(path(null, { page: 'version', versionId: 'v1', leaf: 'play' })).toBe(
-      '/versions/v1/play',
-    )
+    expect(href(null, { page: 'songs' })).toEqual({ to: '/' })
+    expect(href(null, { page: 'song', songId: 's1' })).toEqual({
+      to: '/songs/$songId',
+      params: { songId: 's1' },
+    })
+    expect(
+      href(null, { page: 'version', versionId: 'v1', leaf: 'play' }),
+    ).toEqual({
+      to: '/versions/$versionId/play',
+      params: { versionId: 'v1' },
+    })
   })
 
   test('keeps the workspace through play', () => {
-    const acme = workspace('acme')
-    expect(path(acme, { page: 'song', songId: 's1' })).toBe('/acme/songs/s1')
+    expect(href('acme', { page: 'song', songId: 's1' })).toEqual({
+      to: '/$workspace/songs/$songId',
+      params: { workspace: 'acme', songId: 's1' },
+    })
     expect(
-      path(acme, {
+      href('acme', {
         page: 'version',
         versionId: 'v1',
         leaf: 'play',
         search: { setlist: 'set', index: 2 },
       }),
-    ).toBe('/acme/versions/v1/play?setlist=set&index=2')
+    ).toEqual({
+      to: '/$workspace/versions/$versionId/play',
+      params: { workspace: 'acme', versionId: 'v1' },
+      search: { setlist: 'set', index: 2 },
+    })
   })
 })
 
-describe('switchPath', () => {
+describe('switchHref', () => {
   test('carries a song and drops a version', () => {
-    expect(switchPath('/songs/s1', 'acme')).toBe('/acme/songs/s1')
-    expect(switchPath('/versions/v1/edit', 'acme')).toBe('/acme/songs')
-    expect(switchPath('/old/songs/s1', 'new')).toBe('/new/songs/s1')
-    expect(switchPath('/old/setlists/list', 'new')).toBe('/new/setlists')
-    expect(switchPath('/old/members', 'personal')).toBe('/personal/songs')
-    expect(switchPath('/', 'acme')).toBe('/acme/songs')
-    expect(switchPath('/jam/CODE', 'acme')).toBe('/acme/jam')
+    expect(
+      switchHref('/_authed/songs/$songId', { songId: 's1' }, 'acme'),
+    ).toEqual(href('acme', { page: 'song', songId: 's1' }))
+    expect(
+      switchHref(
+        '/_authed/versions/$versionId/edit',
+        { versionId: 'v1' },
+        'acme',
+      ),
+    ).toEqual(href('acme', { page: 'songs' }))
+    expect(
+      switchHref(
+        '/_authed/$workspace/songs/$songId',
+        { workspace: 'old', songId: 's1' },
+        'new',
+      ),
+    ).toEqual(href('new', { page: 'song', songId: 's1' }))
+    expect(
+      switchHref(
+        '/_authed/$workspace/setlists/$setlistId',
+        { workspace: 'old', setlistId: 'list' },
+        'new',
+      ),
+    ).toEqual(href('new', { page: 'setlists' }))
+    expect(
+      switchHref(
+        '/_authed/$workspace/members',
+        { workspace: 'old' },
+        'personal',
+      ),
+    ).toEqual(href('personal', { page: 'songs' }))
+    expect(switchHref('/_authed/', {}, 'acme')).toEqual(
+      href('acme', { page: 'songs' }),
+    )
+    expect(switchHref('/_authed/jam/$code', { code: 'CODE' }, 'acme')).toEqual(
+      href('acme', { page: 'jam' }),
+    )
   })
 })

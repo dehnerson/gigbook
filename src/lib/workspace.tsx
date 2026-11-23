@@ -1,90 +1,117 @@
-import { useConvexAuth, useQuery } from 'convex/react'
+import { convexQuery } from '@convex-dev/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { useRouterState } from '@tanstack/react-router'
-import { createContext, useContext, useEffect, useState } from 'react'
+import { useMutation } from 'convex/react'
+import { createContext, useContext, useEffect, useMemo, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { api } from '../../convex/_generated/api'
-import { PERSONAL, placeFromPath, workspace } from '@/lib/space'
+import type { Id } from '../../convex/_generated/dataModel'
+import { PERSONAL, workspace } from '@/lib/space'
 import type { Workspace } from '@/lib/space'
 import { m } from '@/paraglide/messages'
 
-const RouteContext = createContext<Workspace | null>(null)
-
-export function RouteWorkspace({
-  workspace: value,
-  children,
-}: {
-  workspace: Workspace
-  children: ReactNode
-}) {
-  return <RouteContext value={value}>{children}</RouteContext>
-}
-
-/** The workspace in the URL. Throws outside a `/$workspace` route. */
-export function useRouteWorkspace() {
-  const value = useContext(RouteContext)
-  if (!value)
-    throw new Error('useRouteWorkspace must be used inside a workspace route')
-  return value
-}
-
-/** The workspace named by the current URL, or null on a library URL. */
-export function usePlace() {
-  const pathname = useRouterState({
-    select: (state) => state.location.pathname,
-  })
-  return placeFromPath(pathname)
-}
-
-/** The workspace remembered for navigation when the URL does not name one. */
 const LAST_HOME = 'gigbook.home'
-const listeners = new Set<() => void>()
 
-export function rememberHome(key: string) {
-  localStorage.setItem(LAST_HOME, key)
-  for (const listener of listeners) listener()
+type WorkspaceValue = {
+  /** Route workspace, or the remembered home when the URL has none. */
+  current: Workspace
+  /** The key came from the `$workspace` match, so links stay in that workspace. */
+  inWorkspace: boolean
+  /** Personal, then every band the user belongs to. */
+  all: Array<Workspace>
+  /** False until the band list has loaded. Unknown workspace URLs wait for this. */
+  bandsReady: boolean
 }
 
-function readHome() {
-  if (typeof localStorage === 'undefined') return PERSONAL
-  return localStorage.getItem(LAST_HOME) || PERSONAL
-}
-
-function useRememberedHome() {
-  const [key, setKey] = useState(PERSONAL)
-  useEffect(() => {
-    const read = () => setKey(readHome())
-    read()
-    listeners.add(read)
-    return () => {
-      listeners.delete(read)
-    }
-  }, [])
-  return key
-}
+const WorkspaceContext = createContext<WorkspaceValue | null>(null)
 
 function personalWorkspace(): Workspace {
   return workspace(PERSONAL, { label: m.personal(), role: 'owner' })
 }
 
-const SessionContext = createContext<Workspace | null>(null)
+export function WorkspaceProvider({ children }: { children: ReactNode }) {
+  const routeKey = useRouterState({
+    select: (state) => {
+      for (const match of state.matches) {
+        if (match.routeId !== '/_authed/$workspace') continue
+        const key = match.params.workspace
+        return typeof key === 'string' ? key : undefined
+      }
+      return undefined
+    },
+  })
+  const { data: me } = useQuery(convexQuery(api.users.me, {}))
+  const { data: bands } = useQuery(convexQuery(api.bands.list, {}))
+  const setHome = useMutation(api.users.setHome)
+  const bandsReady = bands !== undefined
+  const migrated = useRef(false)
 
-export function WorkspaceState({ children }: { children: ReactNode }) {
-  const { isAuthenticated } = useConvexAuth()
-  const remembered = useRememberedHome()
-  const bands = useQuery(api.bands.list, isAuthenticated ? {} : 'skip')
-  const row = bands?.find((item) => item.band._id === remembered)
-  const value: Workspace = !isAuthenticated
-    ? personalWorkspace()
-    : row
-      ? workspace(row.band._id, {
+  useEffect(() => {
+    if (!me || migrated.current) return
+    if (routeKey && routeKey !== PERSONAL && !bandsReady) return
+    migrated.current = true
+    let stored: string | null = null
+    try {
+      stored = localStorage.getItem(LAST_HOME)
+      localStorage.removeItem(LAST_HOME)
+    } catch {
+      return
+    }
+    if (me.homeChosen || routeKey) return
+    if (!stored || stored === PERSONAL) {
+      if (stored === PERSONAL) void setHome({ bandId: null })
+      return
+    }
+    void setHome({ bandId: stored as Id<'bands'> }).catch(() => {
+      void setHome({ bandId: null })
+    })
+  }, [bandsReady, me, routeKey, setHome])
+
+  useEffect(() => {
+    if (!me || !routeKey) return
+    if (routeKey === PERSONAL) {
+      if (me.home.bandId !== null || !me.homeChosen)
+        void setHome({ bandId: null })
+      return
+    }
+    if (!bands) return
+    const row = bands.find((item) => item.band._id === routeKey)
+    if (!row || me.home.bandId === row.band._id) return
+    void setHome({ bandId: row.band._id })
+  }, [bands, me, routeKey, setHome])
+
+  const all = useMemo(
+    () => [
+      personalWorkspace(),
+      ...(bands ?? []).map((row) =>
+        workspace(row.band._id, {
           label: row.band.name,
           role: row.membership.role,
-        })
-      : personalWorkspace()
-  return <SessionContext value={value}>{children}</SessionContext>
+        }),
+      ),
+    ],
+    [bands],
+  )
+  const key = routeKey ?? me?.home.bandId ?? PERSONAL
+  const current =
+    key === PERSONAL
+      ? personalWorkspace()
+      : (all.find((item) => item.key === key) ?? workspace(key))
+  const value = useMemo<WorkspaceValue>(
+    () => ({
+      current,
+      inWorkspace: routeKey !== undefined,
+      all,
+      bandsReady,
+    }),
+    [all, bandsReady, current, routeKey],
+  )
+  return <WorkspaceContext value={value}>{children}</WorkspaceContext>
 }
 
-/** The remembered workspace. Shell and library filing use this when the URL has none. */
 export function useWorkspace() {
-  return useContext(SessionContext) ?? personalWorkspace()
+  const value = useContext(WorkspaceContext)
+  if (!value)
+    throw new Error('useWorkspace must be used inside WorkspaceProvider')
+  return value
 }

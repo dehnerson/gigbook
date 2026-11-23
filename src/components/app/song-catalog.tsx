@@ -1,9 +1,9 @@
-import { convexQuery } from '@convex-dev/react-query'
+import type { convexQuery } from '@convex-dev/react-query'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { FileInputIcon, LibraryIcon, PlusIcon } from 'lucide-react'
 import { Suspense, useState } from 'react'
 import type { ReactNode } from 'react'
-import { api } from '../../../convex/_generated/api'
+import type { api } from '../../../convex/_generated/api'
 import { ContextMark } from '@/components/app/context-mark'
 import { EmptyState } from '@/components/app/empty-state'
 import { NewSongDialog } from '@/components/app/new-song-dialog'
@@ -16,11 +16,14 @@ import { NoMatches, SearchField } from '@/components/app/search-field'
 import { ListSkeleton } from '@/components/app/route-states'
 import { SongRow } from '@/components/app/song-row'
 import { matchesSearch } from '@/lib/search'
-import { built } from '@/lib/built'
-import { path, workspaceOf } from '@/lib/space'
-import type { Workspace } from '@/lib/space'
+import { useWorkspace } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
 import { ButtonGroup } from '@/components/ui/button-group'
+import { href } from '@/lib/space'
+import type { PlaceHref } from '@/lib/space'
+
+type CatalogQuery = ReturnType<typeof convexQuery<typeof api.songs.catalog>>
+type SongLink = (songId: string) => PlaceHref
 
 type CatalogVersion = {
   name: string
@@ -49,21 +52,19 @@ export function SongCatalog({
   marks = false,
   emptyTitle,
   emptyDescription,
-  workspace,
-  fileIn,
+  songQuery,
+  songLink,
 }: {
   title: string
   subtitle?: ReactNode
   marks?: boolean
   emptyTitle: string
   emptyDescription: string
-  /** Null lists every song. */
-  workspace: Workspace | null
-  /** Where a library import is filed. */
-  fileIn?: Workspace
+  songQuery: CatalogQuery
+  songLink: SongLink
 }) {
-  const filing = workspace ?? fileIn ?? workspaceOf(null)
-  const canCreate = workspace === null || workspace.role !== null
+  const { current, inWorkspace } = useWorkspace()
+  const canCreate = !inWorkspace || current.role !== null
   const [open, setOpen] = useState(false)
   const actions = (
     <ButtonGroup>
@@ -71,7 +72,7 @@ export function SongCatalog({
         <PlusIcon />
         {m.song()}
       </HeaderButton>
-      <HeaderButtonLink {...built(path(filing, { page: 'import' }))}>
+      <HeaderButtonLink {...href(current.key, { page: 'import' })}>
         <FileInputIcon />
       </HeaderButtonLink>
     </ButtonGroup>
@@ -80,20 +81,15 @@ export function SongCatalog({
   return (
     <div>
       <PageHeader title={title} subtitle={subtitle} actions={actions} />
-      <NewSongDialog
-        isOpen={open}
-        onOpenChange={setOpen}
-        fileIn={filing}
-        choose={workspace === null}
-      />
+      <NewSongDialog isOpen={open} onOpenChange={setOpen} />
       <Suspense fallback={<ListSkeleton />}>
         <CatalogRows
-          workspace={workspace}
           marks={marks}
-          songHref={(songId) => path(workspace, { page: 'song', songId })}
           emptyTitle={emptyTitle}
           emptyDescription={emptyDescription}
           actions={actions}
+          songQuery={songQuery}
+          songLink={songLink}
         />
       </Suspense>
     </div>
@@ -101,26 +97,22 @@ export function SongCatalog({
 }
 
 function CatalogRows({
-  workspace,
   marks,
-  songHref,
   emptyTitle,
   emptyDescription,
   actions,
+  songQuery,
+  songLink,
 }: {
-  workspace: Workspace | null
   marks: boolean
-  songHref: (songId: string) => string
   emptyTitle: string
   emptyDescription: string
   actions: ReactNode
+  songQuery: CatalogQuery
+  songLink: SongLink
 }) {
-  const { data: rows } = useSuspenseQuery(
-    convexQuery(
-      api.songs.catalog,
-      workspace ? { bandId: workspace.bandId } : {},
-    ),
-  )
+  const { data: rows } = useSuspenseQuery(songQuery)
+
   const [query, setQuery] = useState('')
   const visible = rows.filter((row) =>
     matchesSearch(query, [
@@ -151,7 +143,7 @@ function CatalogRows({
               song={row.song}
               performers={performersOf(row.versions)}
               versionCount={row.versions.length}
-              href={songHref(row.song._id)}
+              songLink={songLink(row.song._id)}
               trailing={
                 marks ? (
                   <span className="flex items-center gap-1">

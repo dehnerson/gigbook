@@ -1,8 +1,5 @@
-import { convexQuery } from '@convex-dev/react-query'
-import { useQuery } from '@tanstack/react-query'
-import { api } from '../../../convex/_generated/api'
 import { Select } from '@/components/ui/select'
-import { PERSONAL } from '@/lib/space'
+import { useWorkspace } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
 
 export function HomeSelect({
@@ -14,20 +11,12 @@ export function HomeSelect({
   onChange: (value: string) => void
   writable?: boolean
 }) {
-  const { data: bands } = useQuery(convexQuery(api.bands.list, {}))
-  const options = [
-    { id: PERSONAL, label: m.personal() },
-    ...(bands ?? []).flatMap((row) =>
-      writable && row.membership.role === 'viewer'
-        ? []
-        : [
-            {
-              id: row.band._id,
-              label: row.band.name,
-            },
-          ],
-    ),
-  ]
+  const { all } = useWorkspace()
+  const options = all.flatMap((item) =>
+    item.bandId && writable && item.role === 'viewer'
+      ? []
+      : [{ id: item.key, label: item.label ?? m.personal() }],
+  )
   return (
     <Select
       label={m.chooseHome()}

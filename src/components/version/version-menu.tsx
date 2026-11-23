@@ -1,5 +1,3 @@
-import { convexQuery } from '@convex-dev/react-query'
-import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import {
   CopyIcon,
@@ -13,7 +11,6 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
 import { ContextMark } from '@/components/app/context-mark'
 import { DeleteVersionDialog } from '@/components/app/delete-version-dialog'
@@ -35,8 +32,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useVersionActions } from '@/components/version/version-actions'
-import { path } from '@/lib/space'
-import type { Dest, Workspace } from '@/lib/space'
+import { href } from '@/lib/space'
+import { useWorkspace } from '@/lib/workspace'
 import { cn } from 'cn'
 import { m } from '@/paraglide/messages'
 
@@ -60,7 +57,6 @@ export function VersionMenu({
   isOnlyVersion,
   includeEdit = false,
   redirectToSong = false,
-  workspace,
   trigger,
 }: {
   version: VersionTarget
@@ -68,20 +64,19 @@ export function VersionMenu({
   isOnlyVersion: boolean
   includeEdit?: boolean
   redirectToSong?: boolean
-  workspace: Workspace | null
   trigger: ReactNode
 }) {
-  const { data: bands } = useQuery(convexQuery(api.bands.list, {}))
+  const { current, inWorkspace, all } = useWorkspace()
+  const at = inWorkspace ? current.key : null
   const actions = useVersionActions()
   const navigate = useNavigate()
-  const go = (dest: Dest) => navigate({ href: path(workspace, dest) })
+  const go = (dest: Parameters<typeof href>[1]) => navigate(href(at, dest))
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [linkAction, setLinkAction] = useState<'rotate' | 'revoke' | null>(null)
   const [place, setPlace] = useState<'copy' | 'move' | null>(null)
   const [choice, setChoice] = useState<string | null>(null)
-  const rows = bands ?? []
-  const copyHomes = homes(version, rows, 'copy')
-  const moveHomes = homes(version, rows, 'move')
+  const copyHomes = homes(version, all, 'copy')
+  const moveHomes = homes(version, all, 'move')
   const options = place === 'copy' ? copyHomes : moveHomes
   const selected = options.some((home) => home.id === choice)
     ? choice
@@ -302,7 +297,6 @@ export function VersionMenu({
         songTitle={songTitle}
         isOnlyVersion={isOnlyVersion}
         redirectToSong={redirectToSong}
-        workspace={workspace}
       />
     </>
   )
@@ -310,15 +304,19 @@ export function VersionMenu({
 
 function homes(
   version: VersionTarget,
-  bands: Array<{
-    band: { _id: Id<'bands'>; name: string }
-    membership: { role: string }
+  workspaces: Array<{
+    key: string
+    bandId: Id<'bands'> | null
+    label: string | null
+    role: string | null
   }>,
   mode: 'copy' | 'move',
 ): Array<Home> {
-  const others = bands.filter(
-    (row) =>
-      row.membership.role !== 'viewer' && row.band._id !== version.ownerBandId,
+  const others = workspaces.filter(
+    (item) =>
+      item.bandId &&
+      item.role !== 'viewer' &&
+      item.bandId !== version.ownerBandId,
   )
   const library =
     mode === 'copy'
@@ -327,10 +325,16 @@ function homes(
   const bandHomes = version.canEdit ? others : []
   return [
     ...(library ? [{ id: 'library', label: m.myLibrary() }] : []),
-    ...bandHomes.map((row) => ({
-      id: row.band._id,
-      bandId: row.band._id,
-      label: row.band.name,
-    })),
+    ...bandHomes.flatMap((item) =>
+      item.bandId
+        ? [
+            {
+              id: item.bandId,
+              bandId: item.bandId,
+              label: item.label ?? '',
+            },
+          ]
+        : [],
+    ),
   ]
 }

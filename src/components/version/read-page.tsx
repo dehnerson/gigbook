@@ -8,8 +8,8 @@ import {
   SaveIcon,
   TriangleAlertIcon,
 } from 'lucide-react'
-import { api } from '../../convex/_generated/api'
-import type { Id } from '../../convex/_generated/dataModel'
+import { api } from '../../../convex/_generated/api'
+import type { Id } from '../../../convex/_generated/dataModel'
 import { ContextMark } from '@/components/app/context-mark'
 import { WorkspaceNotice } from '@/components/app/workspace-notice'
 import {
@@ -21,7 +21,6 @@ import {
 } from '@/components/app/page-header'
 import { SheetSkeleton } from '@/components/app/route-states'
 import { songCrumbs } from '@/components/app/song-crumbs'
-import { built } from '@/lib/built'
 import {
   ControlBar,
   KeyControls,
@@ -47,34 +46,29 @@ import { usePersonalCapo } from '@/lib/use-capo'
 import { useNotation } from '@/lib/use-notation'
 import { useVersionActions } from '@/components/version/version-actions'
 import { VersionMenu } from '@/components/version/version-menu'
-import { path, workspaceOf } from '@/lib/space'
-import type { Dest, Workspace } from '@/lib/space'
+import { href, PERSONAL } from '@/lib/space'
+import { useWorkspace } from '@/lib/workspace'
 import { previewTabShift } from '@/lib/music/tab'
 import { m } from '@/paraglide/messages'
 
-export function ReadPage({
-  versionId,
-  workspace,
-}: {
-  versionId: Id<'versions'>
-  workspace: Workspace | null
-}) {
+export function ReadPage({ versionId }: { versionId: Id<'versions'> }) {
   return (
-    <Suspense fallback={<SheetFrame workspace={workspace} />}>
-      <ReadView versionId={versionId} workspace={workspace} />
+    <Suspense fallback={<SheetFrame />}>
+      <ReadView versionId={versionId} />
     </Suspense>
   )
 }
 
-function SheetFrame({ workspace }: { workspace: Workspace | null }) {
-  const href = (dest: Dest) => path(workspace, dest)
+function SheetFrame() {
+  const { current, inWorkspace } = useWorkspace()
+  const at = inWorkspace ? current.key : null
   return (
     <div className="space-y-6">
       <Breadcrumbs>
         <Crumb
-          {...built(href(workspace ? { page: 'songs' } : { page: 'library' }))}
+          {...href(at, inWorkspace ? { page: 'songs' } : { page: 'library' })}
         >
-          {workspace ? m.songs() : m.allSongs()}
+          {inWorkspace ? m.songs() : m.allSongs()}
         </Crumb>
       </Breadcrumbs>
       <SheetSkeleton />
@@ -82,14 +76,9 @@ function SheetFrame({ workspace }: { workspace: Workspace | null }) {
   )
 }
 
-function ReadView({
-  versionId,
-  workspace,
-}: {
-  versionId: Id<'versions'>
-  workspace: Workspace | null
-}) {
-  const href = (dest: Dest) => path(workspace, dest)
+function ReadView({ versionId }: { versionId: Id<'versions'> }) {
+  const { current, inWorkspace } = useWorkspace()
+  const at = inWorkspace ? current.key : null
   const bundle = useSuspenseQuery(
     convexQuery(api.versions.getBundle, { versionId }),
   )
@@ -139,7 +128,7 @@ function ReadView({
       <div className="space-y-3">
         <Breadcrumbs>
           {songCrumbs({
-            workspace,
+            at,
             songId: song._id,
             title: song.title,
           })}
@@ -155,7 +144,7 @@ function ReadView({
           />
           <HeaderActions>
             <HeaderButtonLink
-              {...built(href({ page: 'version', versionId, leaf: 'play' }))}
+              {...href(at, { page: 'version', versionId, leaf: 'play' })}
             >
               <PlayIcon className="fill-current" />
               {m.play()}
@@ -163,7 +152,7 @@ function ReadView({
             {canEdit ? (
               <HeaderButtonLink
                 variant="outline"
-                {...built(href({ page: 'version', versionId, leaf: 'edit' }))}
+                {...href(at, { page: 'version', versionId, leaf: 'edit' })}
               >
                 <PencilIcon />
                 <span className="hidden sm:inline">{m.edit()}</span>
@@ -173,7 +162,6 @@ function ReadView({
               version={{ ...version, canEdit, ownerBandId, shared }}
               songTitle={song.title}
               isOnlyVersion={versionCount <= 1}
-              workspace={workspace}
               redirectToSong
               trigger={
                 <HeaderButton
@@ -188,10 +176,9 @@ function ReadView({
           </HeaderActions>
         </div>
         <WorkspaceNotice
-          workspace={workspace}
           homeBandId={ownerBandId}
           homeName={ownerName}
-          href={path(workspaceOf(ownerBandId), {
+          href={href(ownerBandId ?? PERSONAL, {
             page: 'version',
             versionId,
           })}

@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { CompassIcon, TriangleAlertIcon } from 'lucide-react'
+import { CompassIcon, GuitarIcon, TriangleAlertIcon } from 'lucide-react'
 import { messageFor } from '@/lib/errors'
 import { m } from '@/paraglide/messages'
 import { buttonVariants } from '@/components/ui/button'
@@ -56,13 +56,16 @@ export function RouteNotFound() {
 
 export function RoutePending() {
   return (
-    <div className="space-y-6" aria-busy>
-      <div className="space-y-3">
-        <Skeleton className="h-4 w-32" />
-        <Skeleton className="h-9 w-72" />
-        <Skeleton className="h-4 w-48" />
-      </div>
-      <ListSkeleton />
+    <div
+      className="grid min-h-dvh place-items-center"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <span className="grid size-16 animate-logo-pulse place-items-center rounded-2xl bg-primary text-primary-foreground shadow-[0_0_40px_-6px_var(--primary)] motion-reduce:animate-none">
+        <GuitarIcon className="size-8" />
+      </span>
+      <span className="sr-only">{m.appName()}</span>
     </div>
   )
 }

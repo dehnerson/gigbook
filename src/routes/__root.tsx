@@ -12,7 +12,6 @@ import type { ConvexReactClient } from 'convex/react'
 import { ThemeProvider } from 'next-themes'
 import { Toaster } from '@/components/ui/sonner'
 import { RouteError, RouteNotFound } from '@/components/app/route-states'
-import { WorkspaceState } from '@/lib/workspace'
 import { getLocale } from '@/paraglide/runtime'
 import { m } from '@/paraglide/messages'
 import appCss from '../styles.css?url'
@@ -52,7 +51,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 
 function RootComponent() {
   return (
-    <WorkspaceState>
+    <>
       <Outlet />
       <Toaster />
       <TanStackDevtools
@@ -61,7 +60,7 @@ function RootComponent() {
           { name: 'Tanstack Router', render: <TanStackRouterDevtoolsPanel /> },
         ]}
       />
-    </WorkspaceState>
+    </>
   )
 }
 

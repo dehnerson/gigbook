@@ -16,26 +16,23 @@ import {
 import { Input } from '@/components/ui/input'
 import { messageFor } from '@/lib/errors'
 import { HomeSelect } from '@/components/app/home-select'
-import { path, workspace } from '@/lib/space'
-import type { Workspace } from '@/lib/space'
+import { href, PERSONAL, workspace } from '@/lib/space'
+import { useWorkspace } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
 
 export function NewSongDialog({
   isOpen,
   onOpenChange,
-  fileIn,
-  choose = false,
 }: {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
-  fileIn: Workspace
-  choose?: boolean
 }) {
+  const { current, inWorkspace } = useWorkspace()
   const create = useMutation(api.songs.create)
   const addVersion = useMutation(api.songs.addVersion)
   const navigate = useNavigate()
-  const [choice, setChoice] = useState(fileIn.key)
-  const target = choose ? workspace(choice) : fileIn
+  const [choice, setChoice] = useState(current.key)
+  const target = inWorkspace ? current : workspace(choice || PERSONAL)
   const fileBandId = target.bandId ?? undefined
   const [title, setTitle] = useState('')
   const [subTitle, setSubTitle] = useState('')
@@ -81,13 +78,13 @@ export function NewSongDialog({
   const finish = (versionId: Id<'versions'>) => {
     onOpenChange(false)
     reset()
-    return navigate({
-      href: path(target, {
+    return navigate(
+      href(target.key, {
         page: 'version',
         versionId,
         leaf: 'edit',
       }),
-    })
+    )
   }
 
   const run = (action: () => Promise<unknown>) => {
@@ -132,7 +129,7 @@ export function NewSongDialog({
           })
         }}
       >
-        {choose ? (
+        {!inWorkspace ? (
           <HomeSelect value={choice} onChange={setChoice} writable />
         ) : null}
         <Field label={m.title()}>
@@ -191,12 +188,12 @@ export function NewSongDialog({
                       onPress={() => {
                         onOpenChange(false)
                         reset()
-                        void navigate({
-                          href: path(target, {
+                        void navigate(
+                          href(target.key, {
                             page: 'song',
                             songId: song._id,
                           }),
-                        })
+                        )
                       }}
                     >
                       {m.open()}

@@ -1,7 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import type { Id } from '../../../../../../convex/_generated/dataModel'
-import { ReadPage } from '@/screens/version'
-import { useRouteWorkspace } from '@/lib/workspace'
+import { ReadPage } from '@/components/version/read-page'
 
 export const Route = createFileRoute(
   '/_authed/$workspace/versions/$versionId/',
@@ -11,10 +10,5 @@ export const Route = createFileRoute(
 
 function WorkspaceReadRoute() {
   const { versionId } = Route.useParams()
-  return (
-    <ReadPage
-      versionId={versionId as Id<'versions'>}
-      workspace={useRouteWorkspace()}
-    />
-  )
+  return <ReadPage versionId={versionId as Id<'versions'>} />
 }

@@ -1,7 +1,9 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { convexQuery } from '@convex-dev/react-query'
+import { createFileRoute, linkOptions } from '@tanstack/react-router'
+import { api } from '../../../../../convex/_generated/api'
 import { HomeCaption } from '@/components/app/context-mark'
 import { SongCatalog } from '@/components/app/song-catalog'
-import { useRouteWorkspace } from '@/lib/workspace'
+import { useWorkspace } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/$workspace/songs/')({
@@ -9,14 +11,26 @@ export const Route = createFileRoute('/_authed/$workspace/songs/')({
 })
 
 function WorkspaceSongsPage() {
-  const workspace = useRouteWorkspace()
+  const { current } = useWorkspace()
+
+  const songQuery = convexQuery(api.songs.catalog, {
+    bandId: current.bandId,
+  })
+
   return (
     <SongCatalog
       title={m.songs()}
-      subtitle={<HomeCaption workspace={workspace} />}
-      workspace={workspace}
-      emptyTitle={m.noSongsHere({ name: workspace.label ?? '' })}
+      subtitle={<HomeCaption />}
+      emptyTitle={m.noSongsHere({ name: current.label ?? '' })}
       emptyDescription={m.noSongsHint()}
+      songQuery={songQuery}
+      songLink={(songId) =>
+        linkOptions({
+          from: Route.fullPath,
+          to: './$songId',
+          params: { songId },
+        })
+      }
     />
   )
 }

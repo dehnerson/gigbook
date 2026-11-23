@@ -101,6 +101,8 @@ export default defineSchema({
     locale: v.optional(v.union(v.literal('en'), v.literal('de'))),
     notation: v.optional(v.union(v.literal('en'), v.literal('de'))),
     aiModel: v.optional(v.string()),
+    /** Null is personal. Absent means the user has not chosen a home yet. */
+    homeBandId: v.optional(v.union(v.null(), v.id('bands'))),
   }),
 
   userAiCredentials: defineTable({

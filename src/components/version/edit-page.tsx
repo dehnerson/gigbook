@@ -2,41 +2,30 @@ import { convexQuery } from '@convex-dev/react-query'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { Suspense } from 'react'
 import { LockIcon } from 'lucide-react'
-import { api } from '../../convex/_generated/api'
-import type { Id } from '../../convex/_generated/dataModel'
+import { api } from '../../../convex/_generated/api'
+import type { Id } from '../../../convex/_generated/dataModel'
 import { ContextMark } from '@/components/app/context-mark'
 import { EmptyState } from '@/components/app/empty-state'
 import { SheetSkeleton } from '@/components/app/route-states'
 import type { EditorEntry } from '@/components/editor/types'
 import { ButtonLink } from '@/components/ui/button'
 import { VersionEditor } from '@/components/version/version-editor'
-import { built } from '@/lib/built'
-import { path } from '@/lib/space'
-import type { Workspace } from '@/lib/space'
+import { href } from '@/lib/space'
+import { useWorkspace } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
 
-export function EditPage({
-  versionId,
-  workspace,
-}: {
-  versionId: Id<'versions'>
-  workspace: Workspace | null
-}) {
+export function EditPage({ versionId }: { versionId: Id<'versions'> }) {
   return (
     <Suspense fallback={<SheetSkeleton />}>
-      <EditView versionId={versionId} workspace={workspace} />
+      <EditView versionId={versionId} />
     </Suspense>
   )
 }
 
-function EditView({
-  versionId,
-  workspace,
-}: {
-  versionId: Id<'versions'>
-  workspace: Workspace | null
-}) {
-  const readHref = path(workspace, { page: 'version', versionId })
+function EditView({ versionId }: { versionId: Id<'versions'> }) {
+  const { current, inWorkspace } = useWorkspace()
+  const at = inWorkspace ? current.key : null
+  const readHref = href(at, { page: 'version', versionId })
   const bundle = useSuspenseQuery(
     convexQuery(api.versions.getBundle, { versionId }),
   )
@@ -46,7 +35,7 @@ function EditView({
         icon={LockIcon}
         title={m.errorForbidden()}
         description={m.readOnlyHint()}
-        action={<ButtonLink {...built(readHref)}>{m.read()}</ButtonLink>}
+        action={<ButtonLink {...readHref}>{m.read()}</ButtonLink>}
       />
     )
   }
@@ -57,7 +46,6 @@ function EditView({
       timeline={bundle.data.timeline as Array<EditorEntry>}
       shapes={bundle.data.shapes}
       versionCount={bundle.data.versionCount}
-      workspace={workspace}
       mark={
         <ContextMark
           bandId={bundle.data.ownerBandId}

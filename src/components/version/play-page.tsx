@@ -9,8 +9,8 @@ import {
   TriangleAlertIcon,
 } from 'lucide-react'
 import { Suspense, useState } from 'react'
-import { api } from '../../convex/_generated/api'
-import type { Id } from '../../convex/_generated/dataModel'
+import { api } from '../../../convex/_generated/api'
+import type { Id } from '../../../convex/_generated/dataModel'
 import {
   AutoscrollControl,
   DockDivider,
@@ -47,9 +47,8 @@ import { usePersonalCapo } from '@/lib/use-capo'
 import { useNotation } from '@/lib/use-notation'
 import { useVersionActions } from '@/components/version/version-actions'
 import { useWakeLock } from '@/lib/use-wake-lock'
-import { built } from '@/lib/built'
-import { path, workspaceOf } from '@/lib/space'
-import type { Dest, Workspace } from '@/lib/space'
+import { href, PERSONAL } from '@/lib/space'
+import { useWorkspace } from '@/lib/workspace'
 import type { PlaySearch } from '@/lib/play-search'
 import { previewTabShift } from '@/lib/music/tab'
 import { m } from '@/paraglide/messages'
@@ -57,11 +56,9 @@ import { m } from '@/paraglide/messages'
 export function PlayPage({
   versionId,
   search,
-  workspace,
 }: {
   versionId: Id<'versions'>
   search: PlaySearch
-  workspace: Workspace | null
 }) {
   return (
     <Suspense
@@ -71,7 +68,7 @@ export function PlayPage({
         </div>
       }
     >
-      <PlayView versionId={versionId} search={search} workspace={workspace} />
+      <PlayView versionId={versionId} search={search} />
     </Suspense>
   )
 }
@@ -79,14 +76,13 @@ export function PlayPage({
 function PlayView({
   versionId,
   search,
-  workspace,
 }: {
   versionId: Id<'versions'>
   search: PlaySearch
-  workspace: Workspace | null
 }) {
   const navigate = useNavigate()
-  const href = (dest: Dest) => path(workspace, dest)
+  const { current, inWorkspace } = useWorkspace()
+  const at = inWorkspace ? current.key : null
   const bundle = useSuspenseQuery(
     convexQuery(api.versions.getBundle, { versionId }),
   )
@@ -121,14 +117,14 @@ function PlayView({
   const goTo = (index: number) => {
     const target = entries.at(index)
     if (!target?.version || !search.setlist) return
-    void navigate({
-      href: href({
+    void navigate(
+      href(at, {
         page: 'version',
         versionId: target.version._id,
         leaf: 'play',
         search: { setlist: search.setlist, index },
       }),
-    })
+    )
     window.scrollTo({ top: 0 })
   }
 
@@ -155,13 +151,11 @@ function PlayView({
               variant="ghost"
               size="icon"
               aria-label={m.back()}
-              {...built(
-                path(
-                  setlist.data
-                    ? workspaceOf(setlist.data.setlist.bandId)
-                    : workspace,
-                  { page: 'setlist', setlistId: search.setlist },
-                ),
+              {...href(
+                setlist.data
+                  ? (setlist.data.setlist.bandId ?? PERSONAL)
+                  : (at ?? PERSONAL),
+                { page: 'setlist', setlistId: search.setlist },
               )}
             >
               <ArrowLeftIcon />
@@ -171,7 +165,7 @@ function PlayView({
               variant="ghost"
               size="icon"
               aria-label={m.back()}
-              {...built(href({ page: 'version', versionId }))}
+              {...href(at, { page: 'version', versionId })}
             >
               <ArrowLeftIcon />
             </ButtonLink>

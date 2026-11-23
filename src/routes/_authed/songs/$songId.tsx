@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import type { Id } from '../../../../convex/_generated/dataModel'
-import { SongPage } from '@/screens/song'
+import { SongPage } from '@/components/app/song-page'
 
 export const Route = createFileRoute('/_authed/songs/$songId')({
   component: LibrarySongRoute,
@@ -8,5 +8,5 @@ export const Route = createFileRoute('/_authed/songs/$songId')({
 
 function LibrarySongRoute() {
   const { songId } = Route.useParams()
-  return <SongPage songId={songId as Id<'songs'>} workspace={null} />
+  return <SongPage songId={songId as Id<'songs'>} />
 }

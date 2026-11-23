@@ -16,9 +16,9 @@
     "prepare": "vp config"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^4.0.106",
-    "@ai-sdk/google": "^4.0.122",
-    "@ai-sdk/openai": "^4.0.121",
+    "@ai-sdk/anthropic": "^4.0.107",
+    "@ai-sdk/google": "^4.0.124",
+    "@ai-sdk/openai": "^4.0.122",
     "@coderline/alphatab": "^1.9.0",
     "@convex-dev/auth": "^2.1.0",
     "@convex-dev/react-query": "^0.1.0",
@@ -26,17 +26,17 @@
     "@fontsource-variable/geist": "^5.3.0",
     "@fontsource-variable/geist-mono": "^5.3.0",
     "@tailwindcss/vite": "^4.3.5",
-    "@tanstack/react-devtools": "0.10.14",
+    "@tanstack/react-devtools": "0.10.15",
     "@tanstack/react-form": "^1.33.5",
-    "@tanstack/react-query": "^5.108.1",
+    "@tanstack/react-query": "^5.108.3",
     "@tanstack/react-router": "1.170.46",
-    "@tanstack/react-router-devtools": "1.167.3",
-    "@tanstack/react-start": "1.169.5",
-    "ai": "^7.0.177",
+    "@tanstack/react-router-devtools": "1.167.4",
+    "@tanstack/react-start": "1.169.7",
+    "ai": "^7.0.179",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.2",
     "convex": "^1.51.0",
-    "lucide-react": "^1.77.0",
+    "lucide-react": "^1.78.0",
     "next-themes": "^0.4.6",
     "react": "^19.3.1",
     "react-aria-components": "^1.22.1",
@@ -51,17 +51,17 @@
     "@coderline/alphatab-vite": "^1.9.0",
     "@inlang/paraglide-js": "^3.2.2",
     "@inlang/plugin-message-format": "^4.6.0",
-    "@tanstack/devtools-vite": "0.8.6",
+    "@tanstack/devtools-vite": "0.8.7",
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.3.0",
     "nitro": "^3.0.261103-rc",
     "typescript": "^7.0.2",
-    "vite": "npm:@voidzero-dev/vite-plus-core@1.6.0",
-    "vite-plus": "1.6.0"
+    "vite": "npm:@voidzero-dev/vite-plus-core@8.3.8000",
+    "vite-plus": "1.7.0"
   },
   "overrides": {
-    "vite": "npm:@voidzero-dev/vite-plus-core@1.6.0"
+    "vite": "npm:@voidzero-dev/vite-plus-core@8.3.8000"
   }
 }

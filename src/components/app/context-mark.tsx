@@ -1,8 +1,8 @@
 import { cn } from 'cn'
 import { UserRoundIcon } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useWorkspace } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
-import type { Workspace } from '@/lib/space'
 import { hueOf } from './chip'
 
 export type MarkParty = {
@@ -79,12 +79,13 @@ export function ContextMark({
   )
 }
 
-export function HomeCaption({ workspace }: { workspace: Workspace | null }) {
-  if (!workspace?.label) return <Skeleton className="h-4 w-24" />
+export function HomeCaption() {
+  const { current } = useWorkspace()
+  if (!current.label) return <Skeleton className="h-4 w-24" />
   return (
     <span className="inline-flex items-center gap-2">
-      <ContextMark bandId={workspace.bandId} name={workspace.label} />
-      {workspace.label}
+      <ContextMark bandId={current.bandId} name={current.label} />
+      {current.label}
     </span>
   )
 }

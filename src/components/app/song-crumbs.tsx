@@ -1,23 +1,22 @@
 import type { ReactNode } from 'react'
 import { Crumb } from '@/components/app/page-header'
-import { built } from '@/lib/built'
-import { path } from '@/lib/space'
-import type { Workspace } from '@/lib/space'
+import { href } from '@/lib/space'
 import { m } from '@/paraglide/messages'
 
 export function songCrumbs({
-  workspace,
+  at,
   songId,
   title,
   linked = true,
 }: {
-  workspace: Workspace | null
+  /** Null keeps the crumb on the library. A key stays in that workspace. */
+  at: string | null
   songId: string
   title: string
   linked?: boolean
 }): Array<ReactNode> {
   const song = linked ? (
-    <Crumb key="song" {...built(path(workspace, { page: 'song', songId }))}>
+    <Crumb key="song" {...href(at, { page: 'song', songId })}>
       {title}
     </Crumb>
   ) : (
@@ -26,12 +25,12 @@ export function songCrumbs({
     </span>
   )
   return [
-    workspace ? (
-      <Crumb key="songs" {...built(path(workspace, { page: 'songs' }))}>
+    at ? (
+      <Crumb key="songs" {...href(at, { page: 'songs' })}>
         {m.songs()}
       </Crumb>
     ) : (
-      <Crumb key="library" {...built(path(null, { page: 'library' }))}>
+      <Crumb key="library" {...href(null, { page: 'library' })}>
         {m.allSongs()}
       </Crumb>
     ),

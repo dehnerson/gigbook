@@ -11,6 +11,7 @@ import {
 } from './_generated/server'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import { requireIdentity } from './lib/access'
+import { loadHome } from './lib/home'
 import { decryptSecret, encryptSecret } from './lib/crypto'
 import { fail } from './lib/errors'
 import { nameWithinLimit } from './lib/users'
@@ -156,8 +157,11 @@ export const me = query({
       components.authEmail.verifiedEmails.getPrimaryEmail,
       { userId },
     )
+    const home = await loadHome(ctx, userId, user.homeBandId ?? null)
     return {
       locale: user.locale ?? null,
+      home: { bandId: home?.bandId ?? null },
+      homeChosen: user.homeBandId !== undefined,
       notation: user.notation ?? 'en',
       email: passwordEmail ?? user.oauthEmail ?? null,
       name: user.name,
@@ -181,6 +185,20 @@ export const me = query({
           }
         : null,
     }
+  },
+})
+
+export const setHome = mutation({
+  args: { bandId: v.union(v.null(), v.id('bands')) },
+  handler: async (ctx, args) => {
+    const identity = await requireIdentity(ctx)
+    const user = await userById(ctx, identity.subject)
+    if (!user) fail('NOT_FOUND')
+    if (args.bandId) {
+      const home = await loadHome(ctx, identity.subject, args.bandId)
+      if (!home) fail('FORBIDDEN')
+    }
+    await ctx.db.patch(user._id, { homeBandId: args.bandId })
   },
 })
 
