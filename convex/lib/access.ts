@@ -1,5 +1,8 @@
 import { getAuthUserId } from '@convex-dev/auth/server'
-import type { GenericDatabaseReader, GenericDatabaseWriter } from 'convex/server'
+import type {
+  GenericDatabaseReader,
+  GenericDatabaseWriter,
+} from 'convex/server'
 import { fail } from './errors'
 import type { Doc, Id } from '../_generated/dataModel'
 import type { DatabaseReader } from '../_generated/server'

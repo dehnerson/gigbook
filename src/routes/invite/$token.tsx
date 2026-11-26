@@ -4,7 +4,6 @@ import { api } from '../../../convex/_generated/api'
 import { AuthScreen } from '@/components/auth/auth-screen'
 import { RoutePending } from '@/components/app/route-states'
 import { Button } from '@/components/ui/button'
-import { href } from '@/lib/space'
 import { roleName } from '@/lib/roles'
 import { m } from '@/paraglide/messages'
 
@@ -37,27 +36,21 @@ function InviteScreen({ token }: { token: string }) {
         {m.inviteBody({ role: roleName(invite.role) })}
       </p>
       {!isAuthenticated || !invite.signedIn ? (
-        <div className="grid gap-2">
-          <Link
-            to="/sign-in"
-            search={{ redirect: back, code: undefined, state: undefined }}
-            className="text-sm text-foreground underline"
-          >
-            {m.signInTitle()}
-          </Link>
-          <Link
-            to="/sign-up"
-            search={{ redirect: back, code: undefined, state: undefined }}
-            className="text-sm text-foreground underline"
-          >
-            {m.signUp()}
-          </Link>
-        </div>
+        <Link
+          to="/sign-in"
+          search={{ redirect: back, code: undefined, state: undefined }}
+          className="text-sm text-foreground underline"
+        >
+          {m.signInTitle()}
+        </Link>
       ) : invite.emailMatches ? (
         <Button
           onPress={() =>
             void accept({ token }).then((result) =>
-              navigate(href(result.bandId, { page: 'songs' })),
+              navigate({
+                to: '/$workspace/songs',
+                params: { workspace: result.bandId },
+              }),
             )
           }
         >

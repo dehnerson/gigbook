@@ -20,6 +20,7 @@ import { m } from '@/paraglide/messages'
 import type { Id } from '../../../convex/_generated/dataModel'
 import type { EditorEntry, EditorVersion } from './types'
 import { useEditor } from './use-editor'
+import type { Workspace } from '@/lib/workspace'
 
 function presetName(id: string) {
   if (id === 'standard') return m.tuningStandard()
@@ -191,12 +192,14 @@ export function DetailsPanel({
   notation,
   songTitle,
   isOnlyVersion,
+  workspace,
 }: {
   version: EditorVersion
   timeline: Array<EditorEntry>
   notation: Notation
   songTitle: string
   isOnlyVersion: boolean
+  workspace?: Workspace
 }) {
   const { mutations, save } = useEditor()
   const [name, setName] = useState(version.name)
@@ -382,6 +385,7 @@ export function DetailsPanel({
         songTitle={songTitle}
         isOnlyVersion={isOnlyVersion}
         redirectToSong
+        workspace={workspace}
       />
     </div>
   )

@@ -86,6 +86,7 @@ export const HeaderButtonLink = HeaderButtonLinkImpl as typeof ButtonLink
 export function PageHeader({
   title,
   subtitle,
+  meta,
   eyebrow,
   breadcrumbs,
   actions,
@@ -93,6 +94,7 @@ export function PageHeader({
 }: {
   title: React.ReactNode
   subtitle?: React.ReactNode
+  meta?: React.ReactNode
   eyebrow?: React.ReactNode
   breadcrumbs?: React.ReactNode
   actions?: React.ReactNode
@@ -101,19 +103,27 @@ export function PageHeader({
   return (
     <header className={cn('mb-8 min-w-0 space-y-3', className)}>
       <Breadcrumbs>{breadcrumbs}</Breadcrumbs>
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-4">
-        <div className="min-w-0 space-y-1">
-          {eyebrow ? (
-            <div className="text-xs font-semibold tracking-widest text-primary uppercase">
-              {eyebrow}
-            </div>
-          ) : null}
-          <h1 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-            {title}
-          </h1>
-          {subtitle ? (
-            <div className="text-base text-muted-foreground">{subtitle}</div>
-          ) : null}
+      <div
+        className={cn(
+          'flex min-w-0 flex-wrap justify-between gap-4',
+          meta ? 'items-start' : 'items-center',
+        )}
+      >
+        <div className="min-w-0">
+          <div className="space-y-1">
+            {eyebrow ? (
+              <div className="text-xs font-semibold tracking-widest text-primary uppercase">
+                {eyebrow}
+              </div>
+            ) : null}
+            <h1 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+              {title}
+            </h1>
+            {subtitle ? (
+              <div className="text-base text-muted-foreground">{subtitle}</div>
+            ) : null}
+          </div>
+          {meta ? <div className="mt-2">{meta}</div> : null}
         </div>
         {actions ? <HeaderActions>{actions}</HeaderActions> : null}
       </div>

@@ -10,32 +10,48 @@ import { SheetSkeleton } from '@/components/app/route-states'
 import type { EditorEntry } from '@/components/editor/types'
 import { ButtonLink } from '@/components/ui/button'
 import { VersionEditor } from '@/components/version/version-editor'
-import { href } from '@/lib/space'
-import { useWorkspace } from '@/lib/workspace'
+import type { Workspace } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
 
-export function EditPage({ versionId }: { versionId: Id<'versions'> }) {
+export function EditPage({
+  versionId,
+  workspace,
+}: {
+  versionId: Id<'versions'>
+  workspace?: Workspace
+}) {
   return (
     <Suspense fallback={<SheetSkeleton />}>
-      <EditView versionId={versionId} />
+      <EditView versionId={versionId} workspace={workspace} />
     </Suspense>
   )
 }
 
-function EditView({ versionId }: { versionId: Id<'versions'> }) {
-  const { current, inWorkspace } = useWorkspace()
-  const at = inWorkspace ? current.key : null
-  const readHref = href(at, { page: 'version', versionId })
+function EditView({
+  versionId,
+  workspace,
+}: {
+  versionId: Id<'versions'>
+  workspace?: Workspace
+}) {
+  const versionLinkOptions = {
+    to: workspace ? '/$workspace/versions/$versionId' : '/versions/$versionId',
+    params: workspace
+      ? { workspace: workspace.key, versionId: versionId }
+      : { versionId },
+  }
+
   const bundle = useSuspenseQuery(
     convexQuery(api.versions.getBundle, { versionId }),
   )
+
   if (!bundle.data.canEdit) {
     return (
       <EmptyState
         icon={LockIcon}
         title={m.errorForbidden()}
         description={m.readOnlyHint()}
-        action={<ButtonLink {...readHref}>{m.read()}</ButtonLink>}
+        action={<ButtonLink {...versionLinkOptions}>{m.read()}</ButtonLink>}
       />
     )
   }

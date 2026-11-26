@@ -28,13 +28,7 @@ function authRedirect(path: string) {
   const bare = path.split('#')[0] ?? path
   const queryIndex = bare.indexOf('?')
   const pathname = queryIndex === -1 ? bare : bare.slice(0, queryIndex)
-  if (
-    pathname !== '/sign-in' &&
-    pathname !== '/sign-in/' &&
-    pathname !== '/sign-up' &&
-    pathname !== '/sign-up/'
-  )
-    return null
+  if (pathname !== '/sign-in' && pathname !== '/sign-in/') return null
   const query = queryIndex === -1 ? '' : bare.slice(queryIndex + 1)
   return new URLSearchParams(query).get('redirect')
 }

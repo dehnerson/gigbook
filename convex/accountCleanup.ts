@@ -125,9 +125,6 @@ const steps: Record<
     await ctx.runMutation(components.authGoogle.provider.deleteUser, {
       userId: user._id,
     })
-    await ctx.runMutation(components.authEmail.verifiedEmails.deleteUser, {
-      userId: user._id,
-    })
     await ctx.db.delete(user._id)
     return null
   },

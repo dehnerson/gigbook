@@ -65,7 +65,7 @@ import { useWakeLock } from '@/lib/use-wake-lock'
 import { messageFor } from '@/lib/errors'
 import { displayChord } from '@/lib/music/chords'
 import type { Notation } from '@/lib/music/pitch'
-import { href, PERSONAL } from '@/lib/space'
+import { PERSONAL } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/jam/$code')({
@@ -227,7 +227,12 @@ function JamRoom({ code }: { code: string }) {
             variant="ghost"
             size="icon"
             aria-label={m.back()}
-            {...href(room.bandId ?? PERSONAL, { page: 'jam' })}
+            {...{
+              to: '/$workspace/jam',
+              params: room.bandId
+                ? { workspace: room.bandId }
+                : { workspace: PERSONAL },
+            }}
           >
             <ArrowLeftIcon />
           </ButtonLink>

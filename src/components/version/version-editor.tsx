@@ -2,10 +2,9 @@ import { CheckIcon, EyeIcon, PencilIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import {
-  Breadcrumbs,
   Crumb,
-  HeaderActions,
   HeaderButtonLink,
+  PageHeader,
 } from '@/components/app/page-header'
 import { SaveIndicator, useSaver } from '@/components/app/save'
 import { Segmented } from '@/components/app/segmented'
@@ -17,13 +16,12 @@ import {
   EditorContext,
   useEditorMutations,
 } from '@/components/editor/use-editor'
-import { SheetHeader, SongSheet } from '@/components/sheet/song-sheet'
+import { SongSheet, versionHeading } from '@/components/sheet/song-sheet'
 import type { ChordShapeOverride } from '@/components/sheet/types'
 import { chartChords } from '@/lib/music/chordpro'
 import { DEFAULT_LAYERS } from '@/lib/sheet-layers'
 import { songCrumbs } from '@/components/app/song-crumbs'
-import { href } from '@/lib/space'
-import { useWorkspace } from '@/lib/workspace'
+import type { Workspace } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
 import { useNotation } from '@/lib/use-notation'
 
@@ -34,6 +32,7 @@ export function VersionEditor({
   shapes,
   versionCount,
   mark,
+  workspace,
 }: {
   version: EditorVersion
   song: { _id: string; title: string; subTitle?: string }
@@ -41,12 +40,17 @@ export function VersionEditor({
   shapes: Array<ChordShapeOverride>
   versionCount: number
   mark?: ReactNode
+  workspace?: Workspace
 }) {
   const notation = useNotation()
-  const { current, inWorkspace } = useWorkspace()
-  const at = inWorkspace ? current.key : null
-  const readHref = (versionId: string) =>
-    href(at, { page: 'version', versionId })
+
+  const versionLinkOptions = {
+    to: workspace ? '/$workspace/versions/$versionId' : '/versions/$versionId',
+    params: workspace
+      ? { workspace: workspace.key, versionId: version._id }
+      : { versionId: version._id },
+  }
+
   const mutations = useEditorMutations()
   const saver = useSaver()
   const [selected, setSelected] = useState<string>(
@@ -84,25 +88,26 @@ export function VersionEditor({
 
   return (
     <EditorContext.Provider value={{ mutations, save: saver.run }}>
-      <div className="space-y-6">
-        <div className="space-y-3">
-          <Breadcrumbs>
-            {songCrumbs({
-              at,
+      <div>
+        <PageHeader
+          breadcrumbs={[
+            ...songCrumbs({
+              workspace,
               songId: song._id,
               title: song.title,
-            })}
-            <Crumb {...readHref(version._id)}>{version.name}</Crumb>
-          </Breadcrumbs>
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <SheetHeader
-              song={song}
-              version={version}
-              showStats={false}
-              mark={mark}
-              className="min-w-0 md:flex-1"
-            />
-            <HeaderActions>
+            }),
+            <Crumb key="version" {...versionLinkOptions}>
+              {version.name}
+            </Crumb>,
+          ]}
+          {...versionHeading({
+            song,
+            version,
+            showStats: false,
+            mark,
+          })}
+          actions={
+            <>
               <SaveIndicator state={saver.state} />
               <Segmented
                 aria-label={m.view()}
@@ -113,13 +118,13 @@ export function VersionEditor({
                   { id: 'preview', label: m.preview(), icon: EyeIcon },
                 ]}
               />
-              <HeaderButtonLink {...readHref(version._id)}>
+              <HeaderButtonLink {...versionLinkOptions}>
                 <CheckIcon />
                 {m.done()}
               </HeaderButtonLink>
-            </HeaderActions>
-          </div>
-        </div>
+            </>
+          }
+        />
 
         {view === 'preview' ? (
           <div className="rounded-3xl border bg-card p-6 sm:p-10 [--sheet-bg:var(--card)]">

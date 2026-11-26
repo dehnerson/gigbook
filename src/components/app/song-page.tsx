@@ -10,7 +10,7 @@ import { Chip } from '@/components/app/chip'
 import { CollectionCard } from '@/components/app/collection-card'
 import { ContextMark } from '@/components/app/context-mark'
 import { EmptyState } from '@/components/app/empty-state'
-import { HomeSelect } from '@/components/app/home-select'
+import { WorkspaceSelect } from '@/components/app/workspace-select'
 import { InlineEdit } from '@/components/app/inline-edit'
 import { PerformerLine } from '@/components/app/performer-line'
 import { Crumb, PageHeader, SectionTitle } from '@/components/app/page-header'
@@ -29,9 +29,8 @@ import { useNotation } from '@/lib/use-notation'
 import { VersionMenu } from '@/components/version/version-menu'
 import { messageFor } from '@/lib/errors'
 import { useSuspenseQuery } from '@tanstack/react-query'
-import { href, PERSONAL, workspace as workspaceOfKey } from '@/lib/space'
-import type { PlaceHref, Workspace } from '@/lib/space'
-import { useWorkspace } from '@/lib/workspace'
+import { PERSONAL, useWorkspace } from '@/lib/workspace'
+import type { Workspace } from '@/lib/workspace'
 import { displayChord } from '@/lib/music/chords'
 import { TUNING_PRESETS } from '@/lib/music/diagrams'
 import type { Notation } from '@/lib/music/pitch'
@@ -45,23 +44,26 @@ function tuningLabel(tuning: Array<string>) {
   return tuning.map((note) => note.replace(/\d+$/, '')).join(' ')
 }
 
-export function SongPage({ songId }: { songId: Id<'songs'> }) {
-  const { current, inWorkspace } = useWorkspace()
-  const at = inWorkspace ? current.key : null
+export function SongPage({
+  songId,
+  workspace,
+}: {
+  songId: Id<'songs'>
+  workspace?: Workspace
+}) {
+  const songLinkOptions = {
+    to: workspace ? '/$workspace/songs' : '/songs',
+    params: workspace ? { workspace: workspace.key } : {},
+  }
+
   return (
     <Suspense
       fallback={
         <div>
           <PageHeader
             breadcrumbs={[
-              <Crumb
-                key="back"
-                {...href(
-                  at,
-                  inWorkspace ? { page: 'songs' } : { page: 'library' },
-                )}
-              >
-                {inWorkspace ? m.songs() : m.allSongs()}
+              <Crumb key="back" {...songLinkOptions}>
+                {workspace ? m.songs() : m.allSongs()}
               </Crumb>,
             ]}
             title={<Skeleton className="h-9 w-64" />}
@@ -70,49 +72,53 @@ export function SongPage({ songId }: { songId: Id<'songs'> }) {
         </div>
       }
     >
-      <SongView songId={songId} />
+      <SongView songId={songId} workspace={workspace} />
     </Suspense>
   )
 }
 
-function SongView({ songId }: { songId: Id<'songs'> }) {
-  const { current, inWorkspace } = useWorkspace()
-  const at = inWorkspace ? current.key : null
-  const scoped = inWorkspace
+function SongView({
+  songId,
+  workspace,
+}: {
+  songId: Id<'songs'>
+  workspace?: Workspace
+}) {
+  const { all } = useWorkspace()
+
   const { data } = useSuspenseQuery(
     convexQuery(api.songs.get, {
       songId,
-      ...(inWorkspace ? { bandId: current.bandId } : {}),
+      ...(workspace ? { bandId: workspace.bandId } : {}),
     }),
   )
-  const { song, versions, versionCount, canRename, canAdd, band } = data
+  const { song, versions, versionCount, canRename, canAdd } = data
   const update = useMutation(api.songs.update)
   const addVersion = useMutation(api.songs.addVersion)
   const notation = useNotation()
   const [addingVersion, setAddingVersion] = useState(false)
   const [pickingHome, setPickingHome] = useState(false)
   const [choice, setChoice] = useState(PERSONAL)
-  const allowAdd = scoped ? canAdd : true
-  const homeName = scoped
-    ? (current.label ?? band?.name ?? m.personal())
-    : undefined
 
   const navigate = useNavigate()
-  const fileVersion = (into: Workspace) => {
+  const fileVersion = (into: string) => {
+    const intoWorkspace = all.find((item) => item.key === into)
+    if (!intoWorkspace) return
     setAddingVersion(true)
     addVersion({
       songId,
       versionName: m.newVersionName(),
-      ...(into.bandId ? { bandId: into.bandId } : {}),
+      ...(intoWorkspace.bandId ? { bandId: intoWorkspace.bandId } : {}),
     })
       .then((added) =>
-        navigate(
-          href(into.key, {
-            page: 'version',
-            versionId: added.versionId,
-            leaf: 'edit',
-          }),
-        ),
+        navigate({
+          to: workspace
+            ? '/$workspace/versions/$versionId/edit'
+            : '/versions/$versionId/edit',
+          params: workspace
+            ? { workspace: workspace.key, versionId: added.versionId }
+            : { versionId: added.versionId },
+        }),
       )
       .catch((error: unknown) => toast.error(messageFor(error)))
       .finally(() => setAddingVersion(false))
@@ -126,18 +132,23 @@ function SongView({ songId }: { songId: Id<'songs'> }) {
     <div>
       <PageHeader
         breadcrumbs={songCrumbs({
-          at,
+          workspace,
           songId,
           title: song.title,
           linked: false,
         })}
         title={
-          <InlineEdit
-            label={m.renameSong()}
-            value={song.title}
-            isDisabled={!canRename}
-            onSave={(title) => save({ title })}
-          />
+          <span className="inline-flex min-w-0 items-center gap-3">
+            {workspace ? (
+              <ContextMark bandId={workspace.bandId} name={workspace.label} />
+            ) : null}
+            <InlineEdit
+              label={m.renameSong()}
+              value={song.title}
+              isDisabled={!canRename}
+              onSave={(title) => save({ title })}
+            />
+          </span>
         }
         subtitle={
           <InlineEdit
@@ -150,13 +161,13 @@ function SongView({ songId }: { songId: Id<'songs'> }) {
       />
       <SectionTitle
         action={
-          allowAdd ? (
+          canAdd ? (
             <Button
               size="sm"
               variant="outline"
               isDisabled={addingVersion}
               onPress={() => {
-                if (scoped) fileVersion(current)
+                if (workspace) fileVersion(workspace.key)
                 else setPickingHome(true)
               }}
             >
@@ -166,15 +177,7 @@ function SongView({ songId }: { songId: Id<'songs'> }) {
           ) : null
         }
       >
-        <span className="inline-flex items-center gap-2">
-          {m.versions()}
-          {scoped ? (
-            <span className="inline-flex items-center gap-1.5 font-medium tracking-normal text-foreground normal-case">
-              <ContextMark bandId={current.bandId} name={homeName} />
-              {homeName}
-            </span>
-          ) : null}
-        </span>
+        {m.versions()}
       </SectionTitle>
       {versions.length === 0 ? (
         <EmptyState icon={FileMusicIcon} title={m.noVersions()} />
@@ -187,23 +190,18 @@ function SongView({ songId }: { songId: Id<'songs'> }) {
               songTitle={song.title}
               isOnlyVersion={versionCount === 1}
               notation={notation}
-              showHome={!scoped}
-              href={href(at, { page: 'version', versionId: version._id })}
-              playHref={href(at, {
-                page: 'version',
-                versionId: version._id,
-                leaf: 'play',
-              })}
+              showHome={!workspace}
+              workspace={workspace}
             />
           ))}
         </ul>
       )}
       <Dialog isOpen={pickingHome} onOpenChange={setPickingHome}>
         <DialogHeader>
-          <DialogTitle>{m.chooseHome()}</DialogTitle>
-          <DialogDescription>{m.chooseHomeHint()}</DialogDescription>
+          <DialogTitle>{m.chooseWorkspace()}</DialogTitle>
+          <DialogDescription>{m.chooseWorkspaceHint()}</DialogDescription>
         </DialogHeader>
-        <HomeSelect value={choice} onChange={setChoice} writable />
+        <WorkspaceSelect value={choice} onChange={setChoice} writable />
         <DialogFooter>
           <Button variant="outline" onPress={() => setPickingHome(false)}>
             {m.cancel()}
@@ -212,7 +210,7 @@ function SongView({ songId }: { songId: Id<'songs'> }) {
             isDisabled={addingVersion}
             onPress={() => {
               setPickingHome(false)
-              fileVersion(workspaceOfKey(choice))
+              fileVersion(choice)
             }}
           >
             {m.addVersion()}
@@ -229,8 +227,7 @@ function VersionCard({
   isOnlyVersion,
   notation,
   showHome,
-  href: versionHref,
-  playHref,
+  workspace,
 }: {
   version: Omit<
     Doc<'versions'>,
@@ -245,15 +242,21 @@ function VersionCard({
   isOnlyVersion: boolean
   notation: Notation
   showHome: boolean
-  href: PlaceHref
-  playHref: PlaceHref
+  workspace?: Workspace
 }) {
   const tuning = tuningLabel(version.tuning)
   const sections = version.timeline.length
 
   return (
     <CollectionCard
-      href={versionHref}
+      linkOptions={{
+        to: workspace
+          ? '/$workspace/versions/$versionId'
+          : '/versions/$versionId',
+        params: workspace
+          ? { workspace: workspace.key, versionId: version._id }
+          : { versionId: version._id },
+      }}
       title={version.name}
       trailing={showHome ? <ContextMark {...version} /> : null}
       footer={
@@ -277,7 +280,16 @@ function VersionCard({
       }
       actions={
         <>
-          <ButtonLink {...playHref}>
+          <ButtonLink
+            {...{
+              to: workspace
+                ? '/$workspace/versions/$versionId/play'
+                : '/versions/$versionId/play',
+              params: workspace
+                ? { workspace: workspace.key, versionId: version._id }
+                : { versionId: version._id },
+            }}
+          >
             <PlayIcon className="fill-current" />
             {m.play()}
           </ButtonLink>

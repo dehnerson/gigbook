@@ -1,4 +1,3 @@
-import { components } from '../_generated/api'
 import type { Doc } from '../_generated/dataModel'
 import type { MutationCtx, QueryCtx } from '../_generated/server'
 
@@ -15,29 +14,21 @@ export function nameWithinLimit(value: string) {
 export async function sessionAddresses(ctx: Ctx, userId: string) {
   const id = ctx.db.normalizeId('users', userId)
   if (!id) return []
-  const [rows, user] = await Promise.all([
-    ctx.runQuery(components.authEmail.verifiedEmails.getEmails, { userId: id }),
-    ctx.db.get(id),
-  ])
-  const addresses = rows.map((row) => row.email.toLowerCase())
-  if (user?.oauthEmail) addresses.push(user.oauthEmail.toLowerCase())
-  return addresses
+  const user = await ctx.db.get(id)
+  const email = user?.email?.toLowerCase()
+  return email ? [email] : []
 }
 
-async function labelFor(ctx: Ctx, user: Doc<'users'>) {
+function labelFor(user: Doc<'users'>) {
   if (user.name) return user.name
-  const email = await ctx.runQuery(
-    components.authEmail.verifiedEmails.getPrimaryEmail,
-    { userId: user._id },
-  )
-  return email ?? user.oauthEmail ?? ''
+  return user.email ?? ''
 }
 
 export async function displayName(ctx: Ctx, userId: string) {
   const id = ctx.db.normalizeId('users', userId)
   if (!id) return ''
   const user = await ctx.db.get(id)
-  return user ? labelFor(ctx, user) : ''
+  return user ? labelFor(user) : ''
 }
 
 export async function withNames<T extends { userId: string; name?: string }>(
@@ -52,16 +43,8 @@ export async function withNames<T extends { userId: string; name?: string }>(
     }),
   )
   const names = new Map(
-    await Promise.all(
-      users.flatMap((user) =>
-        user
-          ? [
-              labelFor(ctx, user).then(
-                (name) => [user._id as string, name] as const,
-              ),
-            ]
-          : [],
-      ),
+    users.flatMap((user) =>
+      user ? [[user._id as string, labelFor(user)] as const] : [],
     ),
   )
   return rows.map((row) => ({

@@ -1,10 +1,10 @@
 import { Link } from '@tanstack/react-router'
 import { ChevronRightIcon } from 'lucide-react'
 import type * as React from 'react'
-import type { PlaceHref } from '@/lib/space'
 import { m } from '@/paraglide/messages'
 import { Chip, Monogram } from './chip'
 import { PerformerLine, performerNames } from './performer-line'
+import type { Workspace } from '@/lib/workspace'
 
 export type SongSummary = {
   _id: string
@@ -18,14 +18,14 @@ export function SongRow({
   song,
   performers,
   versionCount,
-  songLink,
   trailing,
+  workspace,
 }: {
   song: SongSummary
   performers?: Array<string>
   versionCount?: number
-  songLink: PlaceHref
   trailing?: React.ReactNode
+  workspace: Workspace | undefined
 }) {
   const subtitle = song.subTitle?.trim()
   const credited = performerNames(performers ?? []).length > 0
@@ -35,7 +35,12 @@ export function SongRow({
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2">
           <Link
-            {...songLink}
+            {...{
+              to: workspace ? '/$workspace/songs/$songId' : '/songs/$songId',
+              params: workspace
+                ? { workspace: workspace.key, songId: song._id }
+                : { songId: song._id },
+            }}
             className="truncate font-medium outline-none after:absolute after:inset-0 after:rounded-xl focus-visible:after:ring-2 focus-visible:after:ring-ring"
           >
             {song.title}

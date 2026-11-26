@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
 import { messageFor } from '@/lib/errors'
-import { href, PERSONAL } from '@/lib/space'
+import { PERSONAL } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
 
 async function copyShareLink(token: string) {
@@ -24,18 +24,11 @@ export function useVersionActions() {
   const revokeShare = useMutation(api.versions.revokeShare)
   const saveKey = useMutation(api.versions.saveWrittenKey)
   const navigate = useNavigate()
-  const openVersion = (
-    versionId: Id<'versions'>,
-    home: Id<'bands'> | null,
-    leaf: 'read' | 'edit' = 'read',
-  ) =>
-    navigate(
-      href(home ?? PERSONAL, {
-        page: 'version',
-        versionId,
-        leaf,
-      }),
-    )
+  const openVersion = (versionId: Id<'versions'>, bandId?: Id<'bands'>) =>
+    navigate({
+      to: '/$workspace/versions/$versionId',
+      params: { workspace: bandId ?? PERSONAL, versionId },
+    })
 
   return {
     copy: async (version: { _id: Id<'versions'>; name: string }) => {
@@ -56,7 +49,7 @@ export function useVersionActions() {
         const copied = await copyTo({ versionId })
         if (copied.existing) toast.info(m.alreadyInLibrary())
         else toast.success(m.madeMyCopy())
-        await openVersion(copied.versionId, null)
+        await openVersion(copied.versionId)
       } catch (error) {
         toast.error(messageFor(error))
       }
@@ -75,7 +68,7 @@ export function useVersionActions() {
       try {
         const moved = await moveTo({ versionId })
         toast.success(m.movedChart())
-        await openVersion(moved.versionId, null)
+        await openVersion(moved.versionId)
       } catch (error) {
         toast.error(messageFor(error))
       }
@@ -96,12 +89,10 @@ export function useVersionActions() {
         else if (forked.joinedSong)
           toast.success(m.addedAsVersion({ title: forked.joinedSong }))
         else toast.success(m.copiedToLibrary())
-        await navigate(
-          href(PERSONAL, {
-            page: 'song',
-            songId: forked.songId,
-          }),
-        )
+        await navigate({
+          to: '/$workspace/songs/$songId',
+          params: { workspace: PERSONAL, songId: forked.songId },
+        })
       } catch (error) {
         toast.error(messageFor(error))
       }

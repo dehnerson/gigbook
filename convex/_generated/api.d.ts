@@ -10,8 +10,11 @@
 
 import type * as accountCleanup from "../accountCleanup.js";
 import type * as auth from "../auth.js";
+import type * as avatar from "../avatar.js";
+import type * as avatarHttp from "../avatarHttp.js";
 import type * as bands from "../bands.js";
 import type * as chordShapes from "../chordShapes.js";
+import type * as http from "../http.js";
 import type * as importAction from "../importAction.js";
 import type * as importDrafts from "../importDrafts.js";
 import type * as importModels from "../importModels.js";
@@ -25,9 +28,7 @@ import type * as lib_home from "../lib/home.js";
 import type * as lib_mail from "../lib/mail.js";
 import type * as lib_membership from "../lib/membership.js";
 import type * as lib_ownership from "../lib/ownership.js";
-import type * as lib_password from "../lib/password.js";
 import type * as lib_songs from "../lib/songs.js";
-import type * as lib_ticket from "../lib/ticket.js";
 import type * as lib_users from "../lib/users.js";
 import type * as setlists from "../setlists.js";
 import type * as songs from "../songs.js";
@@ -43,8 +44,11 @@ import type {
 declare const fullApi: ApiFromModules<{
   accountCleanup: typeof accountCleanup;
   auth: typeof auth;
+  avatar: typeof avatar;
+  avatarHttp: typeof avatarHttp;
   bands: typeof bands;
   chordShapes: typeof chordShapes;
+  http: typeof http;
   importAction: typeof importAction;
   importDrafts: typeof importDrafts;
   importModels: typeof importModels;
@@ -58,9 +62,7 @@ declare const fullApi: ApiFromModules<{
   "lib/mail": typeof lib_mail;
   "lib/membership": typeof lib_membership;
   "lib/ownership": typeof lib_ownership;
-  "lib/password": typeof lib_password;
   "lib/songs": typeof lib_songs;
-  "lib/ticket": typeof lib_ticket;
   "lib/users": typeof lib_users;
   setlists: typeof setlists;
   songs: typeof songs;
@@ -96,8 +98,6 @@ export declare const internal: FilterApi<
 
 export declare const components: {
   auth: import("@convex-dev/auth/_generated/component.js").ComponentApi<"auth">;
-  authPassword: import("@convex-dev/auth/components/password/_generated/component.js").ComponentApi<"authPassword">;
-  authEmail: import("@convex-dev/auth/components/email/_generated/component.js").ComponentApi<"authEmail">;
   resend: import("@convex-dev/resend/_generated/component.js").ComponentApi<"resend">;
   authGoogle: import("@convex-dev/auth/components/google/_generated/component.js").ComponentApi<"authGoogle">;
 };

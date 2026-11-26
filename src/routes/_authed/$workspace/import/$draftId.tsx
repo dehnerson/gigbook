@@ -30,8 +30,6 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { useNotation } from '@/lib/use-notation'
 import { messageFor } from '@/lib/errors'
-import { href } from '@/lib/space'
-import type { Dest } from '@/lib/space'
 import { useWorkspace } from '@/lib/workspace'
 import { genericGuitarName } from '@/lib/parts'
 import type { StoredPart } from '@/lib/parts'
@@ -155,14 +153,19 @@ function previewTimeline(output: Output) {
 
 function ReviewPage({ draftId }: { draftId: Id<'importDrafts'> }) {
   const { current } = useWorkspace()
-  const to = (dest: Dest) => href(current.key, dest)
   return (
     <Suspense
       fallback={
         <div>
           <PageHeader
             breadcrumbs={[
-              <Crumb key="import" {...to({ page: 'import' })}>
+              <Crumb
+                key="import"
+                {...{
+                  to: '/$workspace/import',
+                  params: { workspace: current.key },
+                }}
+              >
                 {m.importLabel()}
               </Crumb>,
             ]}
@@ -180,7 +183,10 @@ function ReviewPage({ draftId }: { draftId: Id<'importDrafts'> }) {
 function Review({ draftId }: { draftId: Id<'importDrafts'> }) {
   const navigate = useNavigate()
   const { current } = useWorkspace()
-  const to = (dest: Dest) => href(current.key, dest)
+  const linkOptions = {
+    to: '/$workspace/import',
+    params: { workspace: current.key },
+  }
   const { data: draft } = useSuspenseQuery(
     convexQuery(api.importDrafts.get, { draftId }),
   )
@@ -192,7 +198,7 @@ function Review({ draftId }: { draftId: Id<'importDrafts'> }) {
     <div>
       <PageHeader
         breadcrumbs={[
-          <Crumb key="import" {...to({ page: 'import' })}>
+          <Crumb key="import" {...linkOptions}>
             {m.importLabel()}
           </Crumb>,
           <span key="review" className="text-foreground">
@@ -229,9 +235,7 @@ function Review({ draftId }: { draftId: Id<'importDrafts'> }) {
             <Button
               variant="outline"
               onPress={() =>
-                void discard({ draftId }).then(() =>
-                  navigate(to({ page: 'import' })),
-                )
+                void discard({ draftId }).then(() => navigate(linkOptions))
               }
             >
               {m.startOver()}
@@ -281,7 +285,6 @@ function ReadyReview({ draft, output }: { draft: Draft; output: Output }) {
   const discard = useMutation(api.importDrafts.discard)
   const navigate = useNavigate()
   const { current } = useWorkspace()
-  const to = (dest: Dest) => href(current.key, dest)
   const notation = useNotation()
   const [title, setTitle] = useState(output.title)
   const [artist, setArtist] = useState(output.artist)
@@ -326,13 +329,10 @@ function ReadyReview({ draft, output }: { draft: Draft; output: Output }) {
           ? m.addedAsVersion({ title: duplicate.title })
           : m.importSaved(),
       )
-      await navigate(
-        to({
-          page: 'version',
-          versionId: saved.versionId,
-          leaf: 'edit',
-        }),
-      )
+      await navigate({
+        to: '/$workspace/versions/$versionId/edit',
+        params: { workspace: current.key, versionId: saved.versionId },
+      })
     } catch (error) {
       toast.error(messageFor(error))
       setBusy(false)
@@ -411,7 +411,10 @@ function ReadyReview({ draft, output }: { draft: Draft; output: Output }) {
             isDisabled={busy}
             onPress={() =>
               void discard({ draftId: draft._id }).then(() =>
-                navigate(to({ page: 'import' })),
+                navigate({
+                  to: '/$workspace/import',
+                  params: { workspace: current.key },
+                }),
               )
             }
             className="text-muted-foreground hover:text-destructive"

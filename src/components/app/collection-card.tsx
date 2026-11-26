@@ -1,8 +1,7 @@
 import { Link } from '@tanstack/react-router'
-import type { LinkProps } from '@tanstack/react-router'
+import type { LinkOptions } from '@tanstack/react-router'
 import { cn } from 'cn'
 import type * as React from 'react'
-import type { PlaceHref } from '@/lib/space'
 
 export function CollectionCard({
   leading,
@@ -11,8 +10,7 @@ export function CollectionCard({
   children,
   footer,
   actions,
-  href,
-  ...link
+  linkOptions,
 }: {
   leading?: React.ReactNode
   trailing?: React.ReactNode
@@ -20,8 +18,8 @@ export function CollectionCard({
   children?: React.ReactNode
   footer?: React.ReactNode
   actions?: React.ReactNode
-  href: PlaceHref
-} & Omit<LinkProps, 'href' | 'to' | 'params' | 'search' | 'children'>) {
+  linkOptions: LinkOptions
+}) {
   return (
     <li className="group relative flex flex-col gap-4 rounded-2xl border bg-card p-5 transition-colors hover:border-foreground/15">
       {leading ? (
@@ -33,8 +31,7 @@ export function CollectionCard({
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
           <Link
-            {...link}
-            {...href}
+            {...linkOptions}
             className="block truncate text-lg font-semibold outline-none after:absolute after:inset-0 after:rounded-2xl focus-visible:after:ring-2 focus-visible:after:ring-ring"
           >
             {title}

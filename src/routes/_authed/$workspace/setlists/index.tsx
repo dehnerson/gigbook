@@ -1,4 +1,8 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import {
+  createFileRoute,
+  linkOptions,
+  useNavigate,
+} from '@tanstack/react-router'
 import { convexQuery } from '@convex-dev/react-query'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { useMutation } from 'convex/react'
@@ -24,7 +28,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { messageFor } from '@/lib/errors'
 import { matchesSearch } from '@/lib/search'
-import { href } from '@/lib/space'
 import { useWorkspace } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
 
@@ -91,9 +94,9 @@ function SetlistList() {
           {visible.map((setlist) => (
             <CollectionCard
               key={setlist._id}
-              href={href(current.key, {
-                page: 'setlist',
-                setlistId: setlist._id,
+              linkOptions={linkOptions({
+                to: '/$workspace/setlists/$setlistId',
+                params: { workspace: current.key, setlistId: setlist._id },
               })}
               title={setlist.name}
               leading={
@@ -148,7 +151,10 @@ function NewSetlistDialog({
             .then((setlistId) => {
               onOpenChange(false)
               setName('')
-              return navigate(href(current.key, { page: 'setlist', setlistId }))
+              return navigate({
+                to: '/$workspace/setlists/$setlistId',
+                params: { workspace: current.key, setlistId },
+              })
             })
             .catch((error: unknown) => toast.error(messageFor(error)))
             .finally(() => setBusy(false))

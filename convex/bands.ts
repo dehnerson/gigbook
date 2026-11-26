@@ -57,10 +57,12 @@ export const list = query({
   args: {},
   handler: async (ctx) => {
     const identity = await requireIdentity(ctx)
+
     const rows = await ctx.db
       .query('bandMemberships')
       .withIndex('by_user', (q) => q.eq('userId', identity.subject))
       .collect()
+
     const bands = await Promise.all(
       rows.map(async (row) => {
         const band = await ctx.db.get(row.bandId)
@@ -72,6 +74,7 @@ export const list = query({
         return [{ membership: row, band, memberCount: members.length }]
       }),
     )
+
     return bands.flat().sort((a, b) => a.band.name.localeCompare(b.band.name))
   },
 })

@@ -3,8 +3,7 @@ import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
 import { ConfirmDialog } from '@/components/app/confirm-dialog'
-import { href } from '@/lib/space'
-import { useWorkspace } from '@/lib/workspace'
+import type { Workspace } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
 
 export function versionDeleteCopy(
@@ -35,6 +34,7 @@ export function DeleteVersionDialog({
   songTitle,
   isOnlyVersion,
   redirectToSong = false,
+  workspace,
 }: {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
@@ -43,12 +43,23 @@ export function DeleteVersionDialog({
   songTitle: string
   isOnlyVersion: boolean
   redirectToSong?: boolean
+  workspace?: Workspace
 }) {
   const removeVersion = useMutation(api.versions.remove)
   const navigate = useNavigate()
-  const { current, inWorkspace } = useWorkspace()
-  const at = inWorkspace ? current.key : null
   const copy = versionDeleteCopy(versionName, songTitle, isOnlyVersion)
+
+  const songsLinkOptions = {
+    to: workspace ? '/$workspace/songs' : '/songs',
+    params: workspace ? { workspace: workspace.key } : {},
+  }
+  const songLinkOptions = (songId: Id<'songs'>) => ({
+    to: workspace ? '/$workspace/song/$songId' : '/song/$songId',
+    params: workspace
+      ? { workspace: workspace.key, songId: songId }
+      : { songId: songId },
+  })
+
   return (
     <ConfirmDialog
       isOpen={isOpen}
@@ -58,9 +69,14 @@ export function DeleteVersionDialog({
       confirmLabel={isOnlyVersion ? m.deleteSong() : undefined}
       onConfirm={async () => {
         const result = await removeVersion({ versionId })
-        if (result.deletedSong) await navigate(href(at, { page: 'songs' }))
+        if (result.deletedSong)
+          await navigate({
+            ...songsLinkOptions,
+          })
         else if (redirectToSong)
-          await navigate(href(at, { page: 'song', songId: result.songId }))
+          await navigate({
+            ...songLinkOptions(result.songId),
+          })
       }}
     />
   )

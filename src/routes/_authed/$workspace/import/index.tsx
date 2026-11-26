@@ -30,7 +30,6 @@ import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { PROVIDER_LABELS } from '@/lib/import/models'
 import { messageFor } from '@/lib/errors'
-import { href } from '@/lib/space'
 import { useWorkspace } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
 
@@ -165,7 +164,10 @@ function ImportPage() {
           homeBandId,
         })
       }
-      await navigate(href(current.key, { page: 'draft', draftId }))
+      await navigate({
+        to: '/$workspace/import/$draftId',
+        params: { workspace: current.key, draftId },
+      })
     } catch (error) {
       toast.error(messageFor(error))
       setBusy(false)
@@ -334,7 +336,7 @@ function ImportPage() {
                 {
                   id: 'new',
                   label: m.newSongFromImport(),
-                  description: current.label ?? undefined,
+                  description: current.label,
                 },
                 ...songs.flatMap((row) =>
                   row.versions
@@ -350,7 +352,7 @@ function ImportPage() {
           </div>
           <ImportTargetMark
             target={target}
-            label={current.label ?? ''}
+            label={current.label}
             bandId={current.bandId}
             catalog={songs}
           />

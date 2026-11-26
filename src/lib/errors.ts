@@ -15,6 +15,9 @@ export function messageFor(error: unknown) {
   if (code === 'USER_NOT_FOUND') return m.errorUserNotFound()
   if (code === 'LAST_MEMBER') return m.errorLastMember()
   if (code === 'PASTE_REQUIRED') return m.pasteRequired()
+  if (code === 'AVATAR_TOO_LARGE') return m.photoTooLarge()
+  if (code === 'AVATAR_INVALID') return m.photoInvalid()
+  if (code === 'AVATAR_RATE_LIMIT') return m.photoRateLimit()
   if (code === 'INVALID') return m.errorInvalid()
   return m.errorInvalid()
 }

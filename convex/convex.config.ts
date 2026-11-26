@@ -1,9 +1,7 @@
 import { defineApp } from 'convex/server'
 import { v } from 'convex/values'
 import auth from '@convex-dev/auth/convex.config.js'
-import authEmail from '@convex-dev/auth/components/email/convex.config.js'
 import authGoogle from '@convex-dev/auth/components/google/convex.config.js'
-import authPassword from '@convex-dev/auth/components/password/convex.config.js'
 import resend from '@convex-dev/resend/convex.config.js'
 
 const app = defineApp({
@@ -18,8 +16,6 @@ const app = defineApp({
 })
 
 app.use(auth)
-app.use(authPassword)
-app.use(authEmail)
 app.use(resend)
 app.use(authGoogle, {
   httpPrefix: '/oauth/google',

@@ -1,19 +1,15 @@
-import { useOauth } from '@convex-dev/auth/methods/google/react'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { convexQuery } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { useMutation } from 'convex/react'
 import { LogOutIcon, SettingsIcon, UserRoundIcon } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
-import { toast } from 'sonner'
+import { useState } from 'react'
 import { api } from '../../../convex/_generated/api'
 import { UserAvatar } from '@/components/app/user-avatar'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverTrigger } from '@/components/ui/popover'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
-import { authMessage } from '@/lib/auth-message'
 import { m } from '@/paraglide/messages'
 
 const item =
@@ -29,35 +25,7 @@ export function UserMenu({
   const { data: me } = useQuery(convexQuery(api.users.me, {}))
   const { signOut } = useAuthActions()
   const navigate = useNavigate()
-  const clearNotice = useMutation(api.users.clearGoogleLinkNotice)
-  const { flowError } = useOauth()
   const [open, setOpen] = useState(false)
-  const seenNotice = useRef<string | null>(null)
-  const seenError = useRef<string | null>(null)
-
-  useEffect(() => {
-    const notice = me?.googleLinkNotice
-    if (!notice) {
-      seenNotice.current = null
-      return
-    }
-    if (seenNotice.current === notice) return
-    seenNotice.current = notice
-    if (notice === 'taken') toast.error(m.googleAccountTaken())
-    else toast.success(m.googleConnected())
-    void clearNotice()
-  }, [clearNotice, me?.googleLinkNotice])
-
-  useEffect(() => {
-    if (!flowError) {
-      seenError.current = null
-      return
-    }
-    if (seenError.current === flowError.error) return
-    seenError.current = flowError.error
-    const message = authMessage(flowError)
-    if (message) toast.error(message)
-  }, [flowError])
 
   if (!me)
     return (

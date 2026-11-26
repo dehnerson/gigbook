@@ -47,8 +47,7 @@ import { usePersonalCapo } from '@/lib/use-capo'
 import { useNotation } from '@/lib/use-notation'
 import { useVersionActions } from '@/components/version/version-actions'
 import { useWakeLock } from '@/lib/use-wake-lock'
-import { href, PERSONAL } from '@/lib/space'
-import { useWorkspace } from '@/lib/workspace'
+import type { Workspace } from '@/lib/workspace'
 import type { PlaySearch } from '@/lib/play-search'
 import { previewTabShift } from '@/lib/music/tab'
 import { m } from '@/paraglide/messages'
@@ -56,9 +55,11 @@ import { m } from '@/paraglide/messages'
 export function PlayPage({
   versionId,
   search,
+  workspace,
 }: {
   versionId: Id<'versions'>
   search: PlaySearch
+  workspace?: Workspace
 }) {
   return (
     <Suspense
@@ -68,7 +69,7 @@ export function PlayPage({
         </div>
       }
     >
-      <PlayView versionId={versionId} search={search} />
+      <PlayView versionId={versionId} search={search} workspace={workspace} />
     </Suspense>
   )
 }
@@ -76,13 +77,13 @@ export function PlayPage({
 function PlayView({
   versionId,
   search,
+  workspace,
 }: {
   versionId: Id<'versions'>
   search: PlaySearch
+  workspace?: Workspace
 }) {
   const navigate = useNavigate()
-  const { current, inWorkspace } = useWorkspace()
-  const at = inWorkspace ? current.key : null
   const bundle = useSuspenseQuery(
     convexQuery(api.versions.getBundle, { versionId }),
   )
@@ -117,14 +118,15 @@ function PlayView({
   const goTo = (index: number) => {
     const target = entries.at(index)
     if (!target?.version || !search.setlist) return
-    void navigate(
-      href(at, {
-        page: 'version',
-        versionId: target.version._id,
-        leaf: 'play',
-        search: { setlist: search.setlist, index },
-      }),
-    )
+    void navigate({
+      to: workspace
+        ? '/$workspace/versions/$versionId/play'
+        : '/versions/$versionId/play',
+      params: workspace
+        ? { workspace: workspace.key, versionId: target.version._id }
+        : { versionId: target.version._id },
+      search: { setlist: search.setlist, index },
+    })
     window.scrollTo({ top: 0 })
   }
 
@@ -142,6 +144,16 @@ function PlayView({
     scale: prefs.scale,
   }
 
+  const setlistLinkOptions = {
+    to: workspace ? '/$workspace/setlists/$setlistId' : '/setlists/$setlistId',
+    params: workspace
+      ? {
+          workspace: workspace.key,
+          setlistId: search.setlist as Id<'setlists'>,
+        }
+      : { setlistId: search.setlist as Id<'setlists'> },
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur-xl">
@@ -151,12 +163,7 @@ function PlayView({
               variant="ghost"
               size="icon"
               aria-label={m.back()}
-              {...href(
-                setlist.data
-                  ? (setlist.data.setlist.bandId ?? PERSONAL)
-                  : (at ?? PERSONAL),
-                { page: 'setlist', setlistId: search.setlist },
-              )}
+              {...setlistLinkOptions}
             >
               <ArrowLeftIcon />
             </ButtonLink>
@@ -165,7 +172,14 @@ function PlayView({
               variant="ghost"
               size="icon"
               aria-label={m.back()}
-              {...href(at, { page: 'version', versionId })}
+              {...{
+                to: workspace
+                  ? '/$workspace/versions/$versionId'
+                  : '/versions/$versionId',
+                params: workspace
+                  ? { workspace: workspace.key, versionId: version._id }
+                  : { versionId: version._id },
+              }}
             >
               <ArrowLeftIcon />
             </ButtonLink>

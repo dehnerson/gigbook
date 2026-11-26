@@ -15,24 +15,28 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { messageFor } from '@/lib/errors'
-import { HomeSelect } from '@/components/app/home-select'
-import { href, PERSONAL, workspace } from '@/lib/space'
+import { WorkspaceSelect } from '@/components/app/workspace-select'
+import type { Workspace } from '@/lib/workspace'
 import { useWorkspace } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
 
 export function NewSongDialog({
   isOpen,
   onOpenChange,
+  workspace,
 }: {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
+  workspace: Workspace | undefined
 }) {
-  const { current, inWorkspace } = useWorkspace()
+  const { current, all } = useWorkspace()
   const create = useMutation(api.songs.create)
   const addVersion = useMutation(api.songs.addVersion)
   const navigate = useNavigate()
   const [choice, setChoice] = useState(current.key)
-  const target = inWorkspace ? current : workspace(choice || PERSONAL)
+  const target = workspace
+    ? workspace
+    : (all.find((w) => w.key === choice) ?? current)
   const fileBandId = target.bandId ?? undefined
   const [title, setTitle] = useState('')
   const [subTitle, setSubTitle] = useState('')
@@ -56,6 +60,7 @@ export function NewSongDialog({
         ? { ...search, bandId: fileBandId }
         : 'skip',
     ) ?? []
+
   const matches =
     similar.length === 0 && duplicate
       ? [
@@ -67,6 +72,7 @@ export function NewSongDialog({
           },
         ]
       : similar
+
   const exact = matches.find((song) => song.exact)
 
   const reset = () => {
@@ -78,13 +84,14 @@ export function NewSongDialog({
   const finish = (versionId: Id<'versions'>) => {
     onOpenChange(false)
     reset()
-    return navigate(
-      href(target.key, {
-        page: 'version',
-        versionId,
-        leaf: 'edit',
-      }),
-    )
+    return navigate({
+      to: workspace
+        ? '/$workspace/versions/$versionId/edit'
+        : '/versions/$versionId/edit',
+      params: workspace
+        ? { workspace: workspace.key, versionId }
+        : { versionId },
+    })
   }
 
   const run = (action: () => Promise<unknown>) => {
@@ -129,8 +136,8 @@ export function NewSongDialog({
           })
         }}
       >
-        {!inWorkspace ? (
-          <HomeSelect value={choice} onChange={setChoice} writable />
+        {!workspace ? (
+          <WorkspaceSelect value={choice} onChange={setChoice} writable />
         ) : null}
         <Field label={m.title()}>
           <Input
@@ -188,12 +195,14 @@ export function NewSongDialog({
                       onPress={() => {
                         onOpenChange(false)
                         reset()
-                        void navigate(
-                          href(target.key, {
-                            page: 'song',
-                            songId: song._id,
-                          }),
-                        )
+                        void navigate({
+                          to: workspace
+                            ? '/$workspace/songs/$songId'
+                            : '/songs/$songId',
+                          params: workspace
+                            ? { workspace: workspace.key, songId: song._id }
+                            : { songId: song._id },
+                        })
                       }}
                     >
                       {m.open()}

@@ -3,6 +3,7 @@ import { StickyNoteIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Chip } from '@/components/app/chip'
+import { PageHeader } from '@/components/app/page-header'
 import { chartChords } from '@/lib/music/chordpro'
 import { STANDARD_TUNING, stringLabels } from '@/lib/music/diagrams'
 import { tabChords } from '@/lib/music/tab'
@@ -112,6 +113,35 @@ export function VersionStats({
   )
 }
 
+export function versionHeading({
+  song,
+  version,
+  showStats = true,
+  mark,
+}: {
+  song: SheetSong
+  version: SheetVersion
+  showStats?: boolean
+  mark?: ReactNode
+}) {
+  const subtitle = song.subTitle?.trim()
+  return {
+    title: (
+      <span className="inline-flex min-w-0 items-center gap-3">
+        {mark}
+        <span className="min-w-0">{song.title}</span>
+      </span>
+    ),
+    subtitle: subtitle || undefined,
+    meta: (
+      <>
+        <VersionCaption name={version.name} artist={version.artist} />
+        {showStats ? <VersionStats version={version} className="mt-3" /> : null}
+      </>
+    ),
+  }
+}
+
 export function SheetHeader({
   song,
   version,
@@ -125,25 +155,11 @@ export function SheetHeader({
   mark?: ReactNode
   className?: string
 }) {
-  const subtitle = song.subTitle?.trim()
   return (
-    <header className={className}>
-      <div className="space-y-0.5">
-        <h1 className="flex items-center gap-3 text-3xl leading-tight font-semibold tracking-tight">
-          {mark}
-          <span className="min-w-0">{song.title}</span>
-        </h1>
-        {subtitle ? (
-          <p className="text-base text-muted-foreground">{subtitle}</p>
-        ) : null}
-      </div>
-      <VersionCaption
-        name={version.name}
-        artist={version.artist}
-        className="mt-2"
-      />
-      {showStats ? <VersionStats version={version} className="mt-3" /> : null}
-    </header>
+    <PageHeader
+      className={cn('mb-0', className)}
+      {...versionHeading({ song, version, showStats, mark })}
+    />
   )
 }
 

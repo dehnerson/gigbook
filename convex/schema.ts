@@ -90,14 +90,10 @@ export default defineSchema({
     name: v.string(),
     imageUrl: v.optional(v.string()),
     imageStorageId: v.optional(v.id('_storage')),
-    /** Verified address from Google. The email component owns password addresses. */
-    oauthEmail: v.optional(v.string()),
-    /** Set when a Google account is stored for this user. */
-    googleLinked: v.optional(v.boolean()),
-    /** Result of the latest attempt to connect Google while signed in. */
-    googleLinkNotice: v.optional(
-      v.union(v.literal('linked'), v.literal('taken')),
-    ),
+    /** Recent avatar upload attempts, used to rate limit decoding. */
+    avatarAttempts: v.optional(v.array(v.number())),
+    /** Verified address from Google. */
+    email: v.optional(v.string()),
     locale: v.optional(v.union(v.literal('en'), v.literal('de'))),
     notation: v.optional(v.union(v.literal('en'), v.literal('de'))),
     aiModel: v.optional(v.string()),

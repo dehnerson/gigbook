@@ -32,7 +32,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useVersionActions } from '@/components/version/version-actions'
-import { href } from '@/lib/space'
+import type { Workspace } from '@/lib/workspace'
 import { useWorkspace } from '@/lib/workspace'
 import { cn } from 'cn'
 import { m } from '@/paraglide/messages'
@@ -58,6 +58,7 @@ export function VersionMenu({
   includeEdit = false,
   redirectToSong = false,
   trigger,
+  workspace,
 }: {
   version: VersionTarget
   songTitle: string
@@ -65,12 +66,21 @@ export function VersionMenu({
   includeEdit?: boolean
   redirectToSong?: boolean
   trigger: ReactNode
+  workspace?: Workspace
 }) {
-  const { current, inWorkspace, all } = useWorkspace()
-  const at = inWorkspace ? current.key : null
+  const { all } = useWorkspace()
+
   const actions = useVersionActions()
   const navigate = useNavigate()
-  const go = (dest: Parameters<typeof href>[1]) => navigate(href(at, dest))
+  const go = () =>
+    navigate({
+      to: workspace
+        ? '/$workspace/versions/$versionId/edit'
+        : '/versions/$versionId/edit',
+      params: workspace
+        ? { workspace: workspace.key, versionId: version._id }
+        : { versionId: version._id },
+    })
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [linkAction, setLinkAction] = useState<'rotate' | 'revoke' | null>(null)
   const [place, setPlace] = useState<'copy' | 'move' | null>(null)
@@ -116,16 +126,7 @@ export function VersionMenu({
         {trigger}
         <DropdownMenu placement="bottom end" className="w-56">
           {showEdit ? (
-            <DropdownMenuItem
-              textValue={m.edit()}
-              onAction={() =>
-                void go({
-                  page: 'version',
-                  versionId: version._id,
-                  leaf: 'edit',
-                })
-              }
-            >
+            <DropdownMenuItem textValue={m.edit()} onAction={() => void go()}>
               <PencilIcon />
               {m.edit()}
             </DropdownMenuItem>
@@ -172,11 +173,7 @@ export function VersionMenu({
               onAction={() =>
                 void actions.copy(version).then((copyId) => {
                   if (!copyId) return
-                  return go({
-                    page: 'version',
-                    versionId: copyId,
-                    leaf: 'edit',
-                  })
+                  return go()
                 })
               }
             >
@@ -297,6 +294,7 @@ export function VersionMenu({
         songTitle={songTitle}
         isOnlyVersion={isOnlyVersion}
         redirectToSong={redirectToSong}
+        workspace={workspace}
       />
     </>
   )

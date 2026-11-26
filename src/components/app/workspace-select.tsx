@@ -2,7 +2,7 @@ import { Select } from '@/components/ui/select'
 import { useWorkspace } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
 
-export function HomeSelect({
+export function WorkspaceSelect({
   value,
   onChange,
   writable = false,
@@ -15,11 +15,11 @@ export function HomeSelect({
   const options = all.flatMap((item) =>
     item.bandId && writable && item.role === 'viewer'
       ? []
-      : [{ id: item.key, label: item.label ?? m.personal() }],
+      : [{ id: item.key, label: item.label }],
   )
   return (
     <Select
-      label={m.chooseHome()}
+      label={m.workspace()}
       value={value}
       onChange={onChange}
       options={options}

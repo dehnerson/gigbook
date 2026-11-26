@@ -1,5 +1,4 @@
-import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
-import { href, PERSONAL } from '@/lib/space'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { convexQuery } from '@convex-dev/react-query'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { useMutation } from 'convex/react'
@@ -12,7 +11,6 @@ import { ConfirmDialog } from '@/components/app/confirm-dialog'
 import { EmptyState } from '@/components/app/empty-state'
 import { PageHeader } from '@/components/app/page-header'
 import { ListSkeleton } from '@/components/app/route-states'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -29,10 +27,6 @@ import { useWorkspace } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/$workspace/members')({
-  beforeLoad: ({ params }) => {
-    if (params.workspace === PERSONAL)
-      throw redirect(href(PERSONAL, { page: 'members' }))
-  },
   component: MembersPage,
 })
 
@@ -50,10 +44,7 @@ function MembersPage() {
     <Suspense
       fallback={
         <div>
-          <PageHeader
-            title={m.members()}
-            subtitle={current.label ?? <Skeleton className="h-4 w-24" />}
-          />
+          <PageHeader title={m.members()} subtitle={current.label} />
           <ListSkeleton />
         </div>
       }
@@ -246,7 +237,7 @@ function MemberRoster({ bandId }: { bandId: Id<'bands'> }) {
         confirmLabel={m.leaveBand()}
         onConfirm={async () => {
           await leave({ bandId })
-          await navigate(href(PERSONAL, { page: 'songs' }))
+          await navigate({ to: '/' })
         }}
       />
       <ConfirmDialog
@@ -257,7 +248,7 @@ function MemberRoster({ bandId }: { bandId: Id<'bands'> }) {
         confirmLabel={m.deleteBand()}
         onConfirm={async () => {
           await removeBand({ bandId })
-          await navigate(href(PERSONAL, { page: 'songs' }))
+          await navigate({ to: '/' })
         }}
       />
     </div>

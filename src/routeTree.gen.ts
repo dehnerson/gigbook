@@ -10,17 +10,12 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthedRouteRouteImport } from './routes/_authed/route'
-import { Route as ConfirmAddPasswordRouteImport } from './routes/confirm-add-password'
-import { Route as ConfirmEmailChangeRouteImport } from './routes/confirm-email-change'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as ValidateEmailRouteImport } from './routes/validate-email'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
 import { Route as AuthedWorkspaceRouteRouteImport } from './routes/_authed/$workspace/route'
 import { Route as AuthedAccountRouteImport } from './routes/_authed/account'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
 import { Route as InviteTokenRouteImport } from './routes/invite/$token'
 import { Route as SignInIndexRouteImport } from './routes/sign-in/index'
-import { Route as SignUpIndexRouteImport } from './routes/sign-up/index'
 import { Route as AuthedWorkspaceMembersRouteImport } from './routes/_authed/$workspace/members'
 import { Route as AuthedJamCodeRouteImport } from './routes/_authed/jam/$code'
 import { Route as AuthedShareTokenRouteImport } from './routes/_authed/share/$token'
@@ -41,26 +36,6 @@ import { Route as AuthedWorkspaceVersionsVersionIdPlayRouteImport } from './rout
 
 const AuthedRouteRoute = AuthedRouteRouteImport.update({
   id: '/_authed',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ConfirmAddPasswordRoute = ConfirmAddPasswordRouteImport.update({
-  id: '/confirm-add-password',
-  path: '/confirm-add-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ConfirmEmailChangeRoute = ConfirmEmailChangeRouteImport.update({
-  id: '/confirm-email-change',
-  path: '/confirm-email-change',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ValidateEmailRoute = ValidateEmailRouteImport.update({
-  id: '/validate-email',
-  path: '/validate-email',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthedIndexRoute = AuthedIndexRouteImport.update({
@@ -91,11 +66,6 @@ const InviteTokenRoute = InviteTokenRouteImport.update({
 const SignInIndexRoute = SignInIndexRouteImport.update({
   id: '/sign-in/',
   path: '/sign-in/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SignUpIndexRoute = SignUpIndexRouteImport.update({
-  id: '/sign-up/',
-  path: '/sign-up/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthedWorkspaceMembersRoute = AuthedWorkspaceMembersRouteImport.update({
@@ -198,16 +168,11 @@ const AuthedWorkspaceVersionsVersionIdPlayRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthedIndexRoute
-  '/confirm-add-password': typeof ConfirmAddPasswordRoute
-  '/confirm-email-change': typeof ConfirmEmailChangeRoute
-  '/reset-password': typeof ResetPasswordRoute
-  '/validate-email': typeof ValidateEmailRoute
   '/$workspace': typeof AuthedWorkspaceRouteRouteWithChildren
   '/account': typeof AuthedAccountRoute
   '/settings': typeof AuthedSettingsRoute
   '/invite/$token': typeof InviteTokenRoute
   '/sign-in/': typeof SignInIndexRoute
-  '/sign-up/': typeof SignUpIndexRoute
   '/$workspace/members': typeof AuthedWorkspaceMembersRoute
   '/jam/$code': typeof AuthedJamCodeRoute
   '/share/$token': typeof AuthedShareTokenRoute
@@ -227,17 +192,12 @@ export interface FileRoutesByFullPath {
   '/$workspace/versions/$versionId/': typeof AuthedWorkspaceVersionsVersionIdIndexRoute
 }
 export interface FileRoutesByTo {
-  '/confirm-add-password': typeof ConfirmAddPasswordRoute
-  '/confirm-email-change': typeof ConfirmEmailChangeRoute
-  '/reset-password': typeof ResetPasswordRoute
-  '/validate-email': typeof ValidateEmailRoute
   '/$workspace': typeof AuthedWorkspaceRouteRouteWithChildren
   '/account': typeof AuthedAccountRoute
   '/settings': typeof AuthedSettingsRoute
   '/invite/$token': typeof InviteTokenRoute
   '/': typeof AuthedIndexRoute
   '/sign-in': typeof SignInIndexRoute
-  '/sign-up': typeof SignUpIndexRoute
   '/$workspace/members': typeof AuthedWorkspaceMembersRoute
   '/jam/$code': typeof AuthedJamCodeRoute
   '/share/$token': typeof AuthedShareTokenRoute
@@ -259,17 +219,12 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authed': typeof AuthedRouteRouteWithChildren
-  '/confirm-add-password': typeof ConfirmAddPasswordRoute
-  '/confirm-email-change': typeof ConfirmEmailChangeRoute
-  '/reset-password': typeof ResetPasswordRoute
-  '/validate-email': typeof ValidateEmailRoute
   '/_authed/$workspace': typeof AuthedWorkspaceRouteRouteWithChildren
   '/_authed/account': typeof AuthedAccountRoute
   '/_authed/settings': typeof AuthedSettingsRoute
   '/invite/$token': typeof InviteTokenRoute
   '/_authed/': typeof AuthedIndexRoute
   '/sign-in/': typeof SignInIndexRoute
-  '/sign-up/': typeof SignUpIndexRoute
   '/_authed/$workspace/members': typeof AuthedWorkspaceMembersRoute
   '/_authed/jam/$code': typeof AuthedJamCodeRoute
   '/_authed/share/$token': typeof AuthedShareTokenRoute
@@ -292,16 +247,11 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/confirm-add-password'
-    | '/confirm-email-change'
-    | '/reset-password'
-    | '/validate-email'
     | '/$workspace'
     | '/account'
     | '/settings'
     | '/invite/$token'
     | '/sign-in/'
-    | '/sign-up/'
     | '/$workspace/members'
     | '/jam/$code'
     | '/share/$token'
@@ -321,17 +271,12 @@ export interface FileRouteTypes {
     | '/$workspace/versions/$versionId/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/confirm-add-password'
-    | '/confirm-email-change'
-    | '/reset-password'
-    | '/validate-email'
     | '/$workspace'
     | '/account'
     | '/settings'
     | '/invite/$token'
     | '/'
     | '/sign-in'
-    | '/sign-up'
     | '/$workspace/members'
     | '/jam/$code'
     | '/share/$token'
@@ -352,17 +297,12 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_authed'
-    | '/confirm-add-password'
-    | '/confirm-email-change'
-    | '/reset-password'
-    | '/validate-email'
     | '/_authed/$workspace'
     | '/_authed/account'
     | '/_authed/settings'
     | '/invite/$token'
     | '/_authed/'
     | '/sign-in/'
-    | '/sign-up/'
     | '/_authed/$workspace/members'
     | '/_authed/jam/$code'
     | '/_authed/share/$token'
@@ -384,13 +324,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AuthedRouteRoute: typeof AuthedRouteRouteWithChildren
-  ConfirmAddPasswordRoute: typeof ConfirmAddPasswordRoute
-  ConfirmEmailChangeRoute: typeof ConfirmEmailChangeRoute
-  ResetPasswordRoute: typeof ResetPasswordRoute
-  ValidateEmailRoute: typeof ValidateEmailRoute
   InviteTokenRoute: typeof InviteTokenRoute
   SignInIndexRoute: typeof SignInIndexRoute
-  SignUpIndexRoute: typeof SignUpIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -400,34 +335,6 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthedRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/confirm-add-password': {
-      id: '/confirm-add-password'
-      path: '/confirm-add-password'
-      fullPath: '/confirm-add-password'
-      preLoaderRoute: typeof ConfirmAddPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/confirm-email-change': {
-      id: '/confirm-email-change'
-      path: '/confirm-email-change'
-      fullPath: '/confirm-email-change'
-      preLoaderRoute: typeof ConfirmEmailChangeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/validate-email': {
-      id: '/validate-email'
-      path: '/validate-email'
-      fullPath: '/validate-email'
-      preLoaderRoute: typeof ValidateEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authed/': {
@@ -470,13 +377,6 @@ declare module '@tanstack/react-router' {
       path: '/sign-in'
       fullPath: '/sign-in/'
       preLoaderRoute: typeof SignInIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sign-up/': {
-      id: '/sign-up/'
-      path: '/sign-up'
-      fullPath: '/sign-up/'
-      preLoaderRoute: typeof SignUpIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authed/$workspace/members': {
@@ -667,13 +567,8 @@ const AuthedRouteRouteWithChildren = AuthedRouteRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   AuthedRouteRoute: AuthedRouteRouteWithChildren,
-  ConfirmAddPasswordRoute: ConfirmAddPasswordRoute,
-  ConfirmEmailChangeRoute: ConfirmEmailChangeRoute,
-  ResetPasswordRoute: ResetPasswordRoute,
-  ValidateEmailRoute: ValidateEmailRoute,
   InviteTokenRoute: InviteTokenRoute,
   SignInIndexRoute: SignInIndexRoute,
-  SignUpIndexRoute: SignUpIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

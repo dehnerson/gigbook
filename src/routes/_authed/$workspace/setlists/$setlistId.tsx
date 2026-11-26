@@ -23,7 +23,6 @@ import { api } from '../../../../../convex/_generated/api'
 import { Monogram } from '@/components/app/chip'
 import { ContextMark } from '@/components/app/context-mark'
 import { ConfirmDialog } from '@/components/app/confirm-dialog'
-import { WorkspaceNotice } from '@/components/app/workspace-notice'
 import { EmptyState } from '@/components/app/empty-state'
 import { InlineEdit } from '@/components/app/inline-edit'
 import {
@@ -52,8 +51,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { VersionCaption } from '@/components/sheet/song-sheet'
 import { messageFor } from '@/lib/errors'
 import { matchesSearch } from '@/lib/search'
-import { href, PERSONAL } from '@/lib/space'
-import type { Dest } from '@/lib/space'
 import { useWorkspace } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
 
@@ -70,14 +67,19 @@ function WorkspaceSetlistRoute() {
 
 function SetlistPage({ setlistId }: { setlistId: Id<'setlists'> }) {
   const { current } = useWorkspace()
-  const to = (dest: Dest) => href(current.key, dest)
+
+  const setlistsLinkOptions = {
+    to: '/$workspace/setlists',
+    params: { workspace: current.key },
+  }
+
   return (
     <Suspense
       fallback={
         <div>
           <PageHeader
             breadcrumbs={[
-              <Crumb key="setlists" {...to({ page: 'setlists' })}>
+              <Crumb key="setlists" {...setlistsLinkOptions}>
                 {m.setlists()}
               </Crumb>,
             ]}
@@ -95,7 +97,6 @@ function SetlistPage({ setlistId }: { setlistId: Id<'setlists'> }) {
 function SetlistView({ setlistId }: { setlistId: Id<'setlists'> }) {
   const navigate = useNavigate()
   const { current } = useWorkspace()
-  const to = (dest: Dest) => href(current.key, dest)
   const { data } = useSuspenseQuery(
     convexQuery(api.setlists.get, { setlistId }),
   )
@@ -140,7 +141,13 @@ function SetlistView({ setlistId }: { setlistId: Id<'setlists'> }) {
     <div>
       <PageHeader
         breadcrumbs={[
-          <Crumb key="setlists" {...to({ page: 'setlists' })}>
+          <Crumb
+            key="setlists"
+            {...{
+              to: '/$workspace/setlists',
+              params: { workspace: current.key },
+            }}
+          >
             {m.setlists()}
           </Crumb>,
           <span key="name" className="truncate text-foreground">
@@ -163,12 +170,14 @@ function SetlistView({ setlistId }: { setlistId: Id<'setlists'> }) {
           <>
             {first ? (
               <HeaderButtonLink
-                {...to({
-                  page: 'version',
-                  versionId: first.version._id,
-                  leaf: 'play',
+                {...{
+                  to: '/$workspace/versions/$versionId/play',
+                  params: {
+                    workspace: current.key,
+                    versionId: first.version._id,
+                  },
                   search: { setlist: setlistId, index: 0 },
-                })}
+                }}
               >
                 <PlayIcon className="fill-current" />
                 {m.playSetlist()}
@@ -208,14 +217,6 @@ function SetlistView({ setlistId }: { setlistId: Id<'setlists'> }) {
             ) : null}
           </>
         }
-      />
-      <WorkspaceNotice
-        homeBandId={setlist.bandId}
-        homeName={bandName}
-        href={href(setlist.bandId ?? PERSONAL, {
-          page: 'setlist',
-          setlistId,
-        })}
       />
 
       {entries.length === 0 ? (
@@ -265,10 +266,13 @@ function SetlistView({ setlistId }: { setlistId: Id<'setlists'> }) {
                   <div className="min-w-0 flex-1">
                     <span className="flex min-w-0 items-center gap-2">
                       <Link
-                        {...to({
-                          page: 'version',
-                          versionId: entry.version._id,
-                        })}
+                        {...{
+                          to: '/$workspace/versions/$versionId',
+                          params: {
+                            workspace: current.key,
+                            versionId: entry.version._id,
+                          },
+                        }}
                         draggable={false}
                         className="truncate font-medium outline-none after:absolute after:inset-0 after:rounded-2xl focus-visible:after:ring-2 focus-visible:after:ring-ring"
                       >
@@ -310,12 +314,14 @@ function SetlistView({ setlistId }: { setlistId: Id<'setlists'> }) {
                       variant="ghost"
                       size="icon"
                       aria-label={m.play()}
-                      {...to({
-                        page: 'version',
-                        versionId: entry.version._id,
-                        leaf: 'play',
+                      {...{
+                        to: '/$workspace/versions/$versionId/play',
+                        params: {
+                          workspace: current.key,
+                          versionId: entry.version._id,
+                        },
                         search: { setlist: setlistId, index },
-                      })}
+                      }}
                     >
                       <PlayIcon className="fill-current" />
                     </ButtonLink>
@@ -404,7 +410,10 @@ function SetlistView({ setlistId }: { setlistId: Id<'setlists'> }) {
         description={m.deleteSetlistHint()}
         onConfirm={async () => {
           await remove({ setlistId })
-          await navigate(to({ page: 'setlists' }))
+          await navigate({
+            to: '/$workspace/setlists',
+            params: { workspace: current.key },
+          })
         }}
       />
     </div>

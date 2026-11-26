@@ -17,8 +17,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverTrigger } from '@/components/ui/popover'
 import { messageFor } from '@/lib/errors'
-import { href, PERSONAL, switchHref } from '@/lib/space'
-import { useWorkspace } from '@/lib/workspace'
+import { PERSONAL, switchWorkspace, useWorkspace } from '@/lib/workspace'
 import { cn } from 'cn'
 import { m } from '@/paraglide/messages'
 import { Separator } from '../ui/separator'
@@ -34,12 +33,13 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
   const leaf = useRouterState({
     select: (state) => state.matches[state.matches.length - 1],
   })
-  const shown = current.key
-  const label = current.label ?? (current.bandId ? '' : m.personal())
+
   const openWorkspace = (next: string) => {
     setOpen(false)
     const params = leaf.params as { songId?: string }
-    void navigate(switchHref(leaf.routeId, { songId: params.songId }, next))
+    void navigate(
+      switchWorkspace(leaf.routeId, { songId: params.songId }, next),
+    )
   }
 
   return (
@@ -48,7 +48,7 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
         <Button
           variant="ghost"
           size={compact ? 'icon' : 'default'}
-          aria-label={label || m.personal()}
+          aria-label={current.label}
           className={cn(!compact && 'h-auto w-full justify-start px-3 py-2')}
         >
           <ContextMark
@@ -57,7 +57,9 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
           />
           {compact ? null : (
             <>
-              <span className="min-w-0 flex-1 truncate text-left">{label}</span>
+              <span className="min-w-0 flex-1 truncate text-left">
+                {current.label}
+              </span>
               <ChevronsUpDownIcon className="size-4 text-muted-foreground" />
             </>
           )}
@@ -71,7 +73,7 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
               <li key={itemWorkspace.key}>
                 <button
                   type="button"
-                  data-active={shown === itemWorkspace.key}
+                  data-active={current.key === itemWorkspace.key}
                   className={item}
                   onClick={() => openWorkspace(itemWorkspace.key)}
                 >
@@ -79,23 +81,24 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
                     bandId={itemWorkspace.bandId}
                     name={itemWorkspace.bandId ? itemWorkspace.label : null}
                   />
-                  <span className="truncate">
-                    {itemWorkspace.label ?? m.personal()}
-                  </span>
+                  <span className="truncate">{itemWorkspace.label}</span>
                 </button>
               </li>
             ))}
           </ul>
           <div className="space-y-1">
             <Separator />
-            {shown !== PERSONAL ? (
+            {current.key !== PERSONAL ? (
               <>
                 <button
                   type="button"
                   className={item}
                   onClick={() => {
                     setOpen(false)
-                    void navigate(href(shown, { page: 'members' }))
+                    void navigate({
+                      to: '/$workspace/members',
+                      params: { workspace: current.key },
+                    })
                   }}
                 >
                   <UsersIcon className="size-4" />
@@ -121,7 +124,9 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
       <NewBandDialog
         isOpen={creating}
         onOpenChange={setCreating}
-        onCreated={(bandId) => navigate(href(bandId, { page: 'songs' }))}
+        onCreated={(bandId) =>
+          navigate({ to: '/$workspace/songs', params: { workspace: bandId } })
+        }
       />
     </>
   )

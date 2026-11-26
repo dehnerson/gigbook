@@ -21,7 +21,6 @@ import { SheetSkeleton } from '@/components/app/route-states'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { useNotation } from '@/lib/use-notation'
 import { useVersionActions } from '@/components/version/version-actions'
-import { href } from '@/lib/space'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/_authed/share/$token')({
@@ -99,10 +98,10 @@ function ShareView({ token }: { token: string }) {
           {libraryCopy ? (
             <ButtonLink
               variant="secondary"
-              {...href(null, {
-                page: 'version',
-                versionId: libraryCopy.versionId,
-              })}
+              {...{
+                to: '/versions/$versionId',
+                params: { versionId: libraryCopy.versionId },
+              }}
             >
               <LibraryBigIcon />
               {m.openInLibrary()}

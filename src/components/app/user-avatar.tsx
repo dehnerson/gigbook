@@ -24,7 +24,8 @@ export function UserAvatar({
   size?: 'default' | 'sm' | 'lg'
   className?: string
 }) {
-  const [broken, setBroken] = useState(false)
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null)
+  const broken = imageUrl !== null && brokenUrl === imageUrl
   const showImage = Boolean(imageUrl) && !broken
   return (
     <Avatar size={size} className={className}>
@@ -33,7 +34,9 @@ export function UserAvatar({
           src={imageUrl ?? undefined}
           alt=""
           className="size-full rounded-full object-cover"
-          onError={() => setBroken(true)}
+          onError={() => {
+            if (imageUrl) setBrokenUrl(imageUrl)
+          }}
         />
       ) : (
         <AvatarFallback>{initials(name, email)}</AvatarFallback>

@@ -376,6 +376,7 @@ export const testKey = action({
   args: { provider: aiProvider },
   handler: async (ctx, args) => {
     const identity = await requireIdentity(ctx)
+
     const { model, apiKey } = await ctx.runQuery(
       internal.users.internalReadAi,
       {
@@ -383,6 +384,7 @@ export const testKey = action({
         provider: args.provider,
       },
     )
+
     try {
       await generateText({
         model: languageModel(model, apiKey),

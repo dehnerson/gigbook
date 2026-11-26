@@ -24,3 +24,4 @@ project.inlang/README.md
 # Copied from @coderline/alphatab by its Vite plugin
 public/font
 public/soundfont
+.vitest/

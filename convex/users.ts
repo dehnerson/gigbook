@@ -1,7 +1,7 @@
 import { getAuthUserId } from '@convex-dev/auth/server'
 import { vGoogleProfile } from '@convex-dev/auth/methods/google/server'
 import { v } from 'convex/values'
-import { components, internal } from './_generated/api'
+import { internal } from './_generated/api'
 import type { Id } from './_generated/dataModel'
 import {
   internalMutation,
@@ -15,6 +15,11 @@ import { loadHome } from './lib/home'
 import { decryptSecret, encryptSecret } from './lib/crypto'
 import { fail } from './lib/errors'
 import { nameWithinLimit } from './lib/users'
+import {
+  AVATAR_ATTEMPT_LIMIT,
+  AVATAR_ATTEMPT_WINDOW_MS,
+  sniffAvatar,
+} from '../src/lib/avatar'
 import { aiProvider } from './schema'
 import { DEFAULT_MODEL, modelById, pickModel } from '../src/lib/import/models'
 import type { AiProvider } from '../src/lib/import/models'
@@ -26,9 +31,11 @@ type OauthProfile = {
   picture?: string
 }
 
-function userById(ctx: QueryCtx | MutationCtx, userId: string) {
-  const id = ctx.db.normalizeId('users', userId)
-  return id ? ctx.db.get(id) : null
+async function userById(ctx: QueryCtx | MutationCtx, userId: Id<'users'>) {
+  const user = await ctx.db.get(userId)
+  if (!user) fail('NOT_FOUND')
+
+  return user
 }
 
 function verifiedOauthEmail(profile: OauthProfile) {
@@ -36,73 +43,6 @@ function verifiedOauthEmail(profile: OauthProfile) {
   const email = profile.email?.trim().toLowerCase()
   return email || undefined
 }
-
-/** The password account that already verified this address, if there is one. */
-async function userForVerifiedEmail(ctx: MutationCtx, email: string) {
-  const found = await ctx.runMutation(
-    components.authEmail.verifiedEmails.lookupEmail,
-    { email },
-  )
-  if (!found.success) {
-    if (found.userError.error === 'RATE_LIMITED') fail('RATE_LIMIT')
-    return null
-  }
-  return userById(ctx, found.userId)
-}
-
-async function reuseOrCreate(ctx: MutationCtx, profile: OauthProfile) {
-  const email = verifiedOauthEmail(profile)
-  const name = profile.name?.trim() || ''
-  const existing = email ? await userForVerifiedEmail(ctx, email) : null
-  if (existing) {
-    await ctx.db.patch(existing._id, {
-      name: existing.name || name || existing.name,
-      imageUrl: existing.imageUrl ?? profile.picture,
-      oauthEmail: email,
-      googleLinked: true,
-    })
-    return existing._id
-  }
-  return ctx.db.insert('users', {
-    name,
-    imageUrl: profile.picture,
-    oauthEmail: email,
-    googleLinked: true,
-  })
-}
-
-async function rememberOauth(
-  ctx: MutationCtx,
-  userId: Id<'users'>,
-  profile: OauthProfile,
-) {
-  const email = verifiedOauthEmail(profile)
-  const name = profile.name?.trim()
-  const user = await ctx.db.get(userId)
-  if (!user) return
-  const patch: {
-    googleLinked: true
-    name?: string
-    imageUrl?: string
-    oauthEmail?: string
-  } = { googleLinked: true }
-  if (name && !user.name) patch.name = name
-  if (profile.picture && !user.imageUrl) patch.imageUrl = profile.picture
-  if (email) patch.oauthEmail = email
-  await ctx.db.patch(userId, patch)
-}
-
-export const createFromEmailPassword = internalMutation({
-  args: {
-    method: v.object({
-      name: v.literal('emailPassword'),
-      profile: v.object({ name: v.string() }),
-    }),
-  },
-  returns: v.id('users'),
-  handler: async (ctx, args) =>
-    ctx.db.insert('users', { name: args.method.profile.name }),
-})
 
 export const createFromGoogle = internalMutation({
   args: {
@@ -114,15 +54,11 @@ export const createFromGoogle = internalMutation({
   returns: v.id('users'),
   handler: async (ctx, args) => {
     const profile = args.method.profile
-    const sessionUserId = await getAuthUserId(ctx)
-    if (!sessionUserId) return reuseOrCreate(ctx, profile)
-    const email = verifiedOauthEmail(profile)
-    const owner = email ? await userForVerifiedEmail(ctx, email) : null
-    if (owner && owner._id !== sessionUserId) fail('EMAIL_TAKEN')
-    const user = await ctx.db.get(sessionUserId)
-    if (!user) return reuseOrCreate(ctx, profile)
-    await rememberOauth(ctx, sessionUserId, profile)
-    return sessionUserId
+    return ctx.db.insert('users', {
+      name: profile.name?.trim() || '',
+      imageUrl: profile.picture,
+      email: verifiedOauthEmail(profile),
+    })
   },
 })
 
@@ -136,7 +72,20 @@ export const rememberGoogle = internalMutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await rememberOauth(ctx, args.userId, args.method.profile)
+    const profile = args.method.profile
+    const email = verifiedOauthEmail(profile)
+    const name = profile.name?.trim()
+    const user = await ctx.db.get(args.userId)
+    if (!user) return null
+    const patch: {
+      name?: string
+      imageUrl?: string
+      email?: string
+    } = {}
+    if (name && !user.name) patch.name = name
+    if (profile.picture && !user.imageUrl) patch.imageUrl = profile.picture
+    if (email) patch.email = email
+    if (Object.keys(patch).length > 0) await ctx.db.patch(args.userId, patch)
     return null
   },
 })
@@ -153,25 +102,14 @@ export const me = query({
       user.aiModel,
       credentials.map((item) => item.provider),
     )
-    const passwordEmail = await ctx.runQuery(
-      components.authEmail.verifiedEmails.getPrimaryEmail,
-      { userId },
-    )
     const home = await loadHome(ctx, userId, user.homeBandId ?? null)
     return {
       locale: user.locale ?? null,
       home: { bandId: home?.bandId ?? null },
-      homeChosen: user.homeBandId !== undefined,
       notation: user.notation ?? 'en',
-      email: passwordEmail ?? user.oauthEmail ?? null,
+      email: user.email ?? null,
       name: user.name,
       imageUrl: user.imageUrl ?? null,
-      password: passwordEmail ? { email: passwordEmail } : null,
-      google:
-        user.googleLinked || user.oauthEmail
-          ? { email: user.oauthEmail ?? null }
-          : null,
-      googleLinkNotice: user.googleLinkNotice ?? null,
       aiKeys: credentials.map((item) => ({
         provider: item.provider,
         last4: item.last4,
@@ -192,8 +130,9 @@ export const setHome = mutation({
   args: { bandId: v.union(v.null(), v.id('bands')) },
   handler: async (ctx, args) => {
     const identity = await requireIdentity(ctx)
+
     const user = await userById(ctx, identity.subject)
-    if (!user) fail('NOT_FOUND')
+
     if (args.bandId) {
       const home = await loadHome(ctx, identity.subject, args.bandId)
       if (!home) fail('FORBIDDEN')
@@ -210,7 +149,7 @@ export const setPreferences = mutation({
   handler: async (ctx, args) => {
     const identity = await requireIdentity(ctx)
     const user = await userById(ctx, identity.subject)
-    if (!user) fail('NOT_FOUND')
+
     await ctx.db.patch(user._id, {
       locale: args.locale ?? user.locale,
       notation: args.notation ?? user.notation,
@@ -218,51 +157,44 @@ export const setPreferences = mutation({
   },
 })
 
-const MAX_AVATAR_BYTES = 5 * 1024 * 1024
-
 export const updateProfile = mutation({
   args: { name: v.string() },
   handler: async (ctx, args) => {
-    const identity = await requireIdentity(ctx)
-    const user = await userById(ctx, identity.subject)
-    if (!user) fail('NOT_FOUND')
+    const user = await userById(ctx, (await requireIdentity(ctx)).subject)
+
     const name = args.name.trim()
     if (!nameWithinLimit(name)) fail('INVALID')
     await ctx.db.patch(user._id, { name })
   },
 })
 
-export const generateAvatarUploadUrl = mutation({
+export const reserveAvatarUpload = internalMutation({
   args: {},
   handler: async (ctx) => {
-    await requireIdentity(ctx)
-    return ctx.storage.generateUploadUrl()
+    const user = await userById(ctx, (await requireIdentity(ctx)).subject)
+    const now = Date.now()
+    const recent = (user.avatarAttempts ?? []).filter(
+      (at) => now - at < AVATAR_ATTEMPT_WINDOW_MS,
+    )
+    if (recent.length >= AVATAR_ATTEMPT_LIMIT) fail('AVATAR_RATE_LIMIT')
+    await ctx.db.patch(user._id, { avatarAttempts: [...recent, now] })
   },
 })
 
-export const setAvatar = mutation({
-  args: { storageId: v.id('_storage') },
+export const commitAvatar = internalMutation({
+  args: { jpeg: v.bytes() },
   handler: async (ctx, args) => {
-    const identity = await requireIdentity(ctx)
-    const user = await userById(ctx, identity.subject)
-    if (!user) fail('NOT_FOUND')
-    const meta = await ctx.storage.getMetadata(args.storageId)
-    const type = meta?.contentType ?? ''
-    if (!type.startsWith('image/') || (meta?.size ?? 0) > MAX_AVATAR_BYTES) {
-      await ctx.storage.delete(args.storageId)
-      fail('INVALID')
-    }
-    const imageUrl = await ctx.storage.getUrl(args.storageId)
-    if (!imageUrl) {
-      await ctx.storage.delete(args.storageId)
-      fail('INVALID')
-    }
-    if (user.imageStorageId && user.imageStorageId !== args.storageId)
-      await ctx.storage.delete(user.imageStorageId)
-    await ctx.db.patch(user._id, {
-      imageStorageId: args.storageId,
-      imageUrl,
-    })
+    const user = await userById(ctx, (await requireIdentity(ctx)).subject)
+    const jpeg = new Uint8Array(args.jpeg)
+    if (sniffAvatar(jpeg) !== 'jpeg') fail('AVATAR_INVALID')
+    const storageId = await ctx.storage.store(
+      new Blob([args.jpeg], { type: 'image/jpeg' }),
+    )
+    const imageUrl = await ctx.storage.getUrl(storageId)
+    if (!imageUrl) fail('AVATAR_INVALID')
+    const previous = user.imageStorageId
+    await ctx.db.patch(user._id, { imageStorageId: storageId, imageUrl })
+    if (previous && previous !== storageId) await ctx.storage.delete(previous)
   },
 })
 
@@ -271,45 +203,12 @@ export const clearAvatar = mutation({
   handler: async (ctx) => {
     const identity = await requireIdentity(ctx)
     const user = await userById(ctx, identity.subject)
-    if (!user) return
+
     if (user.imageStorageId) await ctx.storage.delete(user.imageStorageId)
     await ctx.db.patch(user._id, {
       imageStorageId: undefined,
       imageUrl: undefined,
     })
-  },
-})
-
-export const disconnectGoogle = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await requireIdentity(ctx)
-    const user = await userById(ctx, identity.subject)
-    if (!user) fail('NOT_FOUND')
-    const passwordEmail = await ctx.runQuery(
-      components.authEmail.verifiedEmails.getPrimaryEmail,
-      { userId: user._id },
-    )
-    if (!passwordEmail) fail('INVALID')
-    await ctx.runMutation(components.authGoogle.provider.deleteUser, {
-      userId: user._id,
-    })
-    await ctx.db.patch(user._id, {
-      googleLinked: undefined,
-      oauthEmail: undefined,
-      googleLinkNotice: undefined,
-      imageUrl: user.imageStorageId ? user.imageUrl : undefined,
-    })
-  },
-})
-
-export const clearGoogleLinkNotice = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await requireIdentity(ctx)
-    const user = await userById(ctx, identity.subject)
-    if (!user?.googleLinkNotice) return
-    await ctx.db.patch(user._id, { googleLinkNotice: undefined })
   },
 })
 
@@ -351,7 +250,7 @@ export const saveAiKey = mutation({
     const key = args.apiKey.trim()
     if (key.length < 10) fail('INVALID')
     const user = await userById(ctx, identity.subject)
-    if (!user) fail('NOT_FOUND')
+
     const ciphertext = await encryptSecret(key)
     const last4 = key.slice(-4)
     const existing = await credentialFor(ctx, user._id, args.provider)
@@ -377,9 +276,8 @@ export const saveAiKey = mutation({
 export const deleteAiKey = mutation({
   args: { provider: aiProvider },
   handler: async (ctx, args) => {
-    const identity = await requireIdentity(ctx)
-    const user = await userById(ctx, identity.subject)
-    if (!user) return
+    const user = await userById(ctx, (await requireIdentity(ctx)).subject)
+
     const existing = await credentialFor(ctx, user._id, args.provider)
     if (existing) await ctx.db.delete(existing._id)
   },
@@ -390,7 +288,7 @@ export const setAiModel = mutation({
   handler: async (ctx, args) => {
     const identity = await requireIdentity(ctx)
     const user = await userById(ctx, identity.subject)
-    if (!user) fail('NOT_FOUND')
+
     const model = modelById(args.model)
     if (!model) fail('INVALID')
     if (!(await credentialFor(ctx, user._id, model.provider)))
@@ -402,9 +300,11 @@ export const setAiModel = mutation({
 export const internalReadAi = internalQuery({
   args: { userId: v.string(), provider: v.optional(aiProvider) },
   handler: async (ctx, args) => {
-    if (!args.provider) return readAiKey(ctx, args.userId)
-    const user = await userById(ctx, args.userId)
-    if (!user) fail('NO_API_KEY')
+    const userId = ctx.db.normalizeId('users', args.userId)
+    if (!userId) fail('NOT_FOUND')
+    if (!args.provider) return readAiKey(ctx, userId)
+    const user = await userById(ctx, userId)
+
     const credential = await credentialFor(ctx, user._id, args.provider)
     if (!credential) fail('NO_API_KEY')
     const chosen = modelById(user.aiModel)
@@ -417,9 +317,9 @@ export const internalReadAi = internalQuery({
   },
 })
 
-export async function readAiKey(ctx: QueryCtx, userId: string) {
+export async function readAiKey(ctx: QueryCtx, userId: Id<'users'>) {
   const user = await userById(ctx, userId)
-  if (!user) fail('NO_API_KEY')
+
   const credentials = await credentialsOf(ctx, user._id)
   const model = pickModel(
     user.aiModel,

@@ -9,7 +9,6 @@ import {
 } from 'lucide-react'
 import { UserMenu } from '@/components/app/user-menu'
 import { WorkspaceSwitcher } from '@/components/app/workspace-switcher'
-import { href } from '@/lib/space'
 import { useWorkspace } from '@/lib/workspace'
 import { m } from '@/paraglide/messages'
 
@@ -46,19 +45,22 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const { current } = useWorkspace()
   const links = [
     {
-      options: href(current.key, { page: 'songs' }),
+      options: { to: '/$workspace/songs', params: { workspace: current.key } },
       label: m.songs(),
       icon: MusicIcon,
       exact: true,
     },
     {
-      options: href(current.key, { page: 'setlists' }),
+      options: {
+        to: '/$workspace/setlists',
+        params: { workspace: current.key },
+      },
       label: m.setlists(),
       icon: ListMusicIcon,
       exact: false,
     },
     {
-      options: href(current.key, { page: 'jam' }),
+      options: { to: '/$workspace/jam', params: { workspace: current.key } },
       label: m.jam(),
       icon: RadioTowerIcon,
       exact: false,
