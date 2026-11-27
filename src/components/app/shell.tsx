@@ -125,7 +125,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           data-status={pathname === '/' ? 'active' : undefined}
         >
           <LibraryBigIcon className="size-5 shrink-0" />
-          <span className="max-w-full truncate">{m.allSongs()}</span>
+          <span className="max-w-full truncate">{m.library()}</span>
         </Link>
         {links.map((link) => (
           <Link

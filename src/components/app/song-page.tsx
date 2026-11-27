@@ -10,7 +10,7 @@ import { Chip } from '@/components/app/chip'
 import { CollectionCard } from '@/components/app/collection-card'
 import { ContextMark } from '@/components/app/context-mark'
 import { EmptyState } from '@/components/app/empty-state'
-import { WorkspaceSelect } from '@/components/app/workspace-select'
+import { useWorkspaceSelectDialog } from '@/components/app/workspace-select'
 import { InlineEdit } from '@/components/app/inline-edit'
 import { PerformerLine } from '@/components/app/performer-line'
 import { Crumb, PageHeader, SectionTitle } from '@/components/app/page-header'
@@ -18,18 +18,11 @@ import { DetailSkeleton } from '@/components/app/route-states'
 import { Skeleton } from '@/components/ui/skeleton'
 import { songCrumbs } from '@/components/app/song-crumbs'
 import { Button, ButtonLink } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { useNotation } from '@/lib/use-notation'
 import { VersionMenu } from '@/components/version/version-menu'
 import { messageFor } from '@/lib/errors'
 import { useSuspenseQuery } from '@tanstack/react-query'
-import { PERSONAL, useWorkspace } from '@/lib/workspace'
+import { useWorkspace } from '@/lib/workspace'
 import type { Workspace } from '@/lib/workspace'
 import { displayChord } from '@/lib/music/chords'
 import { TUNING_PRESETS } from '@/lib/music/diagrams'
@@ -97,8 +90,6 @@ function SongView({
   const addVersion = useMutation(api.songs.addVersion)
   const notation = useNotation()
   const [addingVersion, setAddingVersion] = useState(false)
-  const [pickingHome, setPickingHome] = useState(false)
-  const [choice, setChoice] = useState(PERSONAL)
 
   const navigate = useNavigate()
   const fileVersion = (into: string) => {
@@ -127,6 +118,13 @@ function SongView({
     update({ songId, ...values }).catch((error: unknown) =>
       toast.error(messageFor(error)),
     )
+
+  const { selectWorkspace, workspaceDialog } = useWorkspaceSelectDialog({
+    chooseText: m.addVersion(),
+    hint: m.chooseWorkspaceForVersionHint(),
+    onWorkspaceSelected: (selectedWorkspace) =>
+      fileVersion(selectedWorkspace.key),
+  })
 
   return (
     <div>
@@ -168,7 +166,7 @@ function SongView({
               isDisabled={addingVersion}
               onPress={() => {
                 if (workspace) fileVersion(workspace.key)
-                else setPickingHome(true)
+                else selectWorkspace()
               }}
             >
               <PlusIcon />
@@ -196,27 +194,7 @@ function SongView({
           ))}
         </ul>
       )}
-      <Dialog isOpen={pickingHome} onOpenChange={setPickingHome}>
-        <DialogHeader>
-          <DialogTitle>{m.chooseWorkspace()}</DialogTitle>
-          <DialogDescription>{m.chooseWorkspaceHint()}</DialogDescription>
-        </DialogHeader>
-        <WorkspaceSelect value={choice} onChange={setChoice} writable />
-        <DialogFooter>
-          <Button variant="outline" onPress={() => setPickingHome(false)}>
-            {m.cancel()}
-          </Button>
-          <Button
-            isDisabled={addingVersion}
-            onPress={() => {
-              setPickingHome(false)
-              fileVersion(choice)
-            }}
-          >
-            {m.addVersion()}
-          </Button>
-        </DialogFooter>
-      </Dialog>
+      {workspaceDialog}
     </div>
   )
 }

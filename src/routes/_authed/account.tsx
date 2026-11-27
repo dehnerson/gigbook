@@ -21,7 +21,6 @@ import {
   MAX_AVATAR_BYTES,
   avatarTypeAllowed,
 } from '@/lib/avatar'
-import { convexSiteUrl } from '@/lib/convex-site'
 import { messageFor } from '@/lib/errors'
 
 export const Route = createFileRoute('/_authed/account')({
@@ -66,6 +65,9 @@ function AccountScreen({ account }: { account: Account }) {
 }
 
 function ProfileSection({ account }: { account: Account }) {
+  const convexSiteUrl = import.meta.env.VITE_CONVEX_SITE_URL
+  if (!convexSiteUrl) throw new Error('VITE_CONVEX_SITE_URL is not set')
+
   const updateProfile = useMutation(api.users.updateProfile)
   const clearAvatar = useMutation(api.users.clearAvatar)
   const token = useAuthToken()
@@ -103,7 +105,7 @@ function ProfileSection({ account }: { account: Account }) {
     }
     setBusy(true)
     try {
-      const response = await fetch(`${convexSiteUrl()}/avatar`, {
+      const response = await fetch(`${convexSiteUrl}/avatar`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

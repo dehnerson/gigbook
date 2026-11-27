@@ -302,12 +302,7 @@ export function VersionMenu({
 
 function homes(
   version: VersionTarget,
-  workspaces: Array<{
-    key: string
-    bandId: Id<'bands'> | null
-    label: string | null
-    role: string | null
-  }>,
+  workspaces: Array<Workspace>,
   mode: 'copy' | 'move',
 ): Array<Home> {
   const others = workspaces.filter(
@@ -329,7 +324,7 @@ function homes(
             {
               id: item.bandId,
               bandId: item.bandId,
-              label: item.label ?? '',
+              label: item.label,
             },
           ]
         : [],

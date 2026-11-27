@@ -1,6 +1,6 @@
 import { convexQuery } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
-import { linkOptions, useRouterState } from '@tanstack/react-router'
+import { linkOptions, useParams } from '@tanstack/react-router'
 import { useMutation } from 'convex/react'
 import { createContext, useContext, useEffect, useMemo } from 'react'
 import type { ReactNode } from 'react'
@@ -19,7 +19,7 @@ export type Workspace = {
   key: string
   bandId: Id<'bands'> | null
   label: string
-  role: Role
+  role?: Role
 }
 
 type WorkspaceValue = {
@@ -27,13 +27,11 @@ type WorkspaceValue = {
   current: Workspace
   /** Personal, then every band the user belongs to. */
   all: Array<Workspace>
-  /** False until the band list has loaded. Unknown workspace URLs wait for this. */
-  bandsReady: boolean
 }
 
 const WorkspaceContext = createContext<WorkspaceValue | null>(null)
 
-function workspace(key: string, label: string, role: Role): Workspace {
+function workspace(key: string, label: string, role?: Role): Workspace {
   return {
     key,
     bandId: key === PERSONAL ? null : (key as Id<'bands'>),
@@ -49,20 +47,14 @@ function personalWorkspace(): Workspace {
 }
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
-  const routeKey = useRouterState({
-    select: (state) => {
-      for (const match of state.matches) {
-        if (match.routeId !== '/_authed/$workspace') continue
-        const key = match.params.workspace
-        return typeof key === 'string' ? key : undefined
-      }
-      return undefined
-    },
+  const routeKey = useParams({
+    from: '/_authed/$workspace',
+    shouldThrow: false,
+    select: (params) => params.workspace,
   })
   const { data: me } = useQuery(convexQuery(api.users.me, {}))
   const { data: bands } = useQuery(convexQuery(api.bands.list, {}))
   const setHome = useMutation(api.users.setHome)
-  const bandsReady = bands !== undefined
 
   useEffect(() => {
     if (!me || !routeKey) return
@@ -91,16 +83,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const key = routeKey ?? me?.home.bandId ?? PERSONAL
 
-  const current = all.find((item) => item.key === key) ?? personalWorkspace()
+  const current =
+    all.find((item) => item.key === key) ??
+    (routeKey === undefined ? personalWorkspace() : workspace(key, ''))
 
   const value = useMemo<WorkspaceValue>(
     () => ({
       current,
-      inWorkspace: routeKey !== undefined,
       all,
-      bandsReady,
     }),
-    [all, bandsReady, current, routeKey],
+    [all, current],
   )
   return <WorkspaceContext value={value}>{children}</WorkspaceContext>
 }

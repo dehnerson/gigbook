@@ -9,6 +9,7 @@ import {
   RouteNotFound,
   RoutePending,
 } from '@/components/app/route-states'
+import { SessionGate } from '@/lib/auth-gate'
 import { routeTree } from './routeTree.gen'
 
 const convexUrl = import.meta.env.VITE_CONVEX_URL
@@ -50,6 +51,7 @@ export function getRouter() {
             isAuthenticated: api.auth.isAuthenticated,
           }}
         >
+          <SessionGate />
           {children}
         </ConvexAuthProvider>
       </QueryClientProvider>

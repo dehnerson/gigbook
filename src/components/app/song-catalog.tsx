@@ -7,11 +7,7 @@ import { api } from '../../../convex/_generated/api'
 import { ContextMark } from '@/components/app/context-mark'
 import { EmptyState } from '@/components/app/empty-state'
 import { NewSongDialog } from '@/components/app/new-song-dialog'
-import {
-  HeaderButton,
-  HeaderButtonLink,
-  PageHeader,
-} from '@/components/app/page-header'
+import { HeaderButton, PageHeader } from '@/components/app/page-header'
 import { NoMatches, SearchField } from '@/components/app/search-field'
 import { ListSkeleton } from '@/components/app/route-states'
 import { SongRow } from '@/components/app/song-row'
@@ -19,6 +15,8 @@ import { matchesSearch } from '@/lib/search'
 import { m } from '@/paraglide/messages'
 import { ButtonGroup } from '@/components/ui/button-group'
 import type { Workspace } from '@/lib/workspace'
+import { useWorkspaceSelectDialog } from './workspace-select'
+import { useNavigate } from '@tanstack/react-router'
 
 type CatalogVersion = {
   name: string
@@ -58,12 +56,19 @@ export function SongCatalog({
 }) {
   const canCreate = !workspace || workspace.role !== 'viewer'
 
+  const navigate = useNavigate()
+
   const [open, setOpen] = useState(false)
 
-  const importLinkOptions = {
-    to: workspace ? '/$workspace/import' : '/import',
-    params: workspace ? { workspace: workspace.key } : {},
-  }
+  const { selectWorkspace, workspaceDialog } = useWorkspaceSelectDialog({
+    chooseText: m.importLabel(),
+    hint: m.chooseWorkspaceForImportHint(),
+    onWorkspaceSelected: (selectedWorkspace) =>
+      navigate({
+        to: '/$workspace/import',
+        params: { workspace: selectedWorkspace.key },
+      }),
+  })
 
   const actions = (
     <ButtonGroup>
@@ -71,9 +76,19 @@ export function SongCatalog({
         <PlusIcon />
         {m.song()}
       </HeaderButton>
-      <HeaderButtonLink {...importLinkOptions}>
+      <HeaderButton
+        isDisabled={!canCreate}
+        onPress={() => {
+          if (workspace)
+            navigate({
+              to: '/$workspace/import',
+              params: { workspace: workspace.key },
+            })
+          else selectWorkspace()
+        }}
+      >
         <FileInputIcon />
-      </HeaderButtonLink>
+      </HeaderButton>
     </ButtonGroup>
   )
 
@@ -85,6 +100,7 @@ export function SongCatalog({
         onOpenChange={setOpen}
         workspace={workspace}
       />
+      {workspaceDialog}
       <Suspense fallback={<ListSkeleton />}>
         <CatalogRows
           marks={marks}

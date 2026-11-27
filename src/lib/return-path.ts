@@ -51,7 +51,3 @@ export function authSearch(search: Record<string, unknown>) {
     state: typeof search.state === 'string' ? search.state : undefined,
   }
 }
-
-export function signInSearch(search: Record<string, unknown>) {
-  return authSearch(search)
-}

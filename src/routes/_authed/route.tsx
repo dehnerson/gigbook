@@ -1,16 +1,29 @@
 import { useAuthToken } from '@convex-dev/auth/react'
 import { convexQuery } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
-import { createFileRoute, Outlet, useNavigate } from '@tanstack/react-router'
+import {
+  createFileRoute,
+  Outlet,
+  redirect,
+  useNavigate,
+} from '@tanstack/react-router'
 import { useConvexAuth } from 'convex/react'
 import { useEffect } from 'react'
 import { api } from '../../../convex/_generated/api'
 import { RoutePending } from '@/components/app/route-states'
 import { Shell } from '@/components/app/shell'
+import { waitForSession } from '@/lib/auth-gate'
 import { WorkspaceProvider } from '@/lib/workspace'
 import { setLocale } from '@/paraglide/runtime'
 
 export const Route = createFileRoute('/_authed')({
+  beforeLoad: async ({ location }) => {
+    if (await waitForSession()) return
+    throw redirect({
+      href: `/sign-in?redirect=${encodeURIComponent(location.href)}`,
+      replace: true,
+    })
+  },
   component: Authed,
 })
 
@@ -24,9 +37,9 @@ function Authed() {
   useEffect(() => {
     if (isLoading || isAuthenticated || token !== null) return
     if (window.location.pathname.startsWith('/sign-in')) return
-    const redirect = `${window.location.pathname}${window.location.search}${window.location.hash}`
+    const next = `${window.location.pathname}${window.location.search}${window.location.hash}`
     void navigate({
-      href: `/sign-in?redirect=${encodeURIComponent(redirect)}`,
+      href: `/sign-in?redirect=${encodeURIComponent(next)}`,
       replace: true,
     })
   }, [isAuthenticated, isLoading, navigate, token])

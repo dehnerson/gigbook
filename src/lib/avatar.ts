@@ -1,5 +1,5 @@
 /** Originals up to this size are resized before they are stored. */
-export const MAX_AVATAR_BYTES = 20 * 1024 * 1024
+export const MAX_AVATAR_BYTES = 10 * 1024 * 1024
 
 export const AVATAR_ATTEMPT_LIMIT = 10
 
